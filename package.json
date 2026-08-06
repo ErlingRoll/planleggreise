@@ -1,0 +1,25 @@
+{
+  "name": "planleggreise",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Travel planning workspace",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run build:models && concurrently -k \"npm run dev:models\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:models": "npm run dev --workspace @planleggreise/models",
+    "dev:backend": "npm run dev --workspace @planleggreise/backend",
+    "dev:frontend": "npm run dev --workspace @planleggreise/frontend",
+    "build": "npm run build:models && npm run build:backend && npm run build:frontend",
+    "build:models": "npm run build --workspace @planleggreise/models",
+    "build:backend": "npm run build --workspace @planleggreise/backend",
+    "build:frontend": "npm run build --workspace @planleggreise/frontend",
+    "lint": "npm run lint --workspace @planleggreise/frontend",
+    "start": "npm run start --workspace @planleggreise/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
