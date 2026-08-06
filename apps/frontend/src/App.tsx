@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { getErrorMessage } from './lib/errors'
 import { getSupabaseClient } from './lib/supabase'
 import { LoginScreen } from './features/auth/LoginScreen'
 import { TripDashboard } from './features/trips/TripDashboard'
 
 export default function App() {
+  const { t } = useTranslation()
   const [session, setSession] = useState<Session | null>(null)
   const [isAuthReady, setIsAuthReady] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
@@ -53,7 +56,7 @@ export default function App() {
   }, [])
 
   if (!isAuthReady) {
-    return <div className="grid min-h-screen place-items-center bg-[#f5f1ea] text-[#69726c]">Laster ...</div>
+    return <div className="grid min-h-screen place-items-center bg-[#f5f1ea] text-[#69726c]">{t('common.loading')}</div>
   }
 
   if (authError) {
@@ -64,5 +67,15 @@ export default function App() {
     )
   }
 
-  return session ? <TripDashboard session={session} /> : <LoginScreen />
+  if (!session) {
+    return <LoginScreen />
+  }
+
+  return (
+    <Routes>
+      <Route element={<TripDashboard session={session} />} path="/" />
+      <Route element={<TripDashboard session={session} />} path="/trips/:tripId" />
+      <Route element={<Navigate replace to="/" />} path="*" />
+    </Routes>
+  )
 }

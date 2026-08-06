@@ -3,6 +3,7 @@ import {
   isTripDurationWithinLimit,
   MAX_TRIP_DAYS,
 } from '@planleggreise/models'
+import i18n from '../i18n'
 
 export { MAX_TRIP_DAYS }
 
@@ -19,6 +20,6 @@ export function shiftDate(date: string, dayOffset: number) {
 export function getTripDurationMessage(startDate: string, endDate: string) {
   const duration = getTripDurationInDays(startDate, endDate)
   return duration && duration > MAX_TRIP_DAYS
-    ? `En reise kan ikke vare lenger enn ${MAX_TRIP_DAYS} dager.`
+    ? i18n.t('errors.tripTooLong', { maxDays: MAX_TRIP_DAYS })
     : null
 }

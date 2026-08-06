@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createTrip, type Trip } from '../../api'
 import { DatePicker } from '../../components/DatePicker'
 import { getErrorMessage } from '../../lib/errors'
@@ -11,6 +12,7 @@ type TripFormProps = {
 }
 
 export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
+  const { t } = useTranslation()
   const [name, setName] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -21,12 +23,12 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
     event.preventDefault()
 
     if (!startDate || !endDate) {
-      setError('Velg både startdato og sluttdato.')
+      setError(t('tripForm.datesRequired'))
       return
     }
 
     if (endDate < startDate) {
-      setError('Sluttdatoen må være på eller etter startdatoen.')
+      setError(t('errors.tripDatesInvalid'))
       return
     }
 
@@ -55,21 +57,21 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
       className="mt-6 rounded-2xl border border-[#b9d1be] bg-[#f0f5ed] p-5"
       onSubmit={(event) => void handleSubmit(event)}
     >
-      <h3 className="font-semibold text-[#274b48]">Lag en ny reise</h3>
+      <h3 className="font-semibold text-[#274b48]">{t('tripForm.title')}</h3>
       <div className="mt-4 grid gap-4">
         <label className="grid gap-2 text-sm font-medium text-[#69726c]">
-          Navn på reisen
+          {t('tripForm.name')}
           <input
             className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
             onChange={(event) => setName(event.target.value)}
-            placeholder="For eksempel Sommer i Italia"
+            placeholder={t('tripForm.namePlaceholder')}
             required
             value={name}
           />
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <DatePicker
-            label="Fra"
+            label={t('tripForm.startDate')}
             onChange={(date) => {
               setStartDate(date)
               const maximumEndDate = shiftDate(date, 59)
@@ -83,7 +85,7 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
             value={startDate}
           />
           <DatePicker
-            label="Til"
+            label={t('tripForm.endDate')}
             maxDate={startDate ? shiftDate(startDate, 59) : undefined}
             minDate={startDate}
             onChange={setEndDate}
@@ -98,14 +100,14 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
           onClick={onCancel}
           type="button"
         >
-          Avbryt
+          {t('tripForm.cancel')}
         </button>
         <button
           className="rounded-xl bg-[#274b48] px-4 py-2.5 text-sm font-semibold text-[#f9f5ed] hover:bg-[#1c3b38] disabled:opacity-60"
           disabled={isSaving}
           type="submit"
         >
-          {isSaving ? 'Lagrer ...' : 'Opprett reise'}
+          {isSaving ? t('tripForm.creating') : t('tripForm.create')}
         </button>
       </div>
     </form>

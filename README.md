@@ -34,7 +34,9 @@ Fill in the Supabase values, then open `http://localhost:3000`. The first
 vertical slice supports Google login, private trip creation, authenticated
 trip listing, trip settings, recoverable trip archiving, activities, and
 generated days for each inclusive trip date. Trips may contain at most 60
-inclusive calendar days.
+inclusive calendar days. The frontend uses `/trips/<trip-id>` URLs for
+bookmarked and shareable trip plans; access remains protected by authentication
+and Supabase row-level security.
 
 Apply all migrations in `supabase/migrations` to the Supabase project before
 using trip persistence. Deleting a trip archives it by setting `deleted_at`;

@@ -1,24 +1,36 @@
+import { MAX_TRIP_DAYS } from '@planleggreise/models'
+import i18n from '../i18n'
+
 const errorTranslations: Record<string, string> = {
-  'Authentication required': 'Innlogging kreves.',
-  'Invalid authentication token': 'Innloggingen er ikke gyldig.',
-  'Invalid trip data': 'Ugyldige reisedata.',
+  'Authentication required': 'errors.authenticationRequired',
+  'Invalid authentication token': 'errors.invalidAuthentication',
+  'Invalid trip data': 'errors.invalidTripData',
   'The trip end date must be on or after the start date':
-    'Sluttdatoen må være på eller etter startdatoen.',
-  'Trips cannot be longer than 60 days':
-    'En reise kan ikke vare lenger enn 60 dager.',
-  'Trip not found': 'Fant ikke reisen.',
-  'Invalid activity data': 'Ugyldige aktivitetsdata.',
+    'errors.tripDatesInvalid',
+  'Trips cannot be longer than 60 days': 'errors.tripTooLong',
+  'Trip not found': 'errors.tripNotFound',
+  'Invalid activity data': 'errors.invalidActivityData',
   'The activity date must be within the trip dates':
-    'Aktivitetsdatoen må være innenfor reisedatoene.',
-  'Activity not found': 'Fant ikke aktiviteten.',
-  'Route not found': 'Fant ikke siden.',
-  'Internal server error': 'Noe gikk galt på serveren.',
+    'errors.activityOutsideTrip',
+  'Activity not found': 'errors.activityNotFound',
+  'Route not found': 'errors.routeNotFound',
+  'Internal server error': 'errors.internalServer',
 }
 
 export function getErrorMessage(reason: unknown) {
   if (!(reason instanceof Error)) {
-    return 'Noe gikk galt'
+    return i18n.t('errors.generic')
   }
 
-  return errorTranslations[reason.message] ?? 'Noe gikk galt'
+  const translationKey = errorTranslations[reason.message]
+
+  if (!translationKey) {
+    return i18n.t('errors.generic')
+  }
+
+  if (translationKey === 'errors.tripTooLong') {
+    return i18n.t(translationKey, { maxDays: MAX_TRIP_DAYS })
+  }
+
+  return i18n.t(translationKey)
 }

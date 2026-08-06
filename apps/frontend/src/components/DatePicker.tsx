@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { getDateLocale, getWeekdayLabels } from '../i18n'
 
 type DatePickerProps = {
   label: string
@@ -7,19 +9,6 @@ type DatePickerProps = {
   minDate?: string
   maxDate?: string
 }
-
-const monthFormatter = new Intl.DateTimeFormat('nb-NO', {
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
-
-const dateFormatter = new Intl.DateTimeFormat('nb-NO', {
-  dateStyle: 'long',
-  timeZone: 'UTC',
-})
-
-const weekdayLabels = ['man', 'tir', 'ons', 'tor', 'fre', 'lør', 'søn']
 
 function parseDate(value: string) {
   if (!value) {
@@ -62,10 +51,23 @@ export function DatePicker({
   minDate,
   maxDate,
 }: DatePickerProps) {
+  const { i18n, t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [viewDate, setViewDate] = useState(() => parseDate(value) ?? getToday())
   const calendarDays = useMemo(() => getCalendarDays(viewDate), [viewDate])
+  const locale = getDateLocale(i18n.language)
+  const monthFormatter = new Intl.DateTimeFormat(locale, {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+  const dateFormatter = new Intl.DateTimeFormat(locale, {
+    dateStyle: 'long',
+    timeZone: 'UTC',
+  })
+  const language = i18n.language === 'en' ? 'en' : 'nb'
+  const weekdayLabels = getWeekdayLabels(language)
 
   useEffect(() => {
     if (!isOpen) {
@@ -136,13 +138,13 @@ export function DatePicker({
         <button
           aria-expanded={isOpen}
           aria-haspopup="dialog"
-          aria-label={value ? `${label}: ${dateFormatter.format(parseDate(value)!)}` : label}
+          aria-label={value ? `${label}: ${dateFormatter.format(parseDate(value)!)}` : t('datePicker.chooseDate')}
           className="flex min-h-12 w-full items-center justify-between rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 text-left text-[#27302f] outline-none transition hover:border-[#274b48] focus:border-[#274b48] focus:ring-2 focus:ring-[#b9d1be]"
           onClick={isOpen ? () => setIsOpen(false) : openPicker}
           type="button"
         >
           <span className={value ? 'text-[#27302f]' : 'text-[#8b918b]'}>
-            {value ? dateFormatter.format(parseDate(value)!) : 'Velg dato'}
+            {value ? dateFormatter.format(parseDate(value)!) : t('datePicker.chooseDate')}
           </span>
           <span aria-hidden="true" className="text-lg text-[#274b48]">▾</span>
         </button>
@@ -150,13 +152,13 @@ export function DatePicker({
 
       {isOpen && (
         <div
-          aria-label={`Velg ${label.toLowerCase()}`}
+          aria-label={t('datePicker.select', { label: label.toLowerCase() })}
           className="absolute left-0 right-0 z-20 mt-2 rounded-2xl border border-[#d9d4ca] bg-[#faf8f3] p-4 shadow-[0_16px_40px_rgba(39,75,72,0.16)]"
           role="dialog"
         >
           <div className="flex items-center justify-between gap-3">
             <button
-              aria-label="Forrige måned"
+              aria-label={t('common.previousMonth')}
               className="grid size-11 place-items-center rounded-xl text-2xl text-[#274b48] hover:bg-[#e6eee3]"
               onClick={() => moveMonth(-1)}
               type="button"
@@ -167,7 +169,7 @@ export function DatePicker({
               {monthFormatter.format(viewDate)}
             </p>
             <button
-              aria-label="Neste måned"
+              aria-label={t('common.nextMonth')}
               className="grid size-11 place-items-center rounded-xl text-2xl text-[#274b48] hover:bg-[#e6eee3]"
               onClick={() => moveMonth(1)}
               type="button"

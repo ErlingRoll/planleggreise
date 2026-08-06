@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   createActivity,
   deleteActivity,
@@ -33,16 +34,6 @@ function sortActivities(activities: Activity[]) {
   })
 }
 
-function formatActivityTime(activity: Activity) {
-  if (activity.allDay) {
-    return 'Hele dagen'
-  }
-  if (activity.startTime && activity.endTime) {
-    return `${activity.startTime}–${activity.endTime}`
-  }
-  return activity.startTime ?? activity.endTime ?? 'Tidspunkt ikke satt'
-}
-
 export function TripDetails({
   accessToken,
   trip,
@@ -51,6 +42,7 @@ export function TripDetails({
   onTripUpdated,
   onTripDeleted,
 }: TripDetailsProps) {
+  const { t } = useTranslation()
   const [openDay, setOpenDay] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   const [title, setTitle] = useState('')
@@ -72,12 +64,22 @@ export function TripDetails({
   if (!trip) {
     return (
       <p className="mt-6 rounded-2xl border border-dashed border-[#c9c1b5] p-6 text-sm text-[#69726c]">
-        Velg en reise for å se dagene.
+        {t('tripDetails.selectTrip')}
       </p>
     )
   }
 
   const currentTrip = trip
+
+  function formatActivityTime(activity: Activity) {
+    if (activity.allDay) {
+      return t('tripDetails.allDay')
+    }
+    if (activity.startTime && activity.endTime) {
+      return `${activity.startTime}–${activity.endTime}`
+    }
+    return activity.startTime ?? activity.endTime ?? t('tripDetails.timeNotSet')
+  }
 
   function resetActivityForm() {
     setTitle('')
@@ -158,12 +160,12 @@ export function TripDetails({
             <p className="text-sm text-[#b9d1be]">{formatDateRange(trip)}</p>
             <h3 className="mt-2 text-2xl font-medium">{trip.name}</h3>
             <p className="mt-2 text-sm text-[#b9d1be]">
-              {trip.days.length} {trip.days.length === 1 ? 'dag' : 'dager'} å fylle
+              {t('tripDetails.daysToFill', { count: trip.days.length })}
             </p>
           </div>
           <button
             aria-expanded={showSettings}
-            aria-label="Åpne reiseinnstillinger"
+            aria-label={t('tripDetails.settings')}
             className="grid size-10 shrink-0 place-items-center rounded-xl text-xl text-[#f9f5ed] hover:bg-[#35605c]"
             onClick={() => setShowSettings((current) => !current)}
             type="button"
@@ -200,10 +202,8 @@ export function TripDetails({
                 <p className="font-semibold text-[#274b48]">{formatDate(day.date)}</p>
                 <p className="mt-1 text-sm text-[#69726c]">
                   {day.activities.length === 0
-                    ? 'Ingen planer ennå'
-                    : `${day.activities.length} ${
-                        day.activities.length === 1 ? 'aktivitet' : 'aktiviteter'
-                      }`}
+                    ? t('tripDetails.noPlans')
+                    : t('tripDetails.activitiesCount', { count: day.activities.length })}
                 </p>
               </div>
               <button
@@ -211,7 +211,7 @@ export function TripDetails({
                 onClick={() => toggleActivityForm(day.date)}
                 type="button"
               >
-                {openDay === day.date ? 'Lukk' : '+ Legg til'}
+                {openDay === day.date ? t('common.close') : t('tripDetails.add')}
               </button>
             </div>
 
@@ -229,7 +229,7 @@ export function TripDetails({
                       onClick={() => void handleDeleteActivity(activity)}
                       type="button"
                     >
-                      {deletingActivityId === activity.id ? '...' : 'Slett'}
+                      {deletingActivityId === activity.id ? '...' : t('common.delete')}
                     </button>
                   </div>
                 ))}
@@ -242,11 +242,11 @@ export function TripDetails({
                 onSubmit={(event) => void handleCreateActivity(event, day.date)}
               >
                 <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
-                  Hva skal dere gjøre?
+                  {t('tripDetails.whatToDo')}
                   <input
                     className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
                     onChange={(event) => setTitle(event.target.value)}
-                    placeholder="For eksempel Besøke Colosseum"
+                    placeholder={t('tripDetails.activityPlaceholder')}
                     required
                     value={title}
                   />
@@ -258,12 +258,12 @@ export function TripDetails({
                     onChange={(event) => setAllDay(event.target.checked)}
                     type="checkbox"
                   />
-                  Hele dagen
+                  {t('tripDetails.allDay')}
                 </label>
                 {!allDay && (
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
-                      Fra
+                      {t('common.from')}
                       <input
                         className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
                         onChange={(event) => setStartTime(event.target.value)}
@@ -272,7 +272,7 @@ export function TripDetails({
                       />
                     </label>
                     <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
-                      Til
+                      {t('common.to')}
                       <input
                         className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
                         onChange={(event) => setEndTime(event.target.value)}
@@ -287,7 +287,7 @@ export function TripDetails({
                   disabled={isSaving}
                   type="submit"
                 >
-                  {isSaving ? 'Lagrer ...' : 'Lagre aktivitet'}
+                  {isSaving ? t('tripDetails.savingActivity') : t('tripDetails.saveActivity')}
                 </button>
               </form>
             )}

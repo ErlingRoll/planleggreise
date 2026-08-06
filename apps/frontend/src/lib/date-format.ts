@@ -1,11 +1,10 @@
 import type { Trip } from '@planleggreise/models'
-
-const dateFormatter = new Intl.DateTimeFormat('nb-NO', {
-  dateStyle: 'medium',
-})
+import i18n, { getDateLocale } from '../i18n'
 
 export function formatDate(date: string) {
-  return dateFormatter.format(new Date(`${date}T12:00:00`))
+  return new Intl.DateTimeFormat(getDateLocale(i18n.language), {
+    dateStyle: 'medium',
+  }).format(new Date(`${date}T12:00:00`))
 }
 
 export function formatDateRange(trip: Pick<Trip, 'startDate' | 'endDate'>) {

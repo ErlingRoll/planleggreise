@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   deleteTrip,
   getTrip,
@@ -12,15 +14,18 @@ import { formatDateRange } from '../../lib/date-format'
 import { getSupabaseClient } from '../../lib/supabase'
 import { TripDetails } from './TripDetails'
 import { TripForm } from './TripForm'
+import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 
 type TripDashboardProps = {
   session: Session
 }
 
 export function TripDashboard({ session }: TripDashboardProps) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const { tripId } = useParams<{ tripId: string }>()
   const [trips, setTrips] = useState<Trip[]>([])
   const [selectedTrip, setSelectedTrip] = useState<TripDetail | null>(null)
-  const [selectedTripId, setSelectedTripId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isDetailsLoading, setIsDetailsLoading] = useState(false)
@@ -37,7 +42,6 @@ export function TripDashboard({ session }: TripDashboardProps) {
           return
         }
         setTrips(loadedTrips)
-        setSelectedTripId(loadedTrips[0]?.id ?? null)
       })
       .catch((reason: unknown) => {
         if (isMounted) {
@@ -56,8 +60,9 @@ export function TripDashboard({ session }: TripDashboardProps) {
   }, [session.access_token])
 
   useEffect(() => {
-    if (!selectedTripId) {
+    if (!tripId) {
       setSelectedTrip(null)
+      setDetailsError(null)
       return
     }
 
@@ -65,7 +70,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
     setIsDetailsLoading(true)
     setDetailsError(null)
 
-    getTrip(session.access_token, selectedTripId)
+    getTrip(session.access_token, tripId)
       .then((trip) => {
         if (isMounted) {
           setSelectedTrip(trip)
@@ -85,7 +90,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
     return () => {
       isMounted = false
     }
-  }, [selectedTripId, session.access_token])
+  }, [tripId, session.access_token])
 
   const filteredTrips = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -98,7 +103,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
 
   function handleCreated(trip: Trip) {
     setTrips((currentTrips) => [trip, ...currentTrips])
-    setSelectedTripId(trip.id)
+    navigate(`/trips/${trip.id}`)
     setIsCreating(false)
   }
 
@@ -118,6 +123,17 @@ export function TripDashboard({ session }: TripDashboardProps) {
     )
   }
 
+  function goBackToOverview() {
+    const historyIndex = window.history.state?.idx
+
+    if (typeof historyIndex === 'number' && historyIndex > 0) {
+      navigate(-1)
+      return
+    }
+
+    navigate('/', { replace: true })
+  }
+
   async function handleDeleteTrip(trip: TripDetail) {
     setError(null)
 
@@ -128,9 +144,9 @@ export function TripDashboard({ session }: TripDashboardProps) {
       )
       setTrips(remainingTrips)
 
-      if (selectedTripId === trip.id) {
+      if (tripId === trip.id) {
         setSelectedTrip(null)
-        setSelectedTripId(remainingTrips[0]?.id ?? null)
+        navigate('/', { replace: true })
       }
     } catch (reason: unknown) {
       setError(getErrorMessage(reason))
@@ -140,68 +156,89 @@ export function TripDashboard({ session }: TripDashboardProps) {
   return (
     <main className="min-h-screen bg-[#f5f1ea] text-[#27302f]">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
-        <a className="flex items-center gap-3 font-semibold tracking-tight text-[#274b48]" href="/">
+        <Link className="flex items-center gap-3 font-semibold tracking-tight text-[#274b48]" to="/">
           <span className="grid size-9 place-items-center rounded-xl bg-[#274b48] text-lg text-[#f9f5ed]">✦</span>
           <span>planleggreise</span>
-        </a>
+        </Link>
         <div className="flex items-center gap-3">
-          <span className="hidden max-w-48 truncate text-sm text-[#69726c] sm:block">
-            {session.user.email}
-          </span>
+          <LanguageSwitcher />
+          <span className="hidden max-w-48 truncate text-sm text-[#69726c] sm:block">{session.user.email}</span>
           <button
             className="rounded-full border border-[#d9d4ca] bg-[#faf8f3] px-4 py-2 text-sm font-semibold transition hover:border-[#274b48]"
             onClick={() => void signOut()}
             type="button"
           >
-            Logg ut
+            {t('dashboard.logOut')}
           </button>
         </div>
       </nav>
 
-      <section className="mx-auto max-w-6xl px-5 pb-12 pt-10 sm:px-8 sm:pt-16">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#d06f4c]">Mine reiser</p>
-        <div className="mt-3 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <h1 className="text-4xl font-medium tracking-[-0.05em] text-[#274b48] sm:text-5xl">
-              Hva skal vi planlegge?
-            </h1>
-            <p className="mt-4 max-w-lg leading-7 text-[#69726c]">
-              Start med datoene. Fyll resten inn når du vet mer.
-            </p>
-          </div>
+      {tripId ? (
+        <section className="mx-auto max-w-2xl px-5 pb-12 pt-6 sm:px-8 sm:pt-10">
           <button
-            className="rounded-xl bg-[#274b48] px-5 py-3 font-semibold text-[#f9f5ed] transition hover:bg-[#1c3b38]"
-            onClick={() => setIsCreating((current) => !current)}
+            className="inline-flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-[#69726c] transition hover:bg-[#e6eee3] hover:text-[#274b48]"
+            onClick={goBackToOverview}
             type="button"
           >
-            {isCreating ? 'Lukk' : '+ Ny reise'}
+            <span aria-hidden="true">←</span>
+            {t('dashboard.backToTrips')}
           </button>
-        </div>
-
-        {isCreating && (
-          <TripForm
+          <h1 className="mt-5 text-3xl font-medium tracking-[-0.04em] text-[#274b48]">
+            {t('dashboard.plan')}
+          </h1>
+          <TripDetails
             accessToken={session.access_token}
-            onCancel={() => setIsCreating(false)}
-            onCreated={handleCreated}
+            error={detailsError}
+            isLoading={isDetailsLoading}
+            onTripDeleted={handleDeleteTrip}
+            onTripUpdated={handleTripUpdated}
+            trip={selectedTrip}
           />
-        )}
-
-        {error && (
-          <div className="mt-8 rounded-2xl border border-[#e7b5a3] bg-[#fff6f1] p-5 text-sm text-[#9b4e36]">
-            {error}
+        </section>
+      ) : (
+        <section className="mx-auto max-w-2xl px-5 pb-12 pt-10 sm:px-8 sm:pt-16">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#d06f4c]">{t('dashboard.myTrips')}</p>
+          <div className="mt-3 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+            <div>
+              <h1 className="text-4xl font-medium tracking-[-0.05em] text-[#274b48] sm:text-5xl">
+                {t('dashboard.heading')}
+              </h1>
+              <p className="mt-4 max-w-lg leading-7 text-[#69726c]">
+                {t('dashboard.intro')}
+              </p>
+            </div>
+            <button
+              className="rounded-xl bg-[#274b48] px-5 py-3 font-semibold text-[#f9f5ed] transition hover:bg-[#1c3b38]"
+              onClick={() => setIsCreating((current) => !current)}
+              type="button"
+            >
+              {isCreating ? t('dashboard.closeNewTrip') : t('dashboard.newTrip')}
+            </button>
           </div>
-        )}
 
-        <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <section>
+          {isCreating && (
+            <TripForm
+              accessToken={session.access_token}
+              onCancel={() => setIsCreating(false)}
+              onCreated={handleCreated}
+            />
+          )}
+
+          {error && (
+            <div className="mt-8 rounded-2xl border border-[#e7b5a3] bg-[#fff6f1] p-5 text-sm text-[#9b4e36]">
+              {error}
+            </div>
+          )}
+
+          <section className="mt-10">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-xl font-semibold text-[#274b48]">Reiseoversikt</h2>
-              <label className="sr-only" htmlFor="trip-search">Søk i reiser</label>
+              <h2 className="text-xl font-semibold text-[#274b48]">{t('dashboard.tripOverview')}</h2>
+              <label className="sr-only" htmlFor="trip-search">{t('dashboard.searchTrips')}</label>
               <input
                 className="w-40 rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2 text-sm outline-none focus:border-[#274b48]"
                 id="trip-search"
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Søk"
+                placeholder={t('dashboard.search')}
                 value={search}
               />
             </div>
@@ -214,45 +251,25 @@ export function TripDashboard({ session }: TripDashboardProps) {
             ) : filteredTrips.length > 0 ? (
               <div className="mt-5 grid gap-3">
                 {filteredTrips.map((trip) => (
-                  <div
-                    className={`flex items-center gap-3 rounded-2xl border p-4 transition ${
-                      selectedTripId === trip.id
-                        ? 'border-[#274b48] bg-[#f0f5ed]'
-                        : 'border-[#e1dbd0] bg-[#faf8f3]'
-                    }`}
+                  <button
+                    className="w-full rounded-2xl border border-[#e1dbd0] bg-[#faf8f3] p-4 text-left transition hover:border-[#274b48] hover:bg-[#f0f5ed]"
                     key={trip.id}
+                    onClick={() => navigate(`/trips/${trip.id}`)}
+                    type="button"
                   >
-                    <button
-                      className="min-w-0 flex-1 text-left"
-                      onClick={() => setSelectedTripId(trip.id)}
-                      type="button"
-                    >
-                      <p className="font-semibold text-[#274b48]">{trip.name}</p>
-                      <p className="mt-2 text-sm text-[#69726c]">{formatDateRange(trip)}</p>
-                    </button>
-                  </div>
+                    <p className="font-semibold text-[#274b48]">{trip.name}</p>
+                    <p className="mt-2 text-sm text-[#69726c]">{formatDateRange(trip)}</p>
+                  </button>
                 ))}
               </div>
             ) : (
               <p className="mt-5 rounded-2xl border border-dashed border-[#c9c1b5] p-6 text-sm text-[#69726c]">
-                Du har ingen reiser ennå.
+                {t('dashboard.noTrips')}
               </p>
             )}
           </section>
-
-          <section>
-            <h2 className="text-xl font-semibold text-[#274b48]">Planen din</h2>
-            <TripDetails
-              accessToken={session.access_token}
-              error={detailsError}
-              isLoading={isDetailsLoading}
-              onTripDeleted={handleDeleteTrip}
-              onTripUpdated={handleTripUpdated}
-              trip={selectedTrip}
-            />
-          </section>
-        </div>
-      </section>
+        </section>
+      )}
     </main>
   )
 }

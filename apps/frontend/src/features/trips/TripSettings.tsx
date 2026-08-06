@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { updateTrip, type TripDetail } from '../../api'
 import { DatePicker } from '../../components/DatePicker'
 import { getErrorMessage } from '../../lib/errors'
@@ -19,6 +20,7 @@ export function TripSettings({
   onClose,
   onDelete,
 }: TripSettingsProps) {
+  const { t } = useTranslation()
   const [name, setName] = useState(trip.name)
   const [startDate, setStartDate] = useState(trip.startDate)
   const [endDate, setEndDate] = useState(trip.endDate)
@@ -37,12 +39,12 @@ export function TripSettings({
     event.preventDefault()
 
     if (!startDate || !endDate) {
-      setError('Velg både startdato og sluttdato.')
+      setError(t('tripSettings.datesRequired'))
       return
     }
 
     if (endDate < startDate) {
-      setError('Sluttdatoen må være på eller etter startdatoen.')
+      setError(t('errors.tripDatesInvalid'))
       return
     }
 
@@ -73,7 +75,7 @@ export function TripSettings({
 
   async function handleDelete() {
     const confirmed = window.confirm(
-      `Er du sikker på at du vil slette «${trip.name}»?\n\nReisen skjules, men dataene beholdes og kan gjenopprettes av administrator.`,
+      t('tripSettings.deleteConfirmation', { name: trip.name }),
     )
 
     if (!confirmed) {
@@ -89,13 +91,13 @@ export function TripSettings({
     <section className="mt-4 rounded-2xl border border-[#d9d4ca] bg-[#faf8f3] p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h4 className="font-semibold text-[#274b48]">Reiseinnstillinger</h4>
+          <h4 className="font-semibold text-[#274b48]">{t('tripSettings.title')}</h4>
           <p className="mt-1 text-sm text-[#69726c]">
-            Endre grunnleggende informasjon om reisen.
+            {t('tripSettings.description')}
           </p>
         </div>
         <button
-          aria-label="Lukk reiseinnstillinger"
+          aria-label={t('tripSettings.close')}
           className="grid size-9 place-items-center rounded-lg text-xl text-[#69726c] hover:bg-[#e6eee3]"
           onClick={onClose}
           type="button"
@@ -106,7 +108,7 @@ export function TripSettings({
 
       <form className="mt-5 grid gap-4" onSubmit={(event) => void handleSubmit(event)}>
         <label className="grid gap-2 text-sm font-medium text-[#69726c]">
-          Navn på reisen
+          {t('tripSettings.name')}
           <input
             className="rounded-xl border border-[#d9d4ca] bg-white px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
             onChange={(event) => setName(event.target.value)}
@@ -116,7 +118,7 @@ export function TripSettings({
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <DatePicker
-            label="Fra"
+            label={t('tripSettings.startDate')}
             onChange={(date) => {
               setStartDate(date)
               const maximumEndDate = shiftDate(date, 59)
@@ -130,7 +132,7 @@ export function TripSettings({
             value={startDate}
           />
           <DatePicker
-            label="Til"
+            label={t('tripSettings.endDate')}
             maxDate={shiftDate(startDate, 59)}
             minDate={startDate}
             onChange={setEndDate}
@@ -147,7 +149,7 @@ export function TripSettings({
             onClick={() => void handleDelete()}
             type="button"
           >
-            {isDeleting ? 'Sletter ...' : 'Slett reisen'}
+            {isDeleting ? t('tripSettings.deleting') : t('tripSettings.delete')}
           </button>
           <div className="flex flex-col-reverse gap-3 sm:flex-row">
             <button
@@ -155,14 +157,14 @@ export function TripSettings({
               onClick={onClose}
               type="button"
             >
-              Avbryt
+              {t('tripSettings.cancel')}
             </button>
             <button
               className="rounded-xl bg-[#274b48] px-4 py-2.5 text-sm font-semibold text-[#f9f5ed] hover:bg-[#1c3b38] disabled:opacity-60"
               disabled={isSaving || isDeleting}
               type="submit"
             >
-              {isSaving ? 'Lagrer ...' : 'Lagre endringer'}
+              {isSaving ? t('tripSettings.saving') : t('tripSettings.save')}
             </button>
           </div>
         </div>
