@@ -18,3 +18,15 @@ a,
 input {
   font: inherit;
 }
+
+button:not(:disabled),
+a[href],
+[role='button'],
+input[type='checkbox'],
+input[type='date'] {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}

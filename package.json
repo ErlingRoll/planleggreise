@@ -17,6 +17,8 @@
     "build:backend": "npm run build --workspace @planleggreise/backend",
     "build:frontend": "npm run build --workspace @planleggreise/frontend",
     "lint": "npm run lint --workspace @planleggreise/frontend",
+    "test": "npm run build:models && npm run test:backend",
+    "test:backend": "npm run test --workspace @planleggreise/backend",
     "start": "npm run start --workspace @planleggreise/backend"
   },
   "devDependencies": {

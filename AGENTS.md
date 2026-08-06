@@ -7,8 +7,7 @@ workspace monorepo. The frontend and backend currently live in the same
 repository, but the backend is intentionally structured as a separate
 application so it can be deployed independently later.
 
-**Planleggreise** is the tentative final product name. The current prototype
-still uses **roamly** in parts of the UI; use planleggreise for new product
+**Planleggreise** is the tentative final product name. Use planleggreise for new product
 copy unless a branding task explicitly addresses the existing prototype.
 
 ## Product decisions
@@ -93,14 +92,29 @@ or progress tracking until the relevant product behavior is requested.
 │   ├── backend/
 │   │   ├── src/
 │   │   │   ├── app.ts       # Express app and API routes
-│   │   │   └── index.ts     # Environment loading and HTTP server startup
+│   │   │   ├── app.test.ts  # Backend route tests
+│   │   │   ├── auth.ts      # Supabase bearer-token authentication
+│   │   │   ├── index.ts     # Environment loading and HTTP server startup
+│   │   │   ├── supabase.ts  # Authenticated Supabase client factory
+│   │   │   └── trip-repository.ts
 │   │   ├── .env.example
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   └── frontend/
 │       ├── src/
+│       │   ├── features/
+│       │   │   ├── auth/
+│       │   │   │   └── LoginScreen.tsx
+│       │   │   └── trips/
+│       │   │       ├── TripDashboard.tsx
+│       │   │       ├── TripDetails.tsx
+│       │   │       └── TripForm.tsx
+│       │   ├── lib/
+│       │   │   ├── date-format.ts
+│       │   │   ├── errors.ts
+│       │   │   └── supabase.ts
 │       │   ├── api.ts       # Typed frontend API client
-│       │   ├── App.tsx      # Current travel dashboard
+│       │   ├── App.tsx      # Auth initialization and top-level routing
 │       │   ├── index.css    # Tailwind imports and global styles
 │       │   └── main.tsx
 │       ├── .env.example
@@ -114,6 +128,8 @@ or progress tracking until the relevant product behavior is requested.
 │       │   └── trip.ts      # TripSchema and inferred Trip type
 │       ├── package.json
 │       └── tsconfig.json
+├── supabase/
+│   └── migrations/              # Database schema and RLS policies
 ├── package.json             # Root workspace scripts
 ├── package-lock.json
 └── README.md
@@ -124,7 +140,7 @@ or progress tracking until the relevant product behavior is requested.
 ### `apps/frontend`
 
 - Vite, React, TypeScript, and Tailwind CSS.
-- Runs on `http://localhost:5173`.
+- Runs on `http://localhost:3000`.
 - Calls the backend through `/api`.
 - Vite proxies `/api` to `http://localhost:3001` during development.
 - Frontend API responses must use schemas from `@planleggreise/models`.
@@ -135,7 +151,9 @@ or progress tracking until the relevant product behavior is requested.
 - Express and TypeScript.
 - Runs on `http://localhost:3001`.
 - Exposes the HTTP API under `/api`.
-- The current `/api/trips` data is in memory and is only starter data.
+- `/api/trips` and `/api/trips/:tripId` require a Supabase bearer token.
+- The first slice supports authenticated trip listing, creation, and generated
+  days.
 - Keep HTTP concerns, authentication, persistence, and backend services here.
 - Database/ORM-specific models and mappings belong here, not in the shared
   package.
@@ -152,7 +170,6 @@ or progress tracking until the relevant product behavior is requested.
 
   export type Example = z.infer<typeof ExampleSchema>
   ```
-
 - Export public models from `src/index.ts`.
 - Both frontend and backend may import this package.
 - Do not put secrets, database clients, Express types, React types, or ORM
@@ -169,6 +186,7 @@ npm install
 npm run dev
 npm run build
 npm run lint
+npm test
 npm run start
 ```
 
@@ -193,6 +211,8 @@ npm run dev --workspace @planleggreise/frontend
   deployed separately.
 - Use `apps/frontend/.env.local` for the Supabase values documented in
   `apps/frontend/.env.example`.
+- Apply the SQL migration in `supabase/migrations` to the configured Supabase
+  project before using persistent trip data.
 - Never commit `.env` files, credentials, API keys, or other secrets.
 
 ## Implementation conventions
@@ -200,6 +220,8 @@ npm run dev --workspace @planleggreise/frontend
 - Use TypeScript and preserve strict type checking.
 - Prefer existing workspace scripts and dependencies over adding new tooling.
 - Validate external input and API responses with Zod schemas.
+- Keep authenticated Supabase requests scoped to the current user's bearer
+  token so database row-level security remains active.
 - Keep API routes thin; move business logic into backend service modules as the
   backend grows.
 - Keep frontend API access in API client modules rather than calling `fetch`
@@ -217,11 +239,12 @@ After code changes, run at least:
 ```bash
 npm run build
 npm run lint
+npm test
 ```
 
 For API changes, also verify the relevant endpoint locally. The current health
-endpoint is `GET /api/health`, and the starter trips endpoint is
-`GET /api/trips`.
+endpoint is `GET /api/health`, and the authenticated trip endpoints are
+`GET /api/trips`, `GET /api/trips/:tripId`, and `POST /api/trips`.
 
 ## Decisions to make before adding persistence
 
@@ -246,6 +269,6 @@ The following remain to be specified before implementing Supabase persistence:
 9. **API contract:** decide whether request/response schemas should be split
    from domain models and how breaking API changes are versioned.
 10. **Backend test stack:** choose the backend test runner and add route,
-   validation, authentication, and persistence tests as those features land.
+    validation, authentication, and persistence tests as those features land.
 11. **Quality automation:** add backend/models linting and CI checks once the
-   codebase grows beyond the initial prototype.
+    codebase grows beyond the initial prototype.
