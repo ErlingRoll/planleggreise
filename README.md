@@ -32,11 +32,16 @@ copy apps\backend\.env.example apps\backend\.env
 
 Fill in the Supabase values, then open `http://localhost:3000`. The first
 vertical slice supports Google login, private trip creation, authenticated
-trip listing, and generated days for each inclusive trip date.
+trip listing, trip settings, recoverable trip archiving, activities, and
+generated days for each inclusive trip date. Trips may contain at most 60
+inclusive calendar days.
 
-Apply `supabase/migrations/20260806230000_initial_schema.sql` to the Supabase
-project before using trip persistence. Configure Google as an OAuth provider
-and add `http://localhost:3000` as a redirect URL in Supabase Authentication.
+Apply all migrations in `supabase/migrations` to the Supabase project before
+using trip persistence. Deleting a trip archives it by setting `deleted_at`;
+the row and its related data remain in the database for a future admin restore
+workflow. Archived trips are hidden from the normal user API.
+Configure Google as an OAuth provider and add `http://localhost:3000` as a
+redirect URL in Supabase Authentication.
 
 Shared models belong in `packages/models/src`. Define each model's Zod schema there and derive its TypeScript type from the schema. The backend and frontend both import the package, while database/ORM-specific mappings remain backend-owned.
 

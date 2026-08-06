@@ -39,10 +39,11 @@ The first version is intentionally a simple trip planner:
 2. A user can create a trip.
 3. A trip has an inclusive `startDate` and `endDate`.
 4. The app generates one day for every calendar date between those dates.
-5. Each day can have zero or more housing, activity, and meal entries.
-6. A trip can optionally be shared through registered-user invitations or an
+5. A trip can be at most 60 inclusive calendar days long.
+6. Each day can have zero or more housing, activity, and meal entries.
+7. A trip can optionally be shared through registered-user invitations or an
    access link.
-7. Everyone with access can edit the trip. Access links still require login.
+8. Everyone with access can edit the trip. Access links still require login.
 
 The app has two modes:
 
@@ -102,13 +103,16 @@ or progress tracking until the relevant product behavior is requested.
 │   │   └── tsconfig.json
 │   └── frontend/
 │       ├── src/
+│       │   ├── components/
+│       │   │   └── DatePicker.tsx
 │       │   ├── features/
 │       │   │   ├── auth/
 │       │   │   │   └── LoginScreen.tsx
 │       │   │   └── trips/
 │       │   │       ├── TripDashboard.tsx
 │       │   │       ├── TripDetails.tsx
-│       │   │       └── TripForm.tsx
+│       │   │       ├── TripForm.tsx
+│       │   │       └── TripSettings.tsx
 │       │   ├── lib/
 │       │   │   ├── date-format.ts
 │       │   │   ├── errors.ts
@@ -125,7 +129,7 @@ or progress tracking until the relevant product behavior is requested.
 │   └── models/
 │       ├── src/
 │       │   ├── index.ts     # Public model exports
-│       │   └── trip.ts      # TripSchema and inferred Trip type
+│       │   └── trip.ts      # Trip and activity schemas/types
 │       ├── package.json
 │       └── tsconfig.json
 ├── supabase/
@@ -152,8 +156,10 @@ or progress tracking until the relevant product behavior is requested.
 - Runs on `http://localhost:3001`.
 - Exposes the HTTP API under `/api`.
 - `/api/trips` and `/api/trips/:tripId` require a Supabase bearer token.
-- The first slice supports authenticated trip listing, creation, and generated
-  days.
+- The first slice supports authenticated trip listing, creation, editing,
+  recoverable archiving, activities, and generated days.
+- Trip deletion is a soft delete. The backend sets `deleted_at` and never
+  removes the row; archived trips are hidden from normal user queries.
 - Keep HTTP concerns, authentication, persistence, and backend services here.
 - Database/ORM-specific models and mappings belong here, not in the shared
   package.
@@ -244,16 +250,19 @@ npm test
 
 For API changes, also verify the relevant endpoint locally. The current health
 endpoint is `GET /api/health`, and the authenticated trip endpoints are
-`GET /api/trips`, `GET /api/trips/:tripId`, and `POST /api/trips`.
+`GET /api/trips`, `GET /api/trips/:tripId`, `POST /api/trips`,
+`PATCH /api/trips/:tripId`, and `DELETE /api/trips/:tripId`.
 
-## Decisions to make before adding persistence
+## Future decisions
 
-The following remain to be specified before implementing Supabase persistence:
+The following remain to be specified:
 
-1. **Supabase schema and migrations:** define table ownership, migration
-   workflow, local development workflow, and seed data.
-2. **Row-level security:** define policies for user-owned trips and verify that
-   client-side access cannot read or modify another user's data.
+1. **Admin restore:** define the admin authentication boundary and UI/API for
+   restoring trips where `deleted_at` is set.
+2. **Supabase schema and migrations:** define local development workflow and
+   seed data.
+3. **Row-level security:** verify the final sharing policies as members and
+   access links are implemented.
 3. **Persistence model boundary:** decide which database fields are exposed by
    the API and map ORM entities to shared API models in the backend.
 4. **Authentication details:** configure Google OAuth redirect URLs, account

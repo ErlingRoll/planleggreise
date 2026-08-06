@@ -1,14 +1,25 @@
 export {
+  ActivitySchema,
+  CreateActivityInputSchema,
   CreateTripInputSchema,
   DateOnlySchema,
+  getTripDurationInDays,
+  isTripDurationWithinLimit,
+  MAX_TRIP_DAYS,
   TimeOnlySchema,
   TripDaySchema,
   TripDetailSchema,
   TripSchema,
+  UpdateTripInputSchema,
+  UpdateActivityInputSchema,
 } from './trip.js'
 export type {
+  Activity,
+  CreateActivityInput,
   CreateTripInput,
   Trip,
   TripDay,
   TripDetail,
+  UpdateTripInput,
+  UpdateActivityInput,
 } from './trip.js'

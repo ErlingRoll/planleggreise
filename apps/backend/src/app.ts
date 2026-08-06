@@ -6,7 +6,12 @@ import express, {
   type Response,
 } from 'express'
 import {
+  ActivitySchema,
+  CreateActivityInputSchema,
   CreateTripInputSchema,
+  UpdateActivityInputSchema,
+  UpdateTripInputSchema,
+  isTripDurationWithinLimit,
   type Trip,
   type TripDetail,
 } from '@planleggreise/models'
@@ -17,6 +22,7 @@ import {
 } from './auth.js'
 import {
   createSupabaseTripRepository,
+  isDateWithinTrip,
   isValidDateRange,
   type TripRepository,
 } from './trip-repository.js'
@@ -145,6 +151,128 @@ export function createApp(dependencies: AppDependencies = {}) {
     },
   )
 
+  app.patch(
+    '/api/trips/:tripId',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+
+        if (typeof tripId !== 'string') {
+          response.status(400).json({ message: 'Trip id is required' })
+          return
+        }
+
+        const parsedInput = UpdateTripInputSchema.safeParse(request.body)
+
+        if (!parsedInput.success) {
+          response.status(400).json({
+            message: 'Invalid trip data',
+            issues: parsedInput.error.issues,
+          })
+          return
+        }
+
+        const currentTrip = await tripRepository.getTrip(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+        )
+
+        if (!currentTrip) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        const nextTrip = {
+          id: currentTrip.id,
+          name: currentTrip.name,
+          startDate: currentTrip.startDate,
+          endDate: currentTrip.endDate,
+          ...parsedInput.data,
+        }
+
+        if (!isValidDateRange(nextTrip.startDate, nextTrip.endDate)) {
+          response.status(400).json({
+            message: 'The trip end date must be on or after the start date',
+          })
+          return
+        }
+
+        if (
+          !isTripDurationWithinLimit(nextTrip.startDate, nextTrip.endDate)
+        ) {
+          response.status(400).json({
+            message: 'Trips cannot be longer than 60 days',
+          })
+          return
+        }
+
+        const activities = currentTrip.days.flatMap((day) => day.activities)
+        const activityOutsideTrip = activities.some(
+          (activity) => !isDateWithinTrip(nextTrip, activity.tripDate),
+        )
+
+        if (activityOutsideTrip) {
+          response.status(400).json({
+            message: 'The new trip dates cannot exclude existing activities',
+          })
+          return
+        }
+
+        const trip = await tripRepository.updateTrip(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          parsedInput.data,
+        )
+
+        if (!trip) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        response.json(trip)
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.delete(
+    '/api/trips/:tripId',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+
+        if (typeof tripId !== 'string') {
+          response.status(400).json({ message: 'Trip id is required' })
+          return
+        }
+
+        const deleted = await tripRepository.deleteTrip(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+        )
+
+        if (!deleted) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        response.status(204).send()
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
   app.post(
     '/api/trips',
     (request, response, next) =>
@@ -177,6 +305,18 @@ export function createApp(dependencies: AppDependencies = {}) {
           return
         }
 
+        if (
+          !isTripDurationWithinLimit(
+            parsedInput.data.startDate,
+            parsedInput.data.endDate,
+          )
+        ) {
+          response.status(400).json({
+            message: 'Trips cannot be longer than 60 days',
+          })
+          return
+        }
+
         const authenticatedRequest = request as AuthenticatedRequest
         const trip = await tripRepository.createTrip(
           authenticatedRequest.user.id,
@@ -184,6 +324,201 @@ export function createApp(dependencies: AppDependencies = {}) {
           parsedInput.data,
         )
         response.status(201).json(trip)
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.post(
+    '/api/trips/:tripId/activities',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+
+        if (typeof tripId !== 'string') {
+          response.status(400).json({ message: 'Trip id is required' })
+          return
+        }
+
+        const parsedInput = CreateActivityInputSchema.safeParse(request.body)
+
+        if (!parsedInput.success) {
+          response.status(400).json({
+            message: 'Invalid activity data',
+            issues: parsedInput.error.issues,
+          })
+          return
+        }
+
+        const trip = await tripRepository.getTrip(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+        )
+
+        if (!trip) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        if (!isDateWithinTrip(trip, parsedInput.data.tripDate)) {
+          response.status(400).json({
+            message: 'The activity date must be within the trip dates',
+          })
+          return
+        }
+
+        const activity = await tripRepository.createActivity(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          parsedInput.data,
+        )
+
+        if (!activity) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        response.status(201).json(ActivitySchema.parse(activity))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.patch(
+    '/api/trips/:tripId/activities/:activityId',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId, activityId } = request.params
+
+        if (typeof tripId !== 'string' || typeof activityId !== 'string') {
+          response.status(400).json({ message: 'Trip and activity ids are required' })
+          return
+        }
+
+        const parsedInput = UpdateActivityInputSchema.safeParse(request.body)
+
+        if (!parsedInput.success) {
+          response.status(400).json({
+            message: 'Invalid activity data',
+            issues: parsedInput.error.issues,
+          })
+          return
+        }
+
+        const [trip, currentActivity] = await Promise.all([
+          tripRepository.getTrip(
+            authenticatedRequest.user.id,
+            authenticatedRequest.accessToken,
+            tripId,
+          ),
+          tripRepository.getActivity(
+            authenticatedRequest.user.id,
+            authenticatedRequest.accessToken,
+            tripId,
+            activityId,
+          ),
+        ])
+
+        if (!trip || !currentActivity) {
+          response.status(404).json({ message: 'Activity not found' })
+          return
+        }
+
+        const nextActivity = {
+          tripDate: currentActivity.tripDate,
+          title: currentActivity.title,
+          startTime: currentActivity.startTime,
+          endTime: currentActivity.endTime,
+          allDay: currentActivity.allDay,
+          notes: currentActivity.notes,
+          ...parsedInput.data,
+        }
+        const parsedNextActivity = CreateActivityInputSchema.safeParse(nextActivity)
+
+        if (!parsedNextActivity.success) {
+          response.status(400).json({
+            message: 'Invalid activity data',
+            issues: parsedNextActivity.error.issues,
+          })
+          return
+        }
+
+        if (!isDateWithinTrip(trip, parsedNextActivity.data.tripDate)) {
+          response.status(400).json({
+            message: 'The activity date must be within the trip dates',
+          })
+          return
+        }
+
+        const activity = await tripRepository.updateActivity(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          activityId,
+          parsedInput.data,
+        )
+
+        if (!activity) {
+          response.status(404).json({ message: 'Activity not found' })
+          return
+        }
+
+        response.json(ActivitySchema.parse(activity))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.delete(
+    '/api/trips/:tripId/activities/:activityId',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId, activityId } = request.params
+
+        if (typeof tripId !== 'string' || typeof activityId !== 'string') {
+          response.status(400).json({ message: 'Trip and activity ids are required' })
+          return
+        }
+
+        const activity = await tripRepository.getActivity(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          activityId,
+        )
+
+        if (!activity) {
+          response.status(404).json({ message: 'Activity not found' })
+          return
+        }
+
+        const deleted = await tripRepository.deleteActivity(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          activityId,
+        )
+
+        if (!deleted) {
+          response.status(404).json({ message: 'Activity not found' })
+          return
+        }
+
+        response.status(204).send()
       } catch (error) {
         next(error)
       }

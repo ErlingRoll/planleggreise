@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import {
+  deleteTrip,
   getTrip,
   getTrips,
   type Trip,
@@ -101,6 +102,41 @@ export function TripDashboard({ session }: TripDashboardProps) {
     setIsCreating(false)
   }
 
+  function handleTripUpdated(updatedTrip: TripDetail) {
+    setSelectedTrip(updatedTrip)
+    setTrips((currentTrips) =>
+      currentTrips.map((trip) =>
+        trip.id === updatedTrip.id
+          ? {
+              id: updatedTrip.id,
+              name: updatedTrip.name,
+              startDate: updatedTrip.startDate,
+              endDate: updatedTrip.endDate,
+            }
+          : trip,
+      ),
+    )
+  }
+
+  async function handleDeleteTrip(trip: TripDetail) {
+    setError(null)
+
+    try {
+      await deleteTrip(session.access_token, trip.id)
+      const remainingTrips = trips.filter(
+        (currentTrip) => currentTrip.id !== trip.id,
+      )
+      setTrips(remainingTrips)
+
+      if (selectedTripId === trip.id) {
+        setSelectedTrip(null)
+        setSelectedTripId(remainingTrips[0]?.id ?? null)
+      }
+    } catch (reason: unknown) {
+      setError(getErrorMessage(reason))
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f5f1ea] text-[#27302f]">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
@@ -178,19 +214,23 @@ export function TripDashboard({ session }: TripDashboardProps) {
             ) : filteredTrips.length > 0 ? (
               <div className="mt-5 grid gap-3">
                 {filteredTrips.map((trip) => (
-                  <button
-                    className={`rounded-2xl border p-4 text-left transition ${
+                  <div
+                    className={`flex items-center gap-3 rounded-2xl border p-4 transition ${
                       selectedTripId === trip.id
                         ? 'border-[#274b48] bg-[#f0f5ed]'
-                        : 'border-[#e1dbd0] bg-[#faf8f3] hover:border-[#b9d1be]'
+                        : 'border-[#e1dbd0] bg-[#faf8f3]'
                     }`}
                     key={trip.id}
-                    onClick={() => setSelectedTripId(trip.id)}
-                    type="button"
                   >
-                    <p className="font-semibold text-[#274b48]">{trip.name}</p>
-                    <p className="mt-2 text-sm text-[#69726c]">{formatDateRange(trip)}</p>
-                  </button>
+                    <button
+                      className="min-w-0 flex-1 text-left"
+                      onClick={() => setSelectedTripId(trip.id)}
+                      type="button"
+                    >
+                      <p className="font-semibold text-[#274b48]">{trip.name}</p>
+                      <p className="mt-2 text-sm text-[#69726c]">{formatDateRange(trip)}</p>
+                    </button>
+                  </div>
                 ))}
               </div>
             ) : (
@@ -203,8 +243,11 @@ export function TripDashboard({ session }: TripDashboardProps) {
           <section>
             <h2 className="text-xl font-semibold text-[#274b48]">Planen din</h2>
             <TripDetails
+              accessToken={session.access_token}
               error={detailsError}
               isLoading={isDetailsLoading}
+              onTripDeleted={handleDeleteTrip}
+              onTripUpdated={handleTripUpdated}
               trip={selectedTrip}
             />
           </section>

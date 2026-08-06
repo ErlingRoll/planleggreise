@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { createTrip, type Trip } from '../../api'
+import { DatePicker } from '../../components/DatePicker'
 import { getErrorMessage } from '../../lib/errors'
+import { getTripDurationMessage, shiftDate } from '../../lib/trip-dates'
 
 type TripFormProps = {
   accessToken: string
@@ -17,6 +19,24 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    if (!startDate || !endDate) {
+      setError('Velg både startdato og sluttdato.')
+      return
+    }
+
+    if (endDate < startDate) {
+      setError('Sluttdatoen må være på eller etter startdatoen.')
+      return
+    }
+
+    const durationError = getTripDurationMessage(startDate, endDate)
+
+    if (durationError) {
+      setError(durationError)
+      return
+    }
+
     setIsSaving(true)
     setError(null)
 
@@ -48,26 +68,27 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
           />
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-2 text-sm font-medium text-[#69726c]">
-            Fra
-            <input
-              className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
-              onChange={(event) => setStartDate(event.target.value)}
-              required
-              type="date"
-              value={startDate}
-            />
-          </label>
-          <label className="grid gap-2 text-sm font-medium text-[#69726c]">
-            Til
-            <input
-              className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
-              onChange={(event) => setEndDate(event.target.value)}
-              required
-              type="date"
-              value={endDate}
-            />
-          </label>
+          <DatePicker
+            label="Fra"
+            onChange={(date) => {
+              setStartDate(date)
+              const maximumEndDate = shiftDate(date, 59)
+              if (!endDate || endDate < date) {
+                setEndDate(date)
+              } else if (endDate > maximumEndDate) {
+                setEndDate(maximumEndDate)
+              }
+            }}
+            maxDate={endDate ? shiftDate(endDate, -59) : undefined}
+            value={startDate}
+          />
+          <DatePicker
+            label="Til"
+            maxDate={startDate ? shiftDate(startDate, 59) : undefined}
+            minDate={startDate}
+            onChange={setEndDate}
+            value={endDate}
+          />
         </div>
       </div>
       {error && <p className="mt-4 text-sm text-[#9b4e36]">{error}</p>}
