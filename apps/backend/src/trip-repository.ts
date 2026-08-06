@@ -34,11 +34,14 @@ const activityRowSchema = z.object({
   end_time: z.string().nullable(),
   all_day: z.boolean(),
   notes: z.string().nullable(),
+  google_maps_url: z.string().nullable(),
+  place_name: z.string().nullable(),
+  place_address: z.string().nullable(),
   sort_order: z.number().int(),
 })
 
 const activityColumns =
-  'id, trip_id, trip_date, title, start_time, end_time, all_day, notes, sort_order'
+  'id, trip_id, trip_date, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order'
 
 export interface TripRepository {
   listTrips(userId: string, accessToken: string): Promise<Trip[]>
@@ -159,6 +162,9 @@ function mapActivityRow(row: unknown): Activity {
     endTime: parsedRow.end_time?.slice(0, 5) ?? null,
     allDay: parsedRow.all_day,
     notes: parsedRow.notes,
+    googleMapsUrl: parsedRow.google_maps_url,
+    placeName: parsedRow.place_name,
+    placeAddress: parsedRow.place_address,
     sortOrder: parsedRow.sort_order,
   })
 }
@@ -380,6 +386,9 @@ export function createSupabaseTripRepository(): TripRepository {
         end_time: parsedInput.endTime,
         all_day: parsedInput.allDay,
         notes: parsedInput.notes,
+        google_maps_url: parsedInput.googleMapsUrl,
+        place_name: parsedInput.placeName,
+        place_address: parsedInput.placeAddress,
       })
 
       if (error) {
@@ -421,6 +430,9 @@ export function createSupabaseTripRepository(): TripRepository {
           end_time: parsedInput.endTime,
           all_day: parsedInput.allDay,
           notes: parsedInput.notes,
+          google_maps_url: parsedInput.googleMapsUrl,
+          place_name: parsedInput.placeName,
+          place_address: parsedInput.placeAddress,
         })
         .eq('trip_id', tripId)
         .eq('id', activityId)

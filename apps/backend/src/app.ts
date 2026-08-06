@@ -14,6 +14,7 @@ import {
   isTripDurationWithinLimit,
   type Trip,
   type TripDetail,
+  type UpdateActivityInput,
 } from '@planleggreise/models'
 import {
   createSupabaseAuthService,
@@ -26,6 +27,11 @@ import {
   isValidDateRange,
   type TripRepository,
 } from './trip-repository.js'
+import {
+  createGooglePlacesResolver,
+  GooglePlacesError,
+  type GooglePlacesResolver,
+} from './google-places.js'
 
 type AuthenticatedRequest = Request & {
   accessToken: string
@@ -35,6 +41,7 @@ type AuthenticatedRequest = Request & {
 export type AppDependencies = {
   authService?: AuthService
   tripRepository?: TripRepository
+  googlePlacesResolver?: GooglePlacesResolver
 }
 
 function getAccessToken(request: Request): string | null {
@@ -82,6 +89,8 @@ export function createApp(dependencies: AppDependencies = {}) {
   const authService = dependencies.authService ?? createSupabaseAuthService()
   const tripRepository =
     dependencies.tripRepository ?? createSupabaseTripRepository()
+  const googlePlacesResolver =
+    dependencies.googlePlacesResolver ?? createGooglePlacesResolver()
   const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:3000')
     .split(',')
     .map((origin) => origin.trim())
@@ -372,11 +381,31 @@ export function createApp(dependencies: AppDependencies = {}) {
           return
         }
 
+        let activityInput = parsedInput.data
+
+        if (activityInput.googleMapsUrl) {
+          try {
+            const place = await googlePlacesResolver(activityInput.googleMapsUrl)
+            activityInput = {
+              ...activityInput,
+              title: place.name,
+              placeName: place.name,
+              placeAddress: place.address,
+            }
+          } catch (error) {
+            if (error instanceof GooglePlacesError) {
+              response.status(error.statusCode).json({ message: error.message })
+              return
+            }
+            throw error
+          }
+        }
+
         const activity = await tripRepository.createActivity(
           authenticatedRequest.user.id,
           authenticatedRequest.accessToken,
           tripId,
-          parsedInput.data,
+          activityInput,
         )
 
         if (!activity) {
@@ -460,12 +489,38 @@ export function createApp(dependencies: AppDependencies = {}) {
           return
         }
 
+        let activityInput: UpdateActivityInput = parsedInput.data
+
+        if (parsedInput.data.googleMapsUrl) {
+          try {
+            const place = await googlePlacesResolver(parsedInput.data.googleMapsUrl)
+            activityInput = {
+              ...activityInput,
+              title: place.name,
+              placeName: place.name,
+              placeAddress: place.address,
+            }
+          } catch (error) {
+            if (error instanceof GooglePlacesError) {
+              response.status(error.statusCode).json({ message: error.message })
+              return
+            }
+            throw error
+          }
+        } else if (parsedInput.data.googleMapsUrl === null) {
+          activityInput = {
+            ...activityInput,
+            placeName: null,
+            placeAddress: null,
+          }
+        }
+
         const activity = await tripRepository.updateActivity(
           authenticatedRequest.user.id,
           authenticatedRequest.accessToken,
           tripId,
           activityId,
-          parsedInput.data,
+          activityInput,
         )
 
         if (!activity) {

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import {
   createActivity,
   deleteActivity,
+  updateActivity,
   type Activity,
   type TripDetail,
 } from '../../api'
@@ -46,9 +47,12 @@ export function TripDetails({
   const [openDay, setOpenDay] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   const [title, setTitle] = useState('')
+  const [googleMapsUrl, setGoogleMapsUrl] = useState('')
+  const [activityMode, setActivityMode] = useState<'manual' | 'googleMaps'>('manual')
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [allDay, setAllDay] = useState(false)
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(null)
   const [activityError, setActivityError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null)
@@ -83,9 +87,12 @@ export function TripDetails({
 
   function resetActivityForm() {
     setTitle('')
+    setGoogleMapsUrl('')
+    setActivityMode('manual')
     setStartTime('')
     setEndTime('')
     setAllDay(false)
+    setEditingActivityId(null)
     setActivityError(null)
   }
 
@@ -94,32 +101,68 @@ export function TripDetails({
       const nextDate = currentDate === date ? null : date
       if (nextDate === null) {
         resetActivityForm()
+      } else {
+        resetActivityForm()
       }
       return nextDate
     })
     setActivityError(null)
   }
 
-  async function handleCreateActivity(event: FormEvent<HTMLFormElement>, date: string) {
+  function editActivity(activity: Activity) {
+    setOpenDay(activity.tripDate)
+    setEditingActivityId(activity.id)
+    setTitle(activity.title)
+    setGoogleMapsUrl(activity.googleMapsUrl ?? '')
+    setActivityMode(activity.googleMapsUrl ? 'googleMaps' : 'manual')
+    setStartTime(activity.startTime ?? '')
+    setEndTime(activity.endTime ?? '')
+    setAllDay(activity.allDay)
+    setActivityError(null)
+  }
+
+  async function handleSaveActivity(event: FormEvent<HTMLFormElement>, date: string) {
     event.preventDefault()
     setIsSaving(true)
     setActivityError(null)
 
     try {
-      const activity = await createActivity(accessToken, currentTrip.id, {
+      const input = {
         tripDate: date,
-        title,
+        title: activityMode === 'googleMaps' ? 'Google Maps place' : title,
         startTime: allDay || !startTime ? null : startTime,
         endTime: allDay || !endTime ? null : endTime,
         allDay,
         notes: null,
-      })
+        googleMapsUrl: activityMode === 'googleMaps' ? googleMapsUrl : null,
+        placeName: null,
+        placeAddress: null,
+      }
+      const activity = editingActivityId
+        ? await updateActivity(
+            accessToken,
+            currentTrip.id,
+            editingActivityId,
+            input,
+          )
+        : await createActivity(accessToken, currentTrip.id, input)
 
       onTripUpdated({
         ...currentTrip,
         days: currentTrip.days.map((day) =>
           day.date === date
-            ? { ...day, activities: sortActivities([...day.activities, activity]) }
+            ? {
+                ...day,
+                activities: sortActivities(
+                  editingActivityId
+                    ? day.activities.map((currentActivity) =>
+                        currentActivity.id === editingActivityId
+                          ? activity
+                          : currentActivity,
+                      )
+                    : [...day.activities, activity],
+                ),
+              }
             : day,
         ),
       })
@@ -220,9 +263,33 @@ export function TripDetails({
                 {sortActivities(day.activities).map((activity) => (
                   <div className="flex items-start gap-3 rounded-xl bg-[#faf8f3] p-3" key={activity.id}>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-[#274b48]">{activity.title}</p>
+                      <p className="font-semibold text-[#274b48]">
+                        {activity.title}
+                      </p>
+                      {activity.placeAddress && (
+                        <p className="mt-1 text-sm text-[#69726c]">
+                          {activity.placeAddress}
+                        </p>
+                      )}
                       <p className="mt-1 text-sm text-[#69726c]">{formatActivityTime(activity)}</p>
+                      {activity.googleMapsUrl && (
+                        <a
+                          className="mt-2 inline-block text-sm font-semibold text-[#274b48] underline"
+                          href={activity.googleMapsUrl}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          {t('tripDetails.openGoogleMaps')}
+                        </a>
+                      )}
                     </div>
+                    <button
+                      className="rounded-lg px-2 py-1 text-xs font-semibold text-[#274b48] hover:bg-[#e6eee3]"
+                      onClick={() => editActivity(activity)}
+                      type="button"
+                    >
+                      {t('common.edit')}
+                    </button>
                     <button
                       className="rounded-lg px-2 py-1 text-xs font-semibold text-[#9b4e36] hover:bg-[#fff0e9] disabled:opacity-50"
                       disabled={deletingActivityId === activity.id}
@@ -239,18 +306,57 @@ export function TripDetails({
             {openDay === day.date && (
               <form
                 className="mt-4 grid gap-3 border-t border-[#ded6ca] pt-4"
-                onSubmit={(event) => void handleCreateActivity(event, day.date)}
+                onSubmit={(event) => void handleSaveActivity(event, day.date)}
               >
-                <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
-                  {t('tripDetails.whatToDo')}
-                  <input
-                    className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
-                    onChange={(event) => setTitle(event.target.value)}
-                    placeholder={t('tripDetails.activityPlaceholder')}
-                    required
-                    value={title}
-                  />
-                </label>
+                <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#e6eee3] p-1">
+                  <button
+                    className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+                      activityMode === 'manual'
+                        ? 'bg-[#faf8f3] text-[#274b48] shadow-sm'
+                        : 'text-[#69726c]'
+                    }`}
+                    onClick={() => setActivityMode('manual')}
+                    type="button"
+                  >
+                    {t('tripDetails.manualActivity')}
+                  </button>
+                  <button
+                    className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+                      activityMode === 'googleMaps'
+                        ? 'bg-[#faf8f3] text-[#274b48] shadow-sm'
+                        : 'text-[#69726c]'
+                    }`}
+                    onClick={() => setActivityMode('googleMaps')}
+                    type="button"
+                  >
+                    {t('tripDetails.googleMapsActivity')}
+                  </button>
+                </div>
+                {activityMode === 'manual' ? (
+                  <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
+                    {t('tripDetails.whatToDo')}
+                    <input
+                      className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
+                      onChange={(event) => setTitle(event.target.value)}
+                      placeholder={t('tripDetails.activityPlaceholder')}
+                      required
+                      value={title}
+                    />
+                  </label>
+                ) : (
+                  <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
+                    {t('tripDetails.googleMapsUrl')}
+                    <input
+                      className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
+                      onChange={(event) => setGoogleMapsUrl(event.target.value)}
+                      placeholder={t('tripDetails.googleMapsPlaceholder')}
+                      required
+                      type="url"
+                      value={googleMapsUrl}
+                    />
+                    <span className="font-normal">{t('tripDetails.googleMapsHelp')}</span>
+                  </label>
+                )}
                 <label className="flex items-center gap-2 text-sm text-[#69726c]">
                   <input
                     checked={allDay}
@@ -287,7 +393,11 @@ export function TripDetails({
                   disabled={isSaving}
                   type="submit"
                 >
-                  {isSaving ? t('tripDetails.savingActivity') : t('tripDetails.saveActivity')}
+                  {isSaving
+                    ? t('tripDetails.savingActivity')
+                    : editingActivityId
+                      ? t('tripDetails.saveActivityChanges')
+                      : t('tripDetails.saveActivity')}
                 </button>
               </form>
             )}

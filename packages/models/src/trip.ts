@@ -71,6 +71,12 @@ const ActivityFieldsSchema = z.object({
   notes: z.string().trim().max(2000).nullable(),
 })
 
+const ActivityPlaceSchema = z.object({
+  googleMapsUrl: z.string().url().nullable(),
+  placeName: z.string().trim().max(200).nullable(),
+  placeAddress: z.string().trim().max(500).nullable(),
+})
+
 function hasValidTimeRange(
   startTime: string | null | undefined,
   endTime: string | null | undefined,
@@ -82,9 +88,13 @@ export const ActivitySchema = ActivityFieldsSchema.extend({
   id: z.string(),
   tripId: z.string(),
   sortOrder: z.number().int(),
-})
+}).merge(ActivityPlaceSchema)
 
-export const CreateActivityInputSchema = ActivityFieldsSchema.refine(
+export const CreateActivityInputSchema = ActivityFieldsSchema.extend({
+  googleMapsUrl: z.string().url().nullable().optional().default(null),
+  placeName: z.string().trim().max(200).nullable().optional().default(null),
+  placeAddress: z.string().trim().max(500).nullable().optional().default(null),
+}).refine(
   (activity) => hasValidTimeRange(activity.startTime, activity.endTime),
   'End time must be on or after start time',
 )
@@ -97,6 +107,9 @@ export const UpdateActivityInputSchema = z
     endTime: TimeOnlySchema.nullable().optional(),
     allDay: z.boolean().optional(),
     notes: z.string().trim().max(2000).nullable().optional(),
+    googleMapsUrl: z.string().url().nullable().optional(),
+    placeName: z.string().trim().max(200).nullable().optional(),
+    placeAddress: z.string().trim().max(500).nullable().optional(),
   })
   .refine(
     (activity) => hasValidTimeRange(activity.startTime, activity.endTime),

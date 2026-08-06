@@ -15,6 +15,10 @@ const errorTranslations: Record<string, string> = {
   'Activity not found': 'errors.activityNotFound',
   'Route not found': 'errors.routeNotFound',
   'Internal server error': 'errors.internalServer',
+  'Google Maps link is invalid': 'errors.googleMapsInvalid',
+  'Could not resolve Google Maps link': 'errors.googleMapsResolveFailed',
+  'No place found for Google Maps link': 'errors.googleMapsPlaceNotFound',
+  'Google Places is not configured': 'errors.googlePlacesUnavailable',
 }
 
 export function getErrorMessage(reason: unknown) {

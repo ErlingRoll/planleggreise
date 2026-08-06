@@ -12,6 +12,7 @@ import type {
 } from '@planleggreise/models'
 import type { AuthService } from './auth.js'
 import { createApp } from './app.js'
+import type { GooglePlacesResolver } from './google-places.js'
 import type { TripRepository } from './trip-repository.js'
 
 const testTrip: Trip = {
@@ -39,10 +40,13 @@ const testActivity: Activity = {
   endTime: '12:00',
   allDay: false,
   notes: null,
+  googleMapsUrl: null,
+  placeName: null,
+  placeAddress: null,
   sortOrder: 0,
 }
 
-function createTestApp() {
+function createTestApp(googlePlacesResolver?: GooglePlacesResolver) {
   const authService: AuthService = {
     authenticate: async (accessToken) =>
       accessToken === 'valid-token'
@@ -91,7 +95,7 @@ function createTestApp() {
     deleteActivity: async () => true,
   }
 
-  return createApp({ authService, tripRepository })
+  return createApp({ authService, tripRepository, googlePlacesResolver })
 }
 
 test('health endpoint is public', async () => {
@@ -240,6 +244,49 @@ test('authenticated users can create an activity within a trip', async () => {
   assert.equal(response.status, 201)
   assert.equal(response.body.title, 'Ny aktivitet')
   assert.equal(response.body.tripDate, '2026-08-11')
+})
+
+test('activity creation resolves a Google Maps link', async () => {
+  const response = await request(
+    createTestApp(async () => ({
+      name: 'Colosseum',
+      address: 'Piazza del Colosseo, 1, Rome',
+    })),
+  )
+    .post('/api/trips/trip-1/activities')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      tripDate: '2026-08-11',
+      title: 'Google Maps place',
+      googleMapsUrl: 'https://maps.app.goo.gl/UqkAP8Bc5mx1tcVq6',
+      startTime: null,
+      endTime: null,
+      allDay: true,
+      notes: null,
+    })
+
+  assert.equal(response.status, 201)
+  assert.equal(response.body.title, 'Colosseum')
+  assert.equal(response.body.placeName, 'Colosseum')
+  assert.equal(response.body.placeAddress, 'Piazza del Colosseo, 1, Rome')
+})
+
+test('activity updates resolve a Google Maps link', async () => {
+  const response = await request(
+    createTestApp(async () => ({
+      name: 'Colosseum',
+      address: 'Piazza del Colosseo, 1, Rome',
+    })),
+  )
+    .patch('/api/trips/trip-1/activities/activity-1')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      googleMapsUrl: 'https://maps.app.goo.gl/UqkAP8Bc5mx1tcVq6',
+    })
+
+  assert.equal(response.status, 200)
+  assert.equal(response.body.title, 'Colosseum')
+  assert.equal(response.body.placeName, 'Colosseum')
 })
 
 test('activity creation rejects dates outside the trip', async () => {
