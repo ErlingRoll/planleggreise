@@ -22,6 +22,7 @@ export function TripSettings({
 }: TripSettingsProps) {
   const { t } = useTranslation()
   const [name, setName] = useState(trip.name)
+  const [notes, setNotes] = useState(trip.notes ?? '')
   const [startDate, setStartDate] = useState(trip.startDate)
   const [endDate, setEndDate] = useState(trip.endDate)
   const [error, setError] = useState<string | null>(null)
@@ -30,6 +31,7 @@ export function TripSettings({
 
   useEffect(() => {
     setName(trip.name)
+    setNotes(trip.notes ?? '')
     setStartDate(trip.startDate)
     setEndDate(trip.endDate)
     setError(null)
@@ -63,6 +65,7 @@ export function TripSettings({
         name,
         startDate,
         endDate,
+        notes,
       })
       onSaved(updatedTrip)
       onClose()
@@ -114,6 +117,15 @@ export function TripSettings({
             onChange={(event) => setName(event.target.value)}
             required
             value={name}
+          />
+        </label>
+        <label className="grid gap-2 text-sm font-medium text-[#69726c]">
+          {t('tripSettings.notes')}
+          <textarea
+            className="min-h-24 resize-y rounded-xl border border-[#d9d4ca] bg-white px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder={t('tripSettings.notesPlaceholder')}
+            value={notes}
           />
         </label>
         <div className="grid gap-4 sm:grid-cols-2">

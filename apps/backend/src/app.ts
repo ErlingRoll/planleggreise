@@ -8,7 +8,15 @@ import express, {
 import {
   ActivitySchema,
   CreateActivityInputSchema,
+  CreateHousingStayInputSchema,
+  CreateMealInputSchema,
   CreateTripInputSchema,
+  HousingStaySchema,
+  MealSchema,
+  TripDaySchema,
+  UpdateHousingStayInputSchema,
+  UpdateMealInputSchema,
+  UpdateTripDayInputSchema,
   UpdateActivityInputSchema,
   UpdateTripInputSchema,
   isTripDurationWithinLimit,
@@ -197,10 +205,13 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         const nextTrip = {
           id: currentTrip.id,
-          name: currentTrip.name,
-          startDate: currentTrip.startDate,
-          endDate: currentTrip.endDate,
-          ...parsedInput.data,
+          name: parsedInput.data.name ?? currentTrip.name,
+          startDate: parsedInput.data.startDate ?? currentTrip.startDate,
+          endDate: parsedInput.data.endDate ?? currentTrip.endDate,
+          notes:
+            parsedInput.data.notes === undefined
+              ? currentTrip.notes
+              : parsedInput.data.notes,
         }
 
         if (!isValidDateRange(nextTrip.startDate, nextTrip.endDate)) {
@@ -244,6 +255,66 @@ export function createApp(dependencies: AppDependencies = {}) {
         }
 
         response.json(trip)
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.patch(
+    '/api/trips/:tripId/days/:tripDate',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId, tripDate } = request.params
+
+        if (typeof tripId !== 'string' || typeof tripDate !== 'string') {
+          response.status(400).json({ message: 'Trip id and date are required' })
+          return
+        }
+
+        const parsedInput = UpdateTripDayInputSchema.safeParse(request.body)
+
+        if (!parsedInput.success) {
+          response.status(400).json({
+            message: 'Invalid day data',
+            issues: parsedInput.error.issues,
+          })
+          return
+        }
+
+        const trip = await tripRepository.getTrip(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+        )
+
+        if (!trip) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        if (!isDateWithinTrip(trip, tripDate)) {
+          response.status(400).json({ message: 'The day must be within the trip dates' })
+          return
+        }
+
+        const day = await tripRepository.updateDay(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          tripDate,
+          parsedInput.data,
+        )
+
+        if (!day) {
+          response.status(404).json({ message: 'Day not found' })
+          return
+        }
+
+        response.json(TripDaySchema.parse(day))
       } catch (error) {
         next(error)
       }
@@ -333,6 +404,349 @@ export function createApp(dependencies: AppDependencies = {}) {
           parsedInput.data,
         )
         response.status(201).json(trip)
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.post(
+    '/api/trips/:tripId/housing',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+
+        if (typeof tripId !== 'string') {
+          response.status(400).json({ message: 'Trip id is required' })
+          return
+        }
+
+        const parsedInput = CreateHousingStayInputSchema.safeParse(request.body)
+
+        if (!parsedInput.success) {
+          response.status(400).json({
+            message: 'Invalid housing data',
+            issues: parsedInput.error.issues,
+          })
+          return
+        }
+
+        const trip = await tripRepository.getTrip(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+        )
+
+        if (!trip) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        const housingStay = await tripRepository.createHousingStay(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          parsedInput.data,
+        )
+
+        if (!housingStay) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        response.status(201).json(HousingStaySchema.parse(housingStay))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.patch(
+    '/api/trips/:tripId/housing/:housingStayId',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId, housingStayId } = request.params
+
+        if (
+          typeof tripId !== 'string' ||
+          typeof housingStayId !== 'string'
+        ) {
+          response.status(400).json({ message: 'Trip and housing ids are required' })
+          return
+        }
+
+        const parsedInput = UpdateHousingStayInputSchema.safeParse(request.body)
+
+        if (!parsedInput.success) {
+          response.status(400).json({
+            message: 'Invalid housing data',
+            issues: parsedInput.error.issues,
+          })
+          return
+        }
+
+        const currentHousingStay = await tripRepository.getHousingStay(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          housingStayId,
+        )
+
+        if (!currentHousingStay) {
+          response.status(404).json({ message: 'Housing stay not found' })
+          return
+        }
+
+        const nextHousingStay = CreateHousingStayInputSchema.safeParse({
+          name: currentHousingStay.name,
+          checkIn: currentHousingStay.checkIn,
+          checkOut: currentHousingStay.checkOut,
+          notes: currentHousingStay.notes,
+          ...parsedInput.data,
+        })
+
+        if (!nextHousingStay.success) {
+          response.status(400).json({
+            message: 'Invalid housing data',
+            issues: nextHousingStay.error.issues,
+          })
+          return
+        }
+
+        const housingStay = await tripRepository.updateHousingStay(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          housingStayId,
+          parsedInput.data,
+        )
+
+        if (!housingStay) {
+          response.status(404).json({ message: 'Housing stay not found' })
+          return
+        }
+
+        response.json(HousingStaySchema.parse(housingStay))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.delete(
+    '/api/trips/:tripId/housing/:housingStayId',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId, housingStayId } = request.params
+
+        if (
+          typeof tripId !== 'string' ||
+          typeof housingStayId !== 'string'
+        ) {
+          response.status(400).json({ message: 'Trip and housing ids are required' })
+          return
+        }
+
+        const deleted = await tripRepository.deleteHousingStay(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          housingStayId,
+        )
+
+        if (!deleted) {
+          response.status(404).json({ message: 'Housing stay not found' })
+          return
+        }
+
+        response.status(204).send()
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.post(
+    '/api/trips/:tripId/meals',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+
+        if (typeof tripId !== 'string') {
+          response.status(400).json({ message: 'Trip id is required' })
+          return
+        }
+
+        const parsedInput = CreateMealInputSchema.safeParse(request.body)
+
+        if (!parsedInput.success) {
+          response.status(400).json({
+            message: 'Invalid meal data',
+            issues: parsedInput.error.issues,
+          })
+          return
+        }
+
+        const trip = await tripRepository.getTrip(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+        )
+
+        if (!trip) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        if (!isDateWithinTrip(trip, parsedInput.data.tripDate)) {
+          response.status(400).json({ message: 'The meal date must be within the trip dates' })
+          return
+        }
+
+        const meal = await tripRepository.createMeal(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          parsedInput.data,
+        )
+
+        if (!meal) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        response.status(201).json(MealSchema.parse(meal))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.patch(
+    '/api/trips/:tripId/meals/:mealId',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId, mealId } = request.params
+
+        if (typeof tripId !== 'string' || typeof mealId !== 'string') {
+          response.status(400).json({ message: 'Trip and meal ids are required' })
+          return
+        }
+
+        const parsedInput = UpdateMealInputSchema.safeParse(request.body)
+
+        if (!parsedInput.success) {
+          response.status(400).json({
+            message: 'Invalid meal data',
+            issues: parsedInput.error.issues,
+          })
+          return
+        }
+
+        const [trip, currentMeal] = await Promise.all([
+          tripRepository.getTrip(
+            authenticatedRequest.user.id,
+            authenticatedRequest.accessToken,
+            tripId,
+          ),
+          tripRepository.getMeal(
+            authenticatedRequest.user.id,
+            authenticatedRequest.accessToken,
+            tripId,
+            mealId,
+          ),
+        ])
+
+        if (!trip || !currentMeal) {
+          response.status(404).json({ message: 'Meal not found' })
+          return
+        }
+
+        const nextMeal = CreateMealInputSchema.safeParse({
+          tripDate: currentMeal.tripDate,
+          title: currentMeal.title,
+          startTime: currentMeal.startTime,
+          endTime: currentMeal.endTime,
+          allDay: currentMeal.allDay,
+          notes: currentMeal.notes,
+          ...parsedInput.data,
+        })
+
+        if (!nextMeal.success) {
+          response.status(400).json({
+            message: 'Invalid meal data',
+            issues: nextMeal.error.issues,
+          })
+          return
+        }
+
+        if (!isDateWithinTrip(trip, nextMeal.data.tripDate)) {
+          response.status(400).json({ message: 'The meal date must be within the trip dates' })
+          return
+        }
+
+        const meal = await tripRepository.updateMeal(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          mealId,
+          parsedInput.data,
+        )
+
+        if (!meal) {
+          response.status(404).json({ message: 'Meal not found' })
+          return
+        }
+
+        response.json(MealSchema.parse(meal))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.delete(
+    '/api/trips/:tripId/meals/:mealId',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId, mealId } = request.params
+
+        if (typeof tripId !== 'string' || typeof mealId !== 'string') {
+          response.status(400).json({ message: 'Trip and meal ids are required' })
+          return
+        }
+
+        const deleted = await tripRepository.deleteMeal(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          mealId,
+        )
+
+        if (!deleted) {
+          response.status(404).json({ message: 'Meal not found' })
+          return
+        }
+
+        response.status(204).send()
       } catch (error) {
         next(error)
       }

@@ -43,23 +43,28 @@ export const TimeOnlySchema = z
   .string()
   .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
 
+export const NoteSchema = z.string().trim().max(2000).nullable()
+
 export const TripSchema = z.object({
   id: z.string(),
   name: z.string(),
   startDate: DateOnlySchema,
   endDate: DateOnlySchema,
+  notes: NoteSchema,
 })
 
 export const CreateTripInputSchema = z.object({
   name: z.string().trim().min(1).max(200),
   startDate: DateOnlySchema,
   endDate: DateOnlySchema,
+  notes: NoteSchema.optional().default(null),
 })
 
 export const UpdateTripInputSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
   startDate: DateOnlySchema.optional(),
   endDate: DateOnlySchema.optional(),
+  notes: NoteSchema.optional(),
 })
 
 const ActivityFieldsSchema = z.object({
@@ -116,14 +121,87 @@ export const UpdateActivityInputSchema = z
     'End time must be on or after start time',
   )
 
+const HousingStayFieldsSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  checkIn: DateOnlySchema,
+  checkOut: DateOnlySchema,
+  notes: NoteSchema,
+})
+
+export const HousingStaySchema = HousingStayFieldsSchema.extend({
+  id: z.string(),
+  tripId: z.string(),
+})
+
+export const CreateHousingStayInputSchema = HousingStayFieldsSchema.refine(
+  (stay) => stay.checkOut > stay.checkIn,
+  'Check-out must be after check-in',
+)
+
+export const UpdateHousingStayInputSchema = z
+  .object({
+    name: z.string().trim().min(1).max(200).optional(),
+    checkIn: DateOnlySchema.optional(),
+    checkOut: DateOnlySchema.optional(),
+    notes: NoteSchema.optional(),
+  })
+  .refine(
+    (stay) =>
+      !stay.checkIn ||
+      !stay.checkOut ||
+      stay.checkOut > stay.checkIn,
+    'Check-out must be after check-in',
+  )
+
+const MealFieldsSchema = z.object({
+  tripDate: DateOnlySchema,
+  title: z.string().trim().min(1).max(200),
+  startTime: TimeOnlySchema.nullable(),
+  endTime: TimeOnlySchema.nullable(),
+  allDay: z.boolean(),
+  notes: NoteSchema,
+})
+
+export const MealSchema = MealFieldsSchema.extend({
+  id: z.string(),
+  tripId: z.string(),
+  sortOrder: z.number().int(),
+})
+
+export const CreateMealInputSchema = MealFieldsSchema.refine(
+  (meal) => hasValidTimeRange(meal.startTime, meal.endTime),
+  'End time must be on or after start time',
+)
+
+export const UpdateMealInputSchema = z
+  .object({
+    tripDate: DateOnlySchema.optional(),
+    title: z.string().trim().min(1).max(200).optional(),
+    startTime: TimeOnlySchema.nullable().optional(),
+    endTime: TimeOnlySchema.nullable().optional(),
+    allDay: z.boolean().optional(),
+    notes: NoteSchema.optional(),
+  })
+  .refine(
+    (meal) => hasValidTimeRange(meal.startTime, meal.endTime),
+    'End time must be on or after start time',
+  )
+
 export const TripDaySchema = z.object({
   date: DateOnlySchema,
   dayNumber: z.number().int().positive(),
+  notes: NoteSchema,
   activities: ActivitySchema.array().default([]),
+})
+
+export const UpdateTripDayInputSchema = z.object({
+  notes: NoteSchema.optional(),
 })
 
 export const TripDetailSchema = TripSchema.extend({
   days: TripDaySchema.array(),
+  housingStays: HousingStaySchema.array().default([]),
+  meals: MealSchema.array().default([]),
 })
 
 export type Trip = z.infer<typeof TripSchema>
@@ -132,5 +210,16 @@ export type UpdateTripInput = z.infer<typeof UpdateTripInputSchema>
 export type Activity = z.infer<typeof ActivitySchema>
 export type CreateActivityInput = z.infer<typeof CreateActivityInputSchema>
 export type UpdateActivityInput = z.infer<typeof UpdateActivityInputSchema>
+export type HousingStay = z.infer<typeof HousingStaySchema>
+export type CreateHousingStayInput = z.infer<
+  typeof CreateHousingStayInputSchema
+>
+export type UpdateHousingStayInput = z.infer<
+  typeof UpdateHousingStayInputSchema
+>
+export type Meal = z.infer<typeof MealSchema>
+export type CreateMealInput = z.infer<typeof CreateMealInputSchema>
+export type UpdateMealInput = z.infer<typeof UpdateMealInputSchema>
 export type TripDay = z.infer<typeof TripDaySchema>
+export type UpdateTripDayInput = z.infer<typeof UpdateTripDayInputSchema>
 export type TripDetail = z.infer<typeof TripDetailSchema>

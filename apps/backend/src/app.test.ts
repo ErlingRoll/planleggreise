@@ -4,7 +4,11 @@ import request from 'supertest'
 import type {
   Activity,
   CreateActivityInput,
+  CreateHousingStayInput,
+  CreateMealInput,
   CreateTripInput,
+  HousingStay,
+  Meal,
   Trip,
   TripDetail,
   UpdateTripInput,
@@ -20,15 +24,18 @@ const testTrip: Trip = {
   name: 'Testreise',
   startDate: '2026-08-10',
   endDate: '2026-08-12',
+  notes: null,
 }
 
 const testTripDetail: TripDetail = {
   ...testTrip,
   days: [
-    { date: '2026-08-10', dayNumber: 1, activities: [] },
-    { date: '2026-08-11', dayNumber: 2, activities: [] },
-    { date: '2026-08-12', dayNumber: 3, activities: [] },
+    { date: '2026-08-10', dayNumber: 1, notes: null, activities: [] },
+    { date: '2026-08-11', dayNumber: 2, notes: null, activities: [] },
+    { date: '2026-08-12', dayNumber: 3, notes: null, activities: [] },
   ],
+  housingStays: [],
+  meals: [],
 }
 
 const testActivity: Activity = {
@@ -70,6 +77,39 @@ function createTestApp(googlePlacesResolver?: GooglePlacesResolver) {
       ...input,
     }),
     deleteTrip: async () => true,
+    updateDay: async (_userId, _accessToken, _tripId, tripDate, input) => ({
+      date: tripDate,
+      dayNumber: 1,
+      notes: input.notes ?? null,
+      activities: [],
+    }),
+    getHousingStay: async () => null,
+    createHousingStay: async (
+      _userId,
+      _accessToken,
+      tripId,
+      input: CreateHousingStayInput,
+    ): Promise<HousingStay> => ({
+      id: 'housing-1',
+      tripId,
+      ...input,
+    }),
+    updateHousingStay: async () => null,
+    deleteHousingStay: async () => true,
+    getMeal: async () => null,
+    createMeal: async (
+      _userId,
+      _accessToken,
+      tripId,
+      input: CreateMealInput,
+    ): Promise<Meal> => ({
+      id: 'meal-1',
+      tripId,
+      ...input,
+      sortOrder: 0,
+    }),
+    updateMeal: async () => null,
+    deleteMeal: async () => true,
     getActivity: async () => testActivity,
     createActivity: async (
       _userId,
@@ -151,6 +191,7 @@ test('authenticated users can create trips', async () => {
     name: 'Ny testreise',
     startDate: '2026-09-01',
     endDate: '2026-09-03',
+    notes: null,
   })
 })
 
@@ -202,6 +243,59 @@ test('authenticated users can update trip settings', async () => {
   assert.equal(response.status, 200)
   assert.equal(response.body.name, 'Oppdatert testreise')
   assert.equal(response.body.startDate, '2026-08-09')
+})
+
+test('authenticated users can update a trip note', async () => {
+  const response = await request(createTestApp())
+    .patch('/api/trips/trip-1')
+    .set('Authorization', 'Bearer valid-token')
+    .send({ notes: 'Bestill tog på forhånd' })
+
+  assert.equal(response.status, 200)
+  assert.equal(response.body.notes, 'Bestill tog på forhånd')
+})
+
+test('authenticated users can update a day note', async () => {
+  const response = await request(createTestApp())
+    .patch('/api/trips/trip-1/days/2026-08-11')
+    .set('Authorization', 'Bearer valid-token')
+    .send({ notes: 'Start tidlig' })
+
+  assert.equal(response.status, 200)
+  assert.equal(response.body.date, '2026-08-11')
+  assert.equal(response.body.notes, 'Start tidlig')
+})
+
+test('authenticated users can create a housing stay with a note', async () => {
+  const response = await request(createTestApp())
+    .post('/api/trips/trip-1/housing')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      name: 'Hotell',
+      checkIn: '2026-08-10',
+      checkOut: '2026-08-11',
+      notes: 'Be om rom høyt oppe',
+    })
+
+  assert.equal(response.status, 201)
+  assert.equal(response.body.notes, 'Be om rom høyt oppe')
+})
+
+test('authenticated users can create a meal with a note', async () => {
+  const response = await request(createTestApp())
+    .post('/api/trips/trip-1/meals')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      tripDate: '2026-08-11',
+      title: 'Middag',
+      startTime: '18:00',
+      endTime: '20:00',
+      allDay: false,
+      notes: 'Bestill bord',
+    })
+
+  assert.equal(response.status, 201)
+  assert.equal(response.body.notes, 'Bestill bord')
 })
 
 test('trip updates reject trips longer than 60 days', async () => {
@@ -312,10 +406,12 @@ test('authenticated users can update an activity', async () => {
     .set('Authorization', 'Bearer valid-token')
     .send({
       title: 'Oppdatert aktivitet',
+      notes: 'Husk billetter',
     })
 
   assert.equal(response.status, 200)
   assert.equal(response.body.title, 'Oppdatert aktivitet')
+  assert.equal(response.body.notes, 'Husk billetter')
 })
 
 test('authenticated users can delete an activity', async () => {

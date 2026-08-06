@@ -14,6 +14,7 @@ type TripFormProps = {
 export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
   const { t } = useTranslation()
   const [name, setName] = useState('')
+  const [notes, setNotes] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -43,7 +44,12 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
     setError(null)
 
     try {
-      const trip = await createTrip(accessToken, { name, startDate, endDate })
+      const trip = await createTrip(accessToken, {
+        name,
+        startDate,
+        endDate,
+        notes,
+      })
       onCreated(trip)
     } catch (reason: unknown) {
       setError(getErrorMessage(reason))
@@ -67,6 +73,15 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
             placeholder={t('tripForm.namePlaceholder')}
             required
             value={name}
+          />
+        </label>
+        <label className="grid gap-2 text-sm font-medium text-[#69726c]">
+          {t('tripForm.notes')}
+          <textarea
+            className="min-h-24 resize-y rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder={t('tripForm.notesPlaceholder')}
+            value={notes}
           />
         </label>
         <div className="grid gap-4 sm:grid-cols-2">

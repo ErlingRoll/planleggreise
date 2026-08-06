@@ -33,8 +33,10 @@ copy apps\backend\.env.example apps\backend\.env
 Fill in the Supabase values, then open `http://localhost:3000`. The first
 vertical slice supports Google login, private trip creation, authenticated
 trip listing, trip settings, recoverable trip archiving, activities, and
-generated days for each inclusive trip date. Trips may contain at most 60
-inclusive calendar days. The frontend uses `/trips/<trip-id>` URLs for
+generated days for each inclusive trip date. Trips, days, accommodation stays,
+meals, and activities support editable notes; non-empty notes appear in travel
+mode. Trips may contain at most 60 inclusive calendar days. The frontend uses
+`/trips/<trip-id>` URLs for
 bookmarked and shareable trip plans; access remains protected by authentication
 and Supabase row-level security.
 

@@ -1,15 +1,29 @@
 import {
   ActivitySchema,
   CreateActivityInputSchema,
+  CreateHousingStayInputSchema,
+  CreateMealInputSchema,
+  HousingStaySchema,
+  MealSchema,
   TripDetailSchema,
+  TripDaySchema,
   TripSchema,
+  UpdateHousingStayInputSchema,
+  UpdateMealInputSchema,
   UpdateTripInputSchema,
   UpdateActivityInputSchema,
   type Activity,
   type CreateActivityInput,
+  type CreateHousingStayInput,
+  type CreateMealInput,
   type CreateTripInput,
+  type HousingStay,
+  type Meal,
   type Trip,
   type TripDetail,
+  type UpdateHousingStayInput,
+  type UpdateMealInput,
+  type UpdateTripDayInput,
   type UpdateTripInput,
   type UpdateActivityInput,
 } from '@planleggreise/models'
@@ -18,8 +32,15 @@ export type {
   Activity,
   CreateActivityInput,
   CreateTripInput,
+  CreateHousingStayInput,
+  CreateMealInput,
+  HousingStay,
+  Meal,
   Trip,
   TripDetail,
+  UpdateHousingStayInput,
+  UpdateMealInput,
+  UpdateTripDayInput,
   UpdateTripInput,
   UpdateActivityInput,
 } from '@planleggreise/models'
@@ -78,6 +99,20 @@ export async function deleteTrip(
   })
 }
 
+export async function updateTripDay(
+  accessToken: string,
+  tripId: string,
+  tripDate: string,
+  input: UpdateTripDayInput,
+): Promise<TripDetail['days'][number]> {
+  return TripDaySchema.parse(
+    await request(`/api/trips/${tripId}/days/${tripDate}`, accessToken, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+  )
+}
+
 export async function updateTrip(
   accessToken: string,
   tripId: string,
@@ -89,6 +124,84 @@ export async function updateTrip(
       body: JSON.stringify(UpdateTripInputSchema.parse(input)),
     }),
   )
+}
+
+export async function createHousingStay(
+  accessToken: string,
+  tripId: string,
+  input: CreateHousingStayInput,
+): Promise<HousingStay> {
+  return HousingStaySchema.parse(
+    await request(`/api/trips/${tripId}/housing`, accessToken, {
+      method: 'POST',
+      body: JSON.stringify(CreateHousingStayInputSchema.parse(input)),
+    }),
+  )
+}
+
+export async function updateHousingStay(
+  accessToken: string,
+  tripId: string,
+  housingStayId: string,
+  input: UpdateHousingStayInput,
+): Promise<HousingStay> {
+  return HousingStaySchema.parse(
+    await request(
+      `/api/trips/${tripId}/housing/${housingStayId}`,
+      accessToken,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(UpdateHousingStayInputSchema.parse(input)),
+      },
+    ),
+  )
+}
+
+export async function deleteHousingStay(
+  accessToken: string,
+  tripId: string,
+  housingStayId: string,
+): Promise<void> {
+  await request(`/api/trips/${tripId}/housing/${housingStayId}`, accessToken, {
+    method: 'DELETE',
+  })
+}
+
+export async function createMeal(
+  accessToken: string,
+  tripId: string,
+  input: CreateMealInput,
+): Promise<Meal> {
+  return MealSchema.parse(
+    await request(`/api/trips/${tripId}/meals`, accessToken, {
+      method: 'POST',
+      body: JSON.stringify(CreateMealInputSchema.parse(input)),
+    }),
+  )
+}
+
+export async function updateMeal(
+  accessToken: string,
+  tripId: string,
+  mealId: string,
+  input: UpdateMealInput,
+): Promise<Meal> {
+  return MealSchema.parse(
+    await request(`/api/trips/${tripId}/meals/${mealId}`, accessToken, {
+      method: 'PATCH',
+      body: JSON.stringify(UpdateMealInputSchema.parse(input)),
+    }),
+  )
+}
+
+export async function deleteMeal(
+  accessToken: string,
+  tripId: string,
+  mealId: string,
+): Promise<void> {
+  await request(`/api/trips/${tripId}/meals/${mealId}`, accessToken, {
+    method: 'DELETE',
+  })
 }
 
 export async function createActivity(

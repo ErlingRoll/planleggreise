@@ -75,6 +75,10 @@ export default function App() {
     <Routes>
       <Route element={<TripDashboard session={session} />} path="/" />
       <Route element={<TripDashboard session={session} />} path="/trips/:tripId" />
+      <Route
+        element={<TripDashboard session={session} />}
+        path="/trips/:tripId/travel"
+      />
       <Route element={<Navigate replace to="/" />} path="*" />
     </Routes>
   )

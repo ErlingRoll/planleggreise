@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   deleteTrip,
@@ -14,6 +14,7 @@ import { formatDateRange } from '../../lib/date-format'
 import { getSupabaseClient } from '../../lib/supabase'
 import { TripDetails } from './TripDetails'
 import { TripForm } from './TripForm'
+import { TravelMode } from './TravelMode'
 import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 
 type TripDashboardProps = {
@@ -23,7 +24,9 @@ type TripDashboardProps = {
 export function TripDashboard({ session }: TripDashboardProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const { tripId } = useParams<{ tripId: string }>()
+  const isTravelMode = location.pathname.endsWith('/travel')
   const [trips, setTrips] = useState<Trip[]>([])
   const [selectedTrip, setSelectedTrip] = useState<TripDetail | null>(null)
   const [search, setSearch] = useState('')
@@ -117,6 +120,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
               name: updatedTrip.name,
               startDate: updatedTrip.startDate,
               endDate: updatedTrip.endDate,
+              notes: updatedTrip.notes,
             }
           : trip,
       ),
@@ -184,16 +188,45 @@ export function TripDashboard({ session }: TripDashboardProps) {
             {t('dashboard.backToTrips')}
           </button>
           <h1 className="mt-5 text-3xl font-medium tracking-[-0.04em] text-[#274b48]">
-            {t('dashboard.plan')}
+            {isTravelMode ? t('travelMode.title') : t('dashboard.plan')}
           </h1>
-          <TripDetails
-            accessToken={session.access_token}
-            error={detailsError}
-            isLoading={isDetailsLoading}
-            onTripDeleted={handleDeleteTrip}
-            onTripUpdated={handleTripUpdated}
-            trip={selectedTrip}
-          />
+          <nav
+            aria-label={t('tripModes.plan')}
+            className="mt-5 grid grid-cols-2 rounded-xl bg-[#e6eee3] p-1"
+          >
+            <Link
+              className={`rounded-lg px-3 py-2 text-center text-sm font-semibold ${
+                !isTravelMode
+                  ? 'bg-[#faf8f3] text-[#274b48] shadow-sm'
+                  : 'text-[#69726c]'
+              }`}
+              to={`/trips/${tripId}`}
+            >
+              {t('tripModes.plan')}
+            </Link>
+            <Link
+              className={`rounded-lg px-3 py-2 text-center text-sm font-semibold ${
+                isTravelMode
+                  ? 'bg-[#faf8f3] text-[#274b48] shadow-sm'
+                  : 'text-[#69726c]'
+              }`}
+              to={`/trips/${tripId}/travel`}
+            >
+              {t('tripModes.travel')}
+            </Link>
+          </nav>
+          {isTravelMode && selectedTrip ? (
+            <TravelMode trip={selectedTrip} />
+          ) : (
+            <TripDetails
+              accessToken={session.access_token}
+              error={detailsError}
+              isLoading={isDetailsLoading}
+              onTripDeleted={handleDeleteTrip}
+              onTripUpdated={handleTripUpdated}
+              trip={selectedTrip}
+            />
+          )}
         </section>
       ) : (
         <section className="mx-auto max-w-2xl px-5 pb-12 pt-10 sm:px-8 sm:pt-16">

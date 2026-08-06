@@ -3,12 +3,18 @@ import { useTranslation } from 'react-i18next'
 import {
   createActivity,
   deleteActivity,
+  updateTripDay,
   updateActivity,
   type Activity,
   type TripDetail,
 } from '../../api'
 import { getErrorMessage } from '../../lib/errors'
 import { formatDate, formatDateRange } from '../../lib/date-format'
+import {
+  formatActivityTime,
+  sortActivities,
+} from '../../lib/activity-format'
+import { TripAuxiliaryDetails } from './TripAuxiliaryDetails'
 import { TripSettings } from './TripSettings'
 
 type TripDetailsProps = {
@@ -18,21 +24,6 @@ type TripDetailsProps = {
   error: string | null
   onTripUpdated: (trip: TripDetail) => void
   onTripDeleted: (trip: TripDetail) => Promise<void>
-}
-
-function sortActivities(activities: Activity[]) {
-  return [...activities].sort((left, right) => {
-    if (!left.startTime && !right.startTime) {
-      return left.sortOrder - right.sortOrder
-    }
-    if (!left.startTime) {
-      return 1
-    }
-    if (!right.startTime) {
-      return -1
-    }
-    return left.startTime.localeCompare(right.startTime)
-  })
 }
 
 export function TripDetails({
@@ -48,6 +39,7 @@ export function TripDetails({
   const [showSettings, setShowSettings] = useState(false)
   const [title, setTitle] = useState('')
   const [googleMapsUrl, setGoogleMapsUrl] = useState('')
+  const [notes, setNotes] = useState('')
   const [activityMode, setActivityMode] = useState<'manual' | 'googleMaps'>('manual')
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
@@ -56,6 +48,9 @@ export function TripDetails({
   const [activityError, setActivityError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null)
+  const [editingDayDate, setEditingDayDate] = useState<string | null>(null)
+  const [dayNotes, setDayNotes] = useState('')
+  const [isSavingDayNote, setIsSavingDayNote] = useState(false)
 
   if (isLoading) {
     return <div className="mt-6 h-48 animate-pulse rounded-2xl bg-[#eee8dd]" />
@@ -75,19 +70,10 @@ export function TripDetails({
 
   const currentTrip = trip
 
-  function formatActivityTime(activity: Activity) {
-    if (activity.allDay) {
-      return t('tripDetails.allDay')
-    }
-    if (activity.startTime && activity.endTime) {
-      return `${activity.startTime}–${activity.endTime}`
-    }
-    return activity.startTime ?? activity.endTime ?? t('tripDetails.timeNotSet')
-  }
-
   function resetActivityForm() {
     setTitle('')
     setGoogleMapsUrl('')
+    setNotes('')
     setActivityMode('manual')
     setStartTime('')
     setEndTime('')
@@ -114,6 +100,7 @@ export function TripDetails({
     setEditingActivityId(activity.id)
     setTitle(activity.title)
     setGoogleMapsUrl(activity.googleMapsUrl ?? '')
+    setNotes(activity.notes ?? '')
     setActivityMode(activity.googleMapsUrl ? 'googleMaps' : 'manual')
     setStartTime(activity.startTime ?? '')
     setEndTime(activity.endTime ?? '')
@@ -133,7 +120,7 @@ export function TripDetails({
         startTime: allDay || !startTime ? null : startTime,
         endTime: allDay || !endTime ? null : endTime,
         allDay,
-        notes: null,
+        notes,
         googleMapsUrl: activityMode === 'googleMaps' ? googleMapsUrl : null,
         placeName: null,
         placeAddress: null,
@@ -195,6 +182,33 @@ export function TripDetails({
     }
   }
 
+  function editDayNote(date: string, note: string | null) {
+    setEditingDayDate(date)
+    setDayNotes(note ?? '')
+  }
+
+  async function handleSaveDayNote(date: string) {
+    setIsSavingDayNote(true)
+    setActivityError(null)
+
+    try {
+      const updatedDay = await updateTripDay(accessToken, currentTrip.id, date, {
+        notes: dayNotes,
+      })
+      onTripUpdated({
+        ...currentTrip,
+        days: currentTrip.days.map((day) =>
+          day.date === date ? { ...day, notes: updatedDay.notes } : day,
+        ),
+      })
+      setEditingDayDate(null)
+    } catch (reason: unknown) {
+      setActivityError(getErrorMessage(reason))
+    } finally {
+      setIsSavingDayNote(false)
+    }
+  }
+
   return (
     <div className="mt-6">
       <div className="rounded-2xl bg-[#274b48] p-5 text-[#f9f5ed]">
@@ -248,15 +262,62 @@ export function TripDetails({
                     ? t('tripDetails.noPlans')
                     : t('tripDetails.activitiesCount', { count: day.activities.length })}
                 </p>
+                {day.notes?.trim() && (
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-[#69726c]">
+                    {day.notes}
+                  </p>
+                )}
               </div>
-              <button
-                className="ml-auto shrink-0 rounded-lg px-2 py-1 text-sm font-semibold text-[#274b48] hover:bg-[#e6eee3]"
-                onClick={() => toggleActivityForm(day.date)}
-                type="button"
-              >
-                {openDay === day.date ? t('common.close') : t('tripDetails.add')}
-              </button>
+              <div className="ml-auto flex shrink-0 flex-col items-end gap-1">
+                <button
+                  className="rounded-lg px-2 py-1 text-sm font-semibold text-[#274b48] hover:bg-[#e6eee3]"
+                  onClick={() => toggleActivityForm(day.date)}
+                  type="button"
+                >
+                  {openDay === day.date ? t('common.close') : t('tripDetails.add')}
+                </button>
+                <button
+                  className="rounded-lg px-2 py-1 text-xs font-semibold text-[#69726c] hover:bg-[#e6eee3]"
+                  onClick={() => editDayNote(day.date, day.notes)}
+                  type="button"
+                >
+                  {day.notes?.trim()
+                    ? t('tripDetails.editDayNote')
+                    : t('tripDetails.addDayNote')}
+                </button>
+              </div>
             </div>
+
+            {editingDayDate === day.date && (
+              <div className="mt-4 grid gap-3 border-t border-[#ded6ca] pt-4">
+                <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
+                  {t('tripDetails.dayNote')}
+                  <textarea
+                    className="min-h-20 resize-y rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
+                    onChange={(event) => setDayNotes(event.target.value)}
+                    placeholder={t('tripDetails.notesPlaceholder')}
+                    value={dayNotes}
+                  />
+                </label>
+                <div className="flex justify-end gap-2">
+                  <button
+                    className="rounded-xl px-3 py-2 text-sm font-semibold text-[#69726c] hover:bg-[#e6eee3]"
+                    onClick={() => setEditingDayDate(null)}
+                    type="button"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                  <button
+                    className="rounded-xl bg-[#274b48] px-3 py-2 text-sm font-semibold text-[#f9f5ed] hover:bg-[#1c3b38] disabled:opacity-60"
+                    disabled={isSavingDayNote}
+                    onClick={() => void handleSaveDayNote(day.date)}
+                    type="button"
+                  >
+                    {isSavingDayNote ? t('common.saving') : t('common.save')}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {day.activities.length > 0 && (
               <div className="mt-4 grid gap-2 border-t border-[#ded6ca] pt-3">
@@ -271,7 +332,12 @@ export function TripDetails({
                           {activity.placeAddress}
                         </p>
                       )}
-                      <p className="mt-1 text-sm text-[#69726c]">{formatActivityTime(activity)}</p>
+                      <p className="mt-1 text-sm text-[#69726c]">
+                        {formatActivityTime(activity, {
+                          allDay: t('tripDetails.allDay'),
+                          timeNotSet: t('tripDetails.timeNotSet'),
+                        })}
+                      </p>
                       {activity.googleMapsUrl && (
                         <a
                           className="mt-2 inline-block text-sm font-semibold text-[#274b48] underline"
@@ -357,6 +423,15 @@ export function TripDetails({
                     <span className="font-normal">{t('tripDetails.googleMapsHelp')}</span>
                   </label>
                 )}
+                <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
+                  {t('tripDetails.notes')}
+                  <textarea
+                    className="min-h-20 resize-y rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
+                    onChange={(event) => setNotes(event.target.value)}
+                    placeholder={t('tripDetails.notesPlaceholder')}
+                    value={notes}
+                  />
+                </label>
                 <label className="flex items-center gap-2 text-sm text-[#69726c]">
                   <input
                     checked={allDay}
@@ -404,6 +479,11 @@ export function TripDetails({
           </div>
         ))}
       </div>
+      <TripAuxiliaryDetails
+        accessToken={accessToken}
+        onTripUpdated={onTripUpdated}
+        trip={currentTrip}
+      />
     </div>
   )
 }
