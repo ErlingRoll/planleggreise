@@ -9,6 +9,14 @@ import { LoginScreen } from "./features/auth/LoginScreen"
 import { TripAccessRequestScreen } from "./features/trips/TripAccessRequestScreen"
 import { TripDashboard } from "./features/trips/TripDashboard"
 
+function removeEmptyUrlHash() {
+  const currentUrl = new URL(window.location.href)
+
+  if (currentUrl.hash === "" && window.location.href.endsWith("#")) {
+    window.history.replaceState(null, "", `${currentUrl.pathname}${currentUrl.search}`)
+  }
+}
+
 export default function App() {
   const { t } = useTranslation()
   const [session, setSession] = useState<Session | null>(null)
@@ -27,6 +35,8 @@ export default function App() {
         if (error) {
           throw error
         }
+
+        removeEmptyUrlHash()
 
         if (isMounted) {
           setSession(data.session)
