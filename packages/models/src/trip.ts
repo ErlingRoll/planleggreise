@@ -44,6 +44,7 @@ export const TimeOnlySchema = z
   .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
 
 export const NoteSchema = z.string().trim().max(2000).nullable()
+export const DayTitleSchema = z.string().trim().min(1).max(200).nullable()
 
 export const TripSchema = z.object({
   id: z.string(),
@@ -217,11 +218,13 @@ export const UpdateMealInputSchema = z
 export const TripDaySchema = z.object({
   date: DateOnlySchema,
   dayNumber: z.number().int().positive(),
+  title: DayTitleSchema,
   notes: NoteSchema,
   activities: ActivitySchema.array().default([]),
 })
 
 export const UpdateTripDayInputSchema = z.object({
+  title: DayTitleSchema.optional(),
   notes: NoteSchema.optional(),
 })
 

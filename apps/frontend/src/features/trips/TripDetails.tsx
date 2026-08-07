@@ -147,8 +147,9 @@ export function TripDetails({
   const [isSaving, setIsSaving] = useState(false)
   const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null)
   const [editingDayDate, setEditingDayDate] = useState<string | null>(null)
+  const [dayTitle, setDayTitle] = useState('')
   const [dayNotes, setDayNotes] = useState('')
-  const [isSavingDayNote, setIsSavingDayNote] = useState(false)
+  const [isSavingDayDetails, setIsSavingDayDetails] = useState(false)
   const [selectedDayDate, setSelectedDayDate] = useState('')
   const [selectedDayDates, setSelectedDayDates] = useState<string[]>([])
   const [lastClickedDayDate, setLastClickedDayDate] = useState('')
@@ -359,6 +360,14 @@ export function TripDetails({
       ...day.activities,
       ...meals.filter((meal) => meal.tripDate === day.date),
     ])
+  }
+
+  function getDayScheduleSummary(day: TripDetail['days'][number]) {
+    const items = getDayItems(day)
+
+    return items.length === 0
+      ? t('tripDetails.noPlans')
+      : t('tripDetails.plansCount', { count: items.length })
   }
 
   function getDayItemRecord(item: DayItem, meals = currentTrip.meals): DayItemRecord {
@@ -1255,30 +1264,38 @@ export function TripDetails({
     }
   }
 
-  function editDayNote(date: string, note: string | null) {
+  function editDayDetails(
+    date: string,
+    title: string | null,
+    note: string | null,
+  ) {
     setEditingDayDate(date)
+    setDayTitle(title ?? '')
     setDayNotes(note ?? '')
   }
 
-  async function handleSaveDayNote(date: string) {
-    setIsSavingDayNote(true)
+  async function handleSaveDayDetails(date: string) {
+    setIsSavingDayDetails(true)
     setActivityError(null)
 
     try {
       const updatedDay = await updateTripDay(accessToken, currentTrip.id, date, {
+        title: dayTitle.trim() || null,
         notes: dayNotes,
       })
       onTripUpdated({
         ...currentTrip,
         days: currentTrip.days.map((day) =>
-          day.date === date ? { ...day, notes: updatedDay.notes } : day,
+          day.date === date
+            ? { ...day, title: updatedDay.title, notes: updatedDay.notes }
+            : day,
         ),
       })
       setEditingDayDate(null)
     } catch (reason: unknown) {
       setActivityError(getErrorMessage(reason))
     } finally {
-      setIsSavingDayNote(false)
+      setIsSavingDayDetails(false)
     }
   }
 
@@ -1337,13 +1354,6 @@ export function TripDetails({
               {trip.days.map((day) => {
                 const isActive = day.date === selectedDay.date
                 const isChecked = selectedDayDates.includes(day.date)
-                const hasHousing = trip.housingStays.some(
-                  (stay) =>
-                    stay.checkIn <= day.date && day.date < stay.checkOut,
-                )
-                const hasMeal = trip.meals.some(
-                  (meal) => meal.tripDate === day.date,
-                )
 
                 return (
                   <div
@@ -1373,72 +1383,34 @@ export function TripDetails({
                       aria-label={t('tripDetails.selectDay', {
                         date: formatDate(day.date),
                       })}
-                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                      className="flex min-w-0 flex-1 overflow-hidden text-left"
                       onClick={(event) =>
                         selectOnlyDay(day.date, event.shiftKey)
                       }
                       type="button"
                     >
-                      <span
-                        className={`grid size-8 shrink-0 place-items-center rounded-lg text-xs font-semibold ${
-                          isActive
-                            ? 'bg-[#e5b76b] text-[#274b48]'
-                            : 'bg-[#e5b76b]/50 text-[#274b48]'
-                        }`}
-                      >
-                        {day.dayNumber}
-                      </span>
-                      <span className="min-w-0">
+                      <span className="w-0 min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">
                           {formatDate(day.date)}
                         </span>
+                        {day.title?.trim() && (
+                          <span
+                            className={`mt-0.5 block truncate text-xs ${
+                              isActive ? 'text-[#b9d1be]' : 'text-[#69726c]'
+                            }`}
+                            title={day.title}
+                          >
+                            {day.title}
+                          </span>
+                        )}
                         <span
-                          className={`mt-0.5 block text-xs ${
+                          className={`mt-0.5 block truncate text-xs ${
                             isActive ? 'text-[#b9d1be]' : 'text-[#8a918b]'
                           }`}
                         >
-                          {getDayItems(day).length === 0
-                            ? t('tripDetails.noPlans')
-                            : t('tripDetails.activitiesCount', {
-                                count: getDayItems(day).length,
-                              })}
+                          {getDayScheduleSummary(day)}
                         </span>
                       </span>
-                      {(day.notes?.trim() ||
-                        day.activities.length > 0 ||
-                        hasHousing ||
-                        hasMeal) && (
-                        <span
-                          aria-hidden="true"
-                          className="ml-auto flex shrink-0 gap-1"
-                        >
-                          {(day.notes?.trim() ||
-                            day.activities.length > 0) && (
-                            <span
-                              className={`size-1.5 rounded-full ${
-                                isActive ? 'bg-[#e5b76b]' : 'bg-[#d06f4c]'
-                              }`}
-                              title={t('tripDetails.activities')}
-                            />
-                          )}
-                          {hasHousing && (
-                            <span
-                              className={`size-1.5 rounded-full ${
-                                isActive ? 'bg-[#b9d1be]' : 'bg-[#52705b]'
-                              }`}
-                              title={t('tripDetails.housing')}
-                            />
-                          )}
-                          {hasMeal && (
-                            <span
-                              className={`size-1.5 rounded-full ${
-                                isActive ? 'bg-[#f0c3a7]' : 'bg-[#d06f4c]'
-                              }`}
-                              title={t('tripDetails.meals')}
-                            />
-                          )}
-                        </span>
-                      )}
                     </button>
                   </div>
                 )
@@ -1476,16 +1448,18 @@ export function TripDetails({
                 }`}
                 key={day.date}
               >
-            <div className="flex items-center gap-4">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#e5b76b]/50 text-sm font-semibold text-[#274b48]">
-                {day.dayNumber}
-              </span>
-              <div className="min-w-0">
-                <p className="font-semibold text-[#274b48]">{formatDate(day.date)}</p>
+            <div className="flex items-start gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-[#274b48]">
+                  {formatDate(day.date)}
+                  {day.title?.trim() && (
+                    <span className="ml-2 font-normal text-[#69726c]">
+                      {day.title}
+                    </span>
+                  )}
+                </p>
                 <p className="mt-1 text-sm text-[#69726c]">
-                  {getDayItems(day).length === 0
-                    ? t('tripDetails.noPlans')
-                    : t('tripDetails.activitiesCount', { count: getDayItems(day).length })}
+                  {getDayScheduleSummary(day)}
                 </p>
                 {day.notes?.trim() && (
                   <p className="mt-2 whitespace-pre-wrap text-sm text-[#69726c]">
@@ -1512,12 +1486,12 @@ export function TripDetails({
                 </button>
                 <button
                   className="rounded-lg px-2 py-1 text-xs font-semibold text-[#69726c] hover:bg-[#e6eee3]"
-                  onClick={() => editDayNote(day.date, day.notes)}
+                  onClick={() => editDayDetails(day.date, day.title, day.notes)}
                   type="button"
                 >
-                  {day.notes?.trim()
-                    ? t('tripDetails.editDayNote')
-                    : t('tripDetails.addDayNote')}
+                  {day.title?.trim() || day.notes?.trim()
+                    ? t('tripDetails.editDayDetails')
+                    : t('tripDetails.addDayDetails')}
                 </button>
               </div>
             </div>
@@ -1527,6 +1501,17 @@ export function TripDetails({
 
             {editingDayDate === day.date && (
               <div className="mt-4 grid gap-3 border-t border-[#ded6ca] pt-4">
+                <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
+                  {t('tripDetails.dayTitle')}
+                  <input
+                    className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
+                    maxLength={200}
+                    onChange={(event) => setDayTitle(event.target.value)}
+                    placeholder={t('tripDetails.dayTitlePlaceholder')}
+                    type="text"
+                    value={dayTitle}
+                  />
+                </label>
                 <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
                   {t('tripDetails.dayNote')}
                   <textarea
@@ -1546,11 +1531,11 @@ export function TripDetails({
                   </button>
                   <button
                     className="rounded-xl bg-[#274b48] px-3 py-2 text-sm font-semibold text-[#f9f5ed] hover:bg-[#1c3b38] disabled:opacity-60"
-                    disabled={isSavingDayNote}
-                    onClick={() => void handleSaveDayNote(day.date)}
+                    disabled={isSavingDayDetails}
+                    onClick={() => void handleSaveDayDetails(day.date)}
                     type="button"
                   >
-                    {isSavingDayNote ? t('common.saving') : t('common.save')}
+                    {isSavingDayDetails ? t('common.saving') : t('common.save')}
                   </button>
                 </div>
               </div>

@@ -50,6 +50,7 @@ const tripRowSchema = z.object({
 const tripDayRowSchema = z.object({
   trip_id: z.string(),
   trip_date: DateOnlySchema,
+  title: z.string().nullable(),
   notes: z.string().nullable(),
 })
 
@@ -291,6 +292,7 @@ export function buildTripDays(trip: Trip): TripDetail['days'] {
     days.push({
       date: currentDate.toISOString().slice(0, 10),
       dayNumber,
+      title: null,
       notes: null,
       activities: [],
     })
@@ -313,11 +315,14 @@ function mapTripRow(row: unknown): Trip {
   })
 }
 
-function mapTripDayRow(row: unknown): Pick<TripDay, 'date' | 'notes'> {
+function mapTripDayRow(
+  row: unknown,
+): Pick<TripDay, 'date' | 'title' | 'notes'> {
   const parsedRow = tripDayRowSchema.parse(row)
 
   return {
     date: parsedRow.trip_date,
+    title: parsedRow.title,
     notes: parsedRow.notes,
   }
 }
@@ -414,10 +419,10 @@ async function listActivities(
 async function listTripDays(
   client: ReturnType<typeof createUserSupabaseClient>,
   tripId: string,
-): Promise<Array<Pick<TripDay, 'date' | 'notes'>>> {
+): Promise<Array<Pick<TripDay, 'date' | 'title' | 'notes'>>> {
   const { data, error } = await client
     .from('trip_days')
-    .select('trip_id, trip_date, notes')
+    .select('trip_id, trip_date, title, notes')
     .eq('trip_id', tripId)
 
   if (error) {
@@ -466,10 +471,10 @@ async function listMeals(
 function addActivitiesToDays(
   days: TripDetail['days'],
   activities: Activity[],
-  tripDays: Array<Pick<TripDay, 'date' | 'notes'>>,
+  tripDays: Array<Pick<TripDay, 'date' | 'title' | 'notes'>>,
 ): TripDetail['days'] {
   const activitiesByDate = new Map<string, Activity[]>()
-  const notesByDate = new Map(tripDays.map((day) => [day.date, day.notes]))
+  const dayDetailsByDate = new Map(tripDays.map((day) => [day.date, day]))
 
   for (const activity of activities) {
     const dateActivities = activitiesByDate.get(activity.tripDate) ?? []
@@ -479,7 +484,8 @@ function addActivitiesToDays(
 
   return days.map((day) => ({
     ...day,
-    notes: notesByDate.get(day.date) ?? null,
+    title: dayDetailsByDate.get(day.date)?.title ?? null,
+    notes: dayDetailsByDate.get(day.date)?.notes ?? null,
     activities: activitiesByDate.get(day.date) ?? [],
   }))
 }
@@ -655,12 +661,19 @@ export function createSupabaseTripRepository(): TripRepository {
           {
             trip_id: tripId,
             trip_date: tripDate,
-            notes: parsedInput.notes ?? day.notes,
+            title:
+              parsedInput.title === undefined
+                ? day.title
+                : parsedInput.title,
+            notes:
+              parsedInput.notes === undefined
+                ? day.notes
+                : parsedInput.notes,
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'trip_id,trip_date' },
         )
-        .select('trip_id, trip_date, notes')
+        .select('trip_id, trip_date, title, notes')
         .single()
 
       if (error) {
@@ -670,6 +683,7 @@ export function createSupabaseTripRepository(): TripRepository {
       const parsedDay = mapTripDayRow(data)
       return {
         ...day,
+        title: parsedDay.title,
         notes: parsedDay.notes,
       }
     },

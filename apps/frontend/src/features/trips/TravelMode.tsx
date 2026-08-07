@@ -88,8 +88,13 @@ export function TravelMode({ trip }: TravelModeProps) {
                 ? t('travelMode.today')
                 : t('travelMode.day', { day: selectedDay.dayNumber })}
             </p>
-            <h2 className="mt-1 text-xl font-semibold text-[#274b48]">
-              {formatDate(selectedDay.date)}
+            <h2 className="mt-1 flex flex-wrap items-baseline justify-center gap-x-2 text-xl font-semibold text-[#274b48]">
+              <span>{formatDate(selectedDay.date)}</span>
+              {selectedDay.title?.trim() && (
+                <span className="font-normal text-[#69726c]">
+                  {selectedDay.title}
+                </span>
+              )}
             </h2>
           </div>
           <button

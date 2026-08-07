@@ -5,6 +5,7 @@ export {
   CreateMealInputSchema,
   CreateTripInputSchema,
   DayItemTypeSchema,
+  DayTitleSchema,
   DateOnlySchema,
   getTripDurationInDays,
   isTripDurationWithinLimit,

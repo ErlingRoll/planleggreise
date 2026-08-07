@@ -34,9 +34,9 @@ const testTrip: Trip = {
 const testTripDetail: TripDetail = {
   ...testTrip,
   days: [
-    { date: '2026-08-10', dayNumber: 1, notes: null, activities: [] },
-    { date: '2026-08-11', dayNumber: 2, notes: null, activities: [] },
-    { date: '2026-08-12', dayNumber: 3, notes: null, activities: [] },
+    { date: '2026-08-10', dayNumber: 1, title: null, notes: null, activities: [] },
+    { date: '2026-08-11', dayNumber: 2, title: null, notes: null, activities: [] },
+    { date: '2026-08-12', dayNumber: 3, title: null, notes: null, activities: [] },
   ],
   housingStays: [],
   meals: [],
@@ -84,6 +84,7 @@ function createTestApp(googlePlacesResolver?: GooglePlacesResolver) {
     updateDay: async (_userId, _accessToken, _tripId, tripDate, input) => ({
       date: tripDate,
       dayNumber: 1,
+      title: input.title ?? null,
       notes: input.notes ?? null,
       activities: [],
     }),
@@ -314,6 +315,17 @@ test('authenticated users can update a day note', async () => {
   assert.equal(response.status, 200)
   assert.equal(response.body.date, '2026-08-11')
   assert.equal(response.body.notes, 'Start tidlig')
+})
+
+test('authenticated users can update a day title', async () => {
+  const response = await request(createTestApp())
+    .patch('/api/trips/trip-1/days/2026-08-11')
+    .set('Authorization', 'Bearer valid-token')
+    .send({ title: 'Ankomst til Oslo' })
+
+  assert.equal(response.status, 200)
+  assert.equal(response.body.date, '2026-08-11')
+  assert.equal(response.body.title, 'Ankomst til Oslo')
 })
 
 test('authenticated users can create a housing stay with a note', async () => {

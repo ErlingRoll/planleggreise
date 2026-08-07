@@ -34,7 +34,8 @@ Fill in the Supabase values, then open `http://localhost:3000`. The first
 vertical slice supports Google login, private trip creation, authenticated
 trip listing, trip settings, recoverable trip archiving, activities, and
 generated days for each inclusive trip date. Trips, days, accommodation stays,
-meals, and activities support editable notes; non-empty notes appear in travel
+meals, and activities support editable notes; days can also have titles, and
+non-empty notes appear in travel
 mode. On desktop, the planner has All, Housing, and Meals tabs. Activities and
 meals share one order and can be dragged between days; timed items are kept
 before later timed items when a drop would otherwise place them too far down.
