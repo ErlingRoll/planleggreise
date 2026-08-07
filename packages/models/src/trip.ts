@@ -1,26 +1,20 @@
-import { z } from 'zod'
+import { z } from "zod"
 
 export const DateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 export const MAX_TRIP_DAYS = 60
 
 function parseCalendarDate(date: string) {
-  const [year, month, day] = date.split('-').map(Number)
+  const [year, month, day] = date.split("-").map(Number)
   const parsedDate = new Date(Date.UTC(year, month - 1, day))
 
-  if (
-    !DateOnlySchema.safeParse(date).success ||
-    parsedDate.toISOString().slice(0, 10) !== date
-  ) {
+  if (!DateOnlySchema.safeParse(date).success || parsedDate.toISOString().slice(0, 10) !== date) {
     return null
   }
 
   return parsedDate
 }
 
-export function getTripDurationInDays(
-  startDate: string,
-  endDate: string,
-): number | null {
+export function getTripDurationInDays(startDate: string, endDate: string): number | null {
   const start = parseCalendarDate(startDate)
   const end = parseCalendarDate(endDate)
 
@@ -31,17 +25,12 @@ export function getTripDurationInDays(
   return Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1
 }
 
-export function isTripDurationWithinLimit(
-  startDate: string,
-  endDate: string,
-): boolean {
+export function isTripDurationWithinLimit(startDate: string, endDate: string): boolean {
   const duration = getTripDurationInDays(startDate, endDate)
   return duration !== null && duration <= MAX_TRIP_DAYS
 }
 
-export const TimeOnlySchema = z
-  .string()
-  .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
+export const TimeOnlySchema = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
 
 export const NoteSchema = z.string().trim().max(2000).nullable()
 export const DayTitleSchema = z.string().trim().min(1).max(200).nullable()
@@ -100,14 +89,15 @@ export const CreateActivityInputSchema = ActivityFieldsSchema.extend({
   googleMapsUrl: z.string().url().nullable().optional().default(null),
   placeName: z.string().trim().max(200).nullable().optional().default(null),
   placeAddress: z.string().trim().max(500).nullable().optional().default(null),
-}).refine(
-  (activity) =>
-    Boolean(activity.title?.trim()) || Boolean(activity.googleMapsUrl),
-  'An activity title or Google Maps link is required',
-).refine(
-  (activity) => hasValidTimeRange(activity.startTime, activity.endTime),
-  'End time must be on or after start time',
-)
+})
+  .refine(
+    (activity) => Boolean(activity.title?.trim()) || Boolean(activity.googleMapsUrl),
+    "An activity title or Google Maps link is required",
+  )
+  .refine(
+    (activity) => hasValidTimeRange(activity.startTime, activity.endTime),
+    "End time must be on or after start time",
+  )
 
 export const UpdateActivityInputSchema = z
   .object({
@@ -124,7 +114,7 @@ export const UpdateActivityInputSchema = z
   })
   .refine(
     (activity) => hasValidTimeRange(activity.startTime, activity.endTime),
-    'End time must be on or after start time',
+    "End time must be on or after start time",
   )
 
 export const ReorderActivityInputSchema = z.object({
@@ -151,7 +141,7 @@ export const HousingStaySchema = HousingStayFieldsSchema.extend({
 
 export const CreateHousingStayInputSchema = HousingStayFieldsSchema.refine(
   (stay) => stay.checkOut > stay.checkIn,
-  'Check-out must be after check-in',
+  "Check-out must be after check-in",
 )
 
 export const UpdateHousingStayInputSchema = z
@@ -162,11 +152,8 @@ export const UpdateHousingStayInputSchema = z
     notes: NoteSchema.optional(),
   })
   .refine(
-    (stay) =>
-      !stay.checkIn ||
-      !stay.checkOut ||
-      stay.checkOut > stay.checkIn,
-    'Check-out must be after check-in',
+    (stay) => !stay.checkIn || !stay.checkOut || stay.checkOut > stay.checkIn,
+    "Check-out must be after check-in",
   )
 
 const MealFieldsSchema = z.object({
@@ -188,14 +175,15 @@ export const CreateMealInputSchema = MealFieldsSchema.extend({
   googleMapsUrl: z.string().url().nullable().optional().default(null),
   placeName: z.string().trim().max(200).nullable().optional().default(null),
   placeAddress: z.string().trim().max(500).nullable().optional().default(null),
-}).refine(
-  (meal) =>
-    Boolean(meal.title?.trim()) || Boolean(meal.googleMapsUrl),
-  'A meal title or Google Maps link is required',
-).refine(
-  (meal) => hasValidTimeRange(meal.startTime, meal.endTime),
-  'End time must be on or after start time',
-)
+})
+  .refine(
+    (meal) => Boolean(meal.title?.trim()) || Boolean(meal.googleMapsUrl),
+    "A meal title or Google Maps link is required",
+  )
+  .refine(
+    (meal) => hasValidTimeRange(meal.startTime, meal.endTime),
+    "End time must be on or after start time",
+  )
 
 export const UpdateMealInputSchema = z
   .object({
@@ -212,7 +200,7 @@ export const UpdateMealInputSchema = z
   })
   .refine(
     (meal) => hasValidTimeRange(meal.startTime, meal.endTime),
-    'End time must be on or after start time',
+    "End time must be on or after start time",
   )
 
 export const TripDaySchema = z.object({
@@ -234,7 +222,7 @@ export const TripDetailSchema = TripSchema.extend({
   meals: MealSchema.array().default([]),
 })
 
-export const DayItemTypeSchema = z.enum(['activity', 'meal'])
+export const DayItemTypeSchema = z.enum(["activity", "meal"])
 
 export const ReorderDayItemInputSchema = z.object({
   itemType: DayItemTypeSchema,
@@ -259,16 +247,10 @@ export type Activity = z.infer<typeof ActivitySchema>
 export type CreateActivityInput = z.infer<typeof CreateActivityInputSchema>
 export type UpdateActivityInput = z.infer<typeof UpdateActivityInputSchema>
 export type ReorderActivityInput = z.infer<typeof ReorderActivityInputSchema>
-export type ReorderActivitiesInput = z.infer<
-  typeof ReorderActivitiesInputSchema
->
+export type ReorderActivitiesInput = z.infer<typeof ReorderActivitiesInputSchema>
 export type HousingStay = z.infer<typeof HousingStaySchema>
-export type CreateHousingStayInput = z.infer<
-  typeof CreateHousingStayInputSchema
->
-export type UpdateHousingStayInput = z.infer<
-  typeof UpdateHousingStayInputSchema
->
+export type CreateHousingStayInput = z.infer<typeof CreateHousingStayInputSchema>
+export type UpdateHousingStayInput = z.infer<typeof UpdateHousingStayInputSchema>
 export type Meal = z.infer<typeof MealSchema>
 export type CreateMealInput = z.infer<typeof CreateMealInputSchema>
 export type UpdateMealInput = z.infer<typeof UpdateMealInputSchema>

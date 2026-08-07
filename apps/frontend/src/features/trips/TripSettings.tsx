@@ -1,10 +1,10 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { useTranslation } from 'react-i18next'
-import { updateTrip, type TripDetail } from '../../api'
-import { DatePicker } from '../../components/DatePicker'
-import { getErrorMessage } from '../../lib/errors'
-import { getTripDurationMessage, shiftDate } from '../../lib/trip-dates'
-import { TripSharingSettings } from './TripSharingSettings'
+import { useEffect, useState, type FormEvent } from "react"
+import { useTranslation } from "react-i18next"
+import { updateTrip, type TripDetail } from "../../api"
+import { DatePicker } from "../../components/DatePicker"
+import { getErrorMessage } from "../../lib/errors"
+import { getTripDurationMessage, shiftDate } from "../../lib/trip-dates"
+import { TripSharingSettings } from "./TripSharingSettings"
 
 type TripSettingsProps = {
   accessToken: string
@@ -14,16 +14,10 @@ type TripSettingsProps = {
   onDelete: (trip: TripDetail) => Promise<void>
 }
 
-export function TripSettings({
-  accessToken,
-  trip,
-  onSaved,
-  onClose,
-  onDelete,
-}: TripSettingsProps) {
+export function TripSettings({ accessToken, trip, onSaved, onClose, onDelete }: TripSettingsProps) {
   const { t } = useTranslation()
   const [name, setName] = useState(trip.name)
-  const [notes, setNotes] = useState(trip.notes ?? '')
+  const [notes, setNotes] = useState(trip.notes ?? "")
   const [startDate, setStartDate] = useState(trip.startDate)
   const [endDate, setEndDate] = useState(trip.endDate)
   const [error, setError] = useState<string | null>(null)
@@ -33,7 +27,7 @@ export function TripSettings({
 
   useEffect(() => {
     setName(trip.name)
-    setNotes(trip.notes ?? '')
+    setNotes(trip.notes ?? "")
     setStartDate(trip.startDate)
     setEndDate(trip.endDate)
     setError(null)
@@ -44,12 +38,12 @@ export function TripSettings({
     event.preventDefault()
 
     if (!startDate || !endDate) {
-      setError(t('tripSettings.datesRequired'))
+      setError(t("tripSettings.datesRequired"))
       return
     }
 
     if (endDate < startDate) {
-      setError(t('errors.tripDatesInvalid'))
+      setError(t("errors.tripDatesInvalid"))
       return
     }
 
@@ -80,9 +74,7 @@ export function TripSettings({
   }
 
   async function handleDelete() {
-    const confirmed = window.confirm(
-      t('tripSettings.deleteConfirmation', { name: trip.name }),
-    )
+    const confirmed = window.confirm(t("tripSettings.deleteConfirmation", { name: trip.name }))
 
     if (!confirmed) {
       return
@@ -97,13 +89,11 @@ export function TripSettings({
     <section className="mt-4 rounded-2xl border border-border bg-surface p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h4 className="font-semibold text-brand">{t('tripSettings.title')}</h4>
-          <p className="mt-1 text-sm text-muted">
-            {t('tripSettings.description')}
-          </p>
+          <h4 className="font-semibold text-brand">{t("tripSettings.title")}</h4>
+          <p className="mt-1 text-sm text-muted">{t("tripSettings.description")}</p>
         </div>
         <button
-          aria-label={t('tripSettings.close')}
+          aria-label={t("tripSettings.close")}
           className="grid size-9 place-items-center rounded-lg text-xl text-muted hover:bg-surface-muted"
           onClick={onClose}
           type="button"
@@ -114,7 +104,7 @@ export function TripSettings({
 
       <form className="mt-5 grid gap-4" onSubmit={(event) => void handleSubmit(event)}>
         <label className="grid gap-2 text-sm font-medium text-muted">
-          {t('tripSettings.name')}
+          {t("tripSettings.name")}
           <input
             className="rounded-xl border border-border bg-input px-3 py-2.5 text-input-ink outline-none focus:border-brand"
             onChange={(event) => setName(event.target.value)}
@@ -123,17 +113,17 @@ export function TripSettings({
           />
         </label>
         <label className="grid gap-2 text-sm font-medium text-muted">
-          {t('tripSettings.notes')}
+          {t("tripSettings.notes")}
           <textarea
             className="min-h-24 resize-y rounded-xl border border-border bg-input px-3 py-2.5 text-input-ink outline-none focus:border-brand"
             onChange={(event) => setNotes(event.target.value)}
-            placeholder={t('tripSettings.notesPlaceholder')}
+            placeholder={t("tripSettings.notesPlaceholder")}
             value={notes}
           />
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <DatePicker
-            label={t('tripSettings.startDate')}
+            label={t("tripSettings.startDate")}
             onChange={(date) => {
               setStartDate(date)
               const maximumEndDate = shiftDate(date, 59)
@@ -147,7 +137,7 @@ export function TripSettings({
             value={startDate}
           />
           <DatePicker
-            label={t('tripSettings.endDate')}
+            label={t("tripSettings.endDate")}
             maxDate={shiftDate(startDate, 59)}
             minDate={startDate}
             onChange={setEndDate}
@@ -165,7 +155,7 @@ export function TripSettings({
               onClick={() => void handleDelete()}
               type="button"
             >
-              {isDeleting ? t('tripSettings.deleting') : t('tripSettings.delete')}
+              {isDeleting ? t("tripSettings.deleting") : t("tripSettings.delete")}
             </button>
           )}
           <div className="flex flex-col-reverse gap-3 sm:flex-row">
@@ -174,14 +164,14 @@ export function TripSettings({
               onClick={onClose}
               type="button"
             >
-              {t('tripSettings.cancel')}
+              {t("tripSettings.cancel")}
             </button>
             <button
               className="rounded-xl bg-brand-surface px-4 py-2.5 text-sm font-semibold text-on-brand hover:bg-brand-surface-hover disabled:opacity-60"
               disabled={isSaving || isDeleting}
               type="submit"
             >
-              {isSaving ? t('tripSettings.saving') : t('tripSettings.save')}
+              {isSaving ? t("tripSettings.saving") : t("tripSettings.save")}
             </button>
           </div>
         </div>

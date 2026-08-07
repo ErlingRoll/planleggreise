@@ -1,23 +1,18 @@
-import { useTranslation } from 'react-i18next'
+import { useTranslation } from "react-i18next"
 
 type LoadingCoverProps = {
   fullScreen?: boolean
   message?: string
 }
 
-export function LoadingCover({
-  fullScreen = false,
-  message,
-}: LoadingCoverProps) {
+export function LoadingCover({ fullScreen = false, message }: LoadingCoverProps) {
   const { t } = useTranslation()
 
   return (
     <div
       aria-live="polite"
       className={`relative isolate grid overflow-hidden border border-border-card bg-surface text-center ${
-        fullScreen
-          ? 'min-h-screen rounded-none'
-          : 'mt-6 min-h-[26rem] rounded-[2rem]'
+        fullScreen ? "min-h-screen rounded-none" : "mt-6 min-h-[26rem] rounded-[2rem]"
       }`}
       role="status"
     >
@@ -49,9 +44,7 @@ export function LoadingCover({
         <p className="mt-7 text-xs font-bold uppercase tracking-[0.24em] text-accent-text">
           planleggreise
         </p>
-        <p className="mt-3 text-lg font-semibold text-brand">
-          {message ?? t('common.loading')}
-        </p>
+        <p className="mt-3 text-lg font-semibold text-brand">{message ?? t("common.loading")}</p>
         <div
           aria-hidden="true"
           className="mx-auto mt-6 flex max-w-48 items-center justify-center gap-2"

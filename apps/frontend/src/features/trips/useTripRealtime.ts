@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react'
-import { getTrip, type TripDetail } from '../../api'
-import { getErrorMessage } from '../../lib/errors'
-import { getSupabaseClient } from '../../lib/supabase'
+import { useEffect, useRef } from "react"
+import { getTrip, type TripDetail } from "../../api"
+import { getErrorMessage } from "../../lib/errors"
+import { getSupabaseClient } from "../../lib/supabase"
 
 type UseTripRealtimeProps = {
   accessToken: string
@@ -12,14 +12,14 @@ type UseTripRealtimeProps = {
 }
 
 const realtimeTables = [
-  { table: 'trip_days', column: 'trip_id' },
-  { table: 'activities', column: 'trip_id' },
-  { table: 'meals', column: 'trip_id' },
-  { table: 'housing_stays', column: 'trip_id' },
-  { table: 'trip_members', column: 'trip_id' },
-  { table: 'trip_invitations', column: 'trip_id' },
-  { table: 'trip_access_links', column: 'trip_id' },
-  { table: 'trip_access_requests', column: 'trip_id' },
+  { table: "trip_days", column: "trip_id" },
+  { table: "activities", column: "trip_id" },
+  { table: "meals", column: "trip_id" },
+  { table: "housing_stays", column: "trip_id" },
+  { table: "trip_members", column: "trip_id" },
+  { table: "trip_invitations", column: "trip_id" },
+  { table: "trip_access_links", column: "trip_id" },
+  { table: "trip_access_requests", column: "trip_id" },
 ] as const
 
 export function useTripRealtime({
@@ -69,11 +69,11 @@ export function useTripRealtime({
     }
 
     channel.on(
-      'postgres_changes',
+      "postgres_changes",
       {
-        event: '*',
-        schema: 'public',
-        table: 'trips',
+        event: "*",
+        schema: "public",
+        table: "trips",
         filter: `id=eq.${tripId}`,
       },
       scheduleRefresh,
@@ -81,10 +81,10 @@ export function useTripRealtime({
 
     for (const { table, column } of realtimeTables) {
       channel.on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
+          event: "*",
+          schema: "public",
           table,
           filter: `${column}=eq.${tripId}`,
         },
@@ -93,8 +93,8 @@ export function useTripRealtime({
     }
 
     channel.subscribe((status) => {
-      if (status === 'CHANNEL_ERROR') {
-        onErrorRef.current('Realtime updates are unavailable')
+      if (status === "CHANNEL_ERROR") {
+        onErrorRef.current("Realtime updates are unavailable")
       }
     })
 

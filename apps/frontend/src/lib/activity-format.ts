@@ -1,15 +1,12 @@
-import type { Activity, Meal } from '@planleggreise/models'
+import type { Activity, Meal } from "@planleggreise/models"
 
 export type DayItem = Activity | Meal
 
-export function getDayItemTitle(
-  item: Pick<DayItem, 'title' | 'placeName'>,
-  fallback: string,
-) {
+export function getDayItemTitle(item: Pick<DayItem, "title" | "placeName">, fallback: string) {
   return item.title?.trim() || item.placeName || fallback
 }
 
-export function getDayItemTime(item: Pick<DayItem, 'allDay' | 'startTime' | 'endTime'>) {
+export function getDayItemTime(item: Pick<DayItem, "allDay" | "startTime" | "endTime">) {
   if (item.allDay) {
     return null
   }
@@ -44,7 +41,7 @@ export function sortActivities(activities: Activity[]) {
 }
 
 export function formatActivityTime(
-  activity: Pick<Activity, 'allDay' | 'startTime' | 'endTime'>,
+  activity: Pick<Activity, "allDay" | "startTime" | "endTime">,
   labels: { allDay: string; timeNotSet: string },
 ) {
   if (activity.allDay) {

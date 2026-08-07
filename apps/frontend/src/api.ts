@@ -47,8 +47,8 @@ import {
   type TripInvitation,
   type TripMember,
   type TripSharing,
-} from '@planleggreise/models'
-import { HttpError, notifyUnhandledHttpError } from './lib/http-errors'
+} from "@planleggreise/models"
+import { HttpError, notifyUnhandledHttpError } from "./lib/http-errors"
 
 export type {
   Activity,
@@ -75,16 +75,16 @@ export type {
   TripInvitation,
   TripMember,
   TripSharing,
-} from '@planleggreise/models'
+} from "@planleggreise/models"
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ''
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ""
 
 async function request(path: string, accessToken: string, init?: RequestInit) {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...init?.headers,
     },
   })
@@ -104,29 +104,19 @@ async function request(path: string, accessToken: string, init?: RequestInit) {
     throw error
   }
 
-  return response.status === 204 ? null : response.json() as Promise<unknown>
+  return response.status === 204 ? null : (response.json() as Promise<unknown>)
 }
 
 export async function getTrips(accessToken: string): Promise<Trip[]> {
-  return TripSchema.array().parse(await request('/api/trips', accessToken))
+  return TripSchema.array().parse(await request("/api/trips", accessToken))
 }
 
-export async function getTrip(
-  accessToken: string,
-  tripId: string,
-): Promise<TripDetail> {
-  return TripDetailSchema.parse(
-    await request(`/api/trips/${tripId}`, accessToken),
-  )
+export async function getTrip(accessToken: string, tripId: string): Promise<TripDetail> {
+  return TripDetailSchema.parse(await request(`/api/trips/${tripId}`, accessToken))
 }
 
-export async function getTripSharing(
-  accessToken: string,
-  tripId: string,
-): Promise<TripSharing> {
-  return TripSharingSchema.parse(
-    await request(`/api/trips/${tripId}/sharing`, accessToken),
-  )
+export async function getTripSharing(accessToken: string, tripId: string): Promise<TripSharing> {
+  return TripSharingSchema.parse(await request(`/api/trips/${tripId}/sharing`, accessToken))
 }
 
 export async function getTripAccessStatus(
@@ -134,10 +124,7 @@ export async function getTripAccessStatus(
   tripId: string,
 ): Promise<TripAccessStatus> {
   return TripAccessStatusSchema.parse(
-    await request(
-      `/api/trips/${tripId}/sharing/access-status`,
-      accessToken,
-    ),
+    await request(`/api/trips/${tripId}/sharing/access-status`, accessToken),
   )
 }
 
@@ -148,7 +135,7 @@ export async function createTripInvitation(
 ): Promise<TripInvitation> {
   return TripInvitationSchema.parse(
     await request(`/api/trips/${tripId}/sharing/invitations`, accessToken, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(InviteTripMemberInputSchema.parse(input)),
     }),
   )
@@ -160,7 +147,7 @@ export async function createTripAccessLink(
 ): Promise<TripAccessLink> {
   return TripAccessLinkSchema.parse(
     await request(`/api/trips/${tripId}/sharing/access-links`, accessToken, {
-      method: 'POST',
+      method: "POST",
     }),
   )
 }
@@ -172,7 +159,7 @@ export async function requestTripAccess(
 ): Promise<TripAccessStatus> {
   return TripAccessStatusSchema.parse(
     await request(`/api/trips/${tripId}/sharing/access-requests`, accessToken, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(RequestTripAccessInputSchema.parse(input)),
     }),
   )
@@ -184,11 +171,9 @@ export async function approveTripAccessRequest(
   requestId: string,
 ): Promise<TripMember> {
   return TripMemberSchema.parse(
-    await request(
-      `/api/trips/${tripId}/sharing/requests/${requestId}/approve`,
-      accessToken,
-      { method: 'PATCH' },
-    ),
+    await request(`/api/trips/${tripId}/sharing/requests/${requestId}/approve`, accessToken, {
+      method: "PATCH",
+    }),
   )
 }
 
@@ -198,11 +183,9 @@ export async function denyTripAccessRequest(
   requestId: string,
 ): Promise<TripAccessRequest> {
   return TripAccessRequestSchema.parse(
-    await request(
-      `/api/trips/${tripId}/sharing/requests/${requestId}/deny`,
-      accessToken,
-      { method: 'PATCH' },
-    ),
+    await request(`/api/trips/${tripId}/sharing/requests/${requestId}/deny`, accessToken, {
+      method: "PATCH",
+    }),
   )
 }
 
@@ -212,11 +195,9 @@ export async function revokeTripInvitation(
   invitationId: string,
 ): Promise<TripInvitation> {
   return TripInvitationSchema.parse(
-    await request(
-      `/api/trips/${tripId}/sharing/invitations/${invitationId}/revoke`,
-      accessToken,
-      { method: 'PATCH' },
-    ),
+    await request(`/api/trips/${tripId}/sharing/invitations/${invitationId}/revoke`, accessToken, {
+      method: "PATCH",
+    }),
   )
 }
 
@@ -226,11 +207,9 @@ export async function revokeTripAccessLink(
   linkId: string,
 ): Promise<TripAccessLink> {
   return TripAccessLinkSchema.parse(
-    await request(
-      `/api/trips/${tripId}/sharing/access-links/${linkId}/revoke`,
-      accessToken,
-      { method: 'PATCH' },
-    ),
+    await request(`/api/trips/${tripId}/sharing/access-links/${linkId}/revoke`, accessToken, {
+      method: "PATCH",
+    }),
   )
 }
 
@@ -239,31 +218,23 @@ export async function removeTripMember(
   tripId: string,
   memberId: string,
 ): Promise<void> {
-  await request(
-    `/api/trips/${tripId}/sharing/members/${memberId}`,
-    accessToken,
-    { method: 'DELETE' },
-  )
+  await request(`/api/trips/${tripId}/sharing/members/${memberId}`, accessToken, {
+    method: "DELETE",
+  })
 }
 
-export async function createTrip(
-  accessToken: string,
-  input: CreateTripInput,
-): Promise<Trip> {
+export async function createTrip(accessToken: string, input: CreateTripInput): Promise<Trip> {
   return TripSchema.parse(
-    await request('/api/trips', accessToken, {
-      method: 'POST',
+    await request("/api/trips", accessToken, {
+      method: "POST",
       body: JSON.stringify(input),
     }),
   )
 }
 
-export async function deleteTrip(
-  accessToken: string,
-  tripId: string,
-): Promise<void> {
+export async function deleteTrip(accessToken: string, tripId: string): Promise<void> {
   await request(`/api/trips/${tripId}`, accessToken, {
-    method: 'DELETE',
+    method: "DELETE",
   })
 }
 
@@ -272,10 +243,10 @@ export async function updateTripDay(
   tripId: string,
   tripDate: string,
   input: UpdateTripDayInput,
-): Promise<TripDetail['days'][number]> {
+): Promise<TripDetail["days"][number]> {
   return TripDaySchema.parse(
     await request(`/api/trips/${tripId}/days/${tripDate}`, accessToken, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify(input),
     }),
   )
@@ -288,7 +259,7 @@ export async function updateTrip(
 ): Promise<TripDetail> {
   return TripDetailSchema.parse(
     await request(`/api/trips/${tripId}`, accessToken, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify(UpdateTripInputSchema.parse(input)),
     }),
   )
@@ -301,7 +272,7 @@ export async function createHousingStay(
 ): Promise<HousingStay> {
   return HousingStaySchema.parse(
     await request(`/api/trips/${tripId}/housing`, accessToken, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(CreateHousingStayInputSchema.parse(input)),
     }),
   )
@@ -314,14 +285,10 @@ export async function updateHousingStay(
   input: UpdateHousingStayInput,
 ): Promise<HousingStay> {
   return HousingStaySchema.parse(
-    await request(
-      `/api/trips/${tripId}/housing/${housingStayId}`,
-      accessToken,
-      {
-        method: 'PATCH',
-        body: JSON.stringify(UpdateHousingStayInputSchema.parse(input)),
-      },
-    ),
+    await request(`/api/trips/${tripId}/housing/${housingStayId}`, accessToken, {
+      method: "PATCH",
+      body: JSON.stringify(UpdateHousingStayInputSchema.parse(input)),
+    }),
   )
 }
 
@@ -331,7 +298,7 @@ export async function deleteHousingStay(
   housingStayId: string,
 ): Promise<void> {
   await request(`/api/trips/${tripId}/housing/${housingStayId}`, accessToken, {
-    method: 'DELETE',
+    method: "DELETE",
   })
 }
 
@@ -342,7 +309,7 @@ export async function createMeal(
 ): Promise<Meal> {
   return MealSchema.parse(
     await request(`/api/trips/${tripId}/meals`, accessToken, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(CreateMealInputSchema.parse(input)),
     }),
   )
@@ -356,7 +323,7 @@ export async function updateMeal(
 ): Promise<Meal> {
   return MealSchema.parse(
     await request(`/api/trips/${tripId}/meals/${mealId}`, accessToken, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify(UpdateMealInputSchema.parse(input)),
     }),
   )
@@ -368,7 +335,7 @@ export async function deleteMeal(
   mealId: string,
 ): Promise<void> {
   await request(`/api/trips/${tripId}/meals/${mealId}`, accessToken, {
-    method: 'DELETE',
+    method: "DELETE",
   })
 }
 
@@ -379,7 +346,7 @@ export async function createActivity(
 ): Promise<Activity> {
   return ActivitySchema.parse(
     await request(`/api/trips/${tripId}/activities`, accessToken, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(CreateActivityInputSchema.parse(input)),
     }),
   )
@@ -392,14 +359,10 @@ export async function updateActivity(
   input: UpdateActivityInput,
 ): Promise<Activity> {
   return ActivitySchema.parse(
-    await request(
-      `/api/trips/${tripId}/activities/${activityId}`,
-      accessToken,
-      {
-        method: 'PATCH',
-        body: JSON.stringify(UpdateActivityInputSchema.parse(input)),
-      },
-    ),
+    await request(`/api/trips/${tripId}/activities/${activityId}`, accessToken, {
+      method: "PATCH",
+      body: JSON.stringify(UpdateActivityInputSchema.parse(input)),
+    }),
   )
 }
 
@@ -410,10 +373,8 @@ export async function reorderActivities(
 ): Promise<Activity[]> {
   return ActivitySchema.array().parse(
     await request(`/api/trips/${tripId}/activities/reorder`, accessToken, {
-      method: 'PATCH',
-      body: JSON.stringify(
-        ReorderActivitiesInputSchema.parse({ activities }),
-      ),
+      method: "PATCH",
+      body: JSON.stringify(ReorderActivitiesInputSchema.parse({ activities })),
     }),
   )
 }
@@ -425,7 +386,7 @@ export async function reorderDayItems(
 ) {
   return ReorderedDayItemsSchema.parse(
     await request(`/api/trips/${tripId}/day-items/reorder`, accessToken, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify(ReorderDayItemsInputSchema.parse({ items })),
     }),
   )
@@ -437,6 +398,6 @@ export async function deleteActivity(
   activityId: string,
 ): Promise<void> {
   await request(`/api/trips/${tripId}/activities/${activityId}`, accessToken, {
-    method: 'DELETE',
+    method: "DELETE",
   })
 }

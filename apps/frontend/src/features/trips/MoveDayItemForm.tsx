@@ -1,6 +1,6 @@
-import type { FormEvent } from 'react'
-import { useTranslation } from 'react-i18next'
-import { DatePicker } from '../../components/DatePicker'
+import type { FormEvent } from "react"
+import { useTranslation } from "react-i18next"
+import { DatePicker } from "../../components/DatePicker"
 
 type MoveDayItemFormProps = {
   startDate: string
@@ -27,7 +27,7 @@ export function MoveDayItemForm({
       onSubmit={onSubmit}
     >
       <DatePicker
-        label={t('tripDetails.moveToDate')}
+        label={t("tripDetails.moveToDate")}
         maxDate={endDate}
         minDate={startDate}
         onChange={onTargetDateChange}
@@ -39,13 +39,13 @@ export function MoveDayItemForm({
           onClick={onCancel}
           type="button"
         >
-          {t('common.cancel')}
+          {t("common.cancel")}
         </button>
         <button
           className="rounded-xl bg-brand-surface px-3 py-2 text-sm font-semibold text-on-brand hover:bg-brand-surface-hover"
           type="submit"
         >
-          {t('common.move')}
+          {t("common.move")}
         </button>
       </div>
     </form>

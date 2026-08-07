@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
-import { Navigate, Route, Routes } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { getErrorMessage } from './lib/errors'
-import { getSupabaseClient } from './lib/supabase'
-import { LoadingCover } from './components/LoadingCover'
-import { LoginScreen } from './features/auth/LoginScreen'
-import { TripAccessRequestScreen } from './features/trips/TripAccessRequestScreen'
-import { TripDashboard } from './features/trips/TripDashboard'
+import { useEffect, useState } from "react"
+import type { Session } from "@supabase/supabase-js"
+import { Navigate, Route, Routes } from "react-router-dom"
+import { useTranslation } from "react-i18next"
+import { getErrorMessage } from "./lib/errors"
+import { getSupabaseClient } from "./lib/supabase"
+import { LoadingCover } from "./components/LoadingCover"
+import { LoginScreen } from "./features/auth/LoginScreen"
+import { TripAccessRequestScreen } from "./features/trips/TripAccessRequestScreen"
+import { TripDashboard } from "./features/trips/TripDashboard"
 
 export default function App() {
   const { t } = useTranslation()
@@ -58,13 +58,15 @@ export default function App() {
   }, [])
 
   if (!isAuthReady) {
-    return <LoadingCover fullScreen message={t('common.loading')} />
+    return <LoadingCover fullScreen message={t("common.loading")} />
   }
 
   if (authError) {
     return (
       <main className="grid min-h-screen place-items-center bg-page px-5 text-center text-error">
-        <p className="max-w-md rounded-2xl border border-danger-border bg-error-surface p-5">{authError}</p>
+        <p className="max-w-md rounded-2xl border border-danger-border bg-error-surface p-5">
+          {authError}
+        </p>
       </main>
     )
   }
@@ -76,17 +78,12 @@ export default function App() {
   return (
     <Routes>
       <Route
-        element={
-          <TripAccessRequestScreen accessToken={session.access_token} />
-        }
+        element={<TripAccessRequestScreen accessToken={session.access_token} />}
         path="/trips/:tripId/request-access"
       />
       <Route element={<TripDashboard session={session} />} path="/" />
       <Route element={<TripDashboard session={session} />} path="/trips/:tripId" />
-      <Route
-        element={<TripDashboard session={session} />}
-        path="/trips/:tripId/travel"
-      />
+      <Route element={<TripDashboard session={session} />} path="/trips/:tripId/travel" />
       <Route element={<Navigate replace to="/" />} path="*" />
     </Routes>
   )

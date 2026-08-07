@@ -1,12 +1,12 @@
-import type { FormEvent } from 'react'
-import { useTranslation } from 'react-i18next'
-import { TimePicker } from '../../components/TimePicker'
-import type { DayItemRecord } from './planner-types'
+import type { FormEvent } from "react"
+import { useTranslation } from "react-i18next"
+import { TimePicker } from "../../components/TimePicker"
+import type { DayItemRecord } from "./planner-types"
 
 type DayItemFormProps = {
   isMealForm: boolean
   editingItemId: string | null
-  editingItemType: DayItemRecord['itemType'] | null
+  editingItemType: DayItemRecord["itemType"] | null
   title: string
   googleMapsUrl: string
   googleMapsUrlIsInvalid: boolean
@@ -18,7 +18,7 @@ type DayItemFormProps = {
   isSaving: boolean
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   onCancel: () => void
-  onSelectItemType: (itemType: DayItemRecord['itemType']) => void
+  onSelectItemType: (itemType: DayItemRecord["itemType"]) => void
   onTitleChange: (value: string) => void
   onGoogleMapsUrlChange: (value: string) => void
   onNotesChange: (value: string) => void
@@ -59,53 +59,49 @@ export function DayItemForm({
     >
       {editingItemId === null && (
         <label className="grid gap-1.5 text-sm font-medium text-muted">
-          {t('tripDetails.itemType')}
+          {t("tripDetails.itemType")}
           <select
             className="rounded-xl border border-border bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
             onChange={(event) =>
-              onSelectItemType(
-                event.target.value === 'meal' ? 'meal' : 'activity',
-              )
+              onSelectItemType(event.target.value === "meal" ? "meal" : "activity")
             }
-            value={editingItemType ?? 'activity'}
+            value={editingItemType ?? "activity"}
           >
-            <option value="activity">{t('tripDetails.activity')}</option>
-            <option value="meal">{t('tripDetails.meal')}</option>
+            <option value="activity">{t("tripDetails.activity")}</option>
+            <option value="meal">{t("tripDetails.meal")}</option>
           </select>
         </label>
       )}
       <label className="grid gap-1.5 text-sm font-medium text-muted">
-        {isMealForm ? t('tripDetails.mealName') : t('tripDetails.whatToDo')}
+        {isMealForm ? t("tripDetails.mealName") : t("tripDetails.whatToDo")}
         <input
           className="rounded-xl border border-border bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
           onChange={(event) => onTitleChange(event.target.value)}
           placeholder={
-            isMealForm
-              ? t('tripDetails.mealName')
-              : t('tripDetails.activityPlaceholder')
+            isMealForm ? t("tripDetails.mealName") : t("tripDetails.activityPlaceholder")
           }
           required={!googleMapsUrl.trim()}
           value={title}
         />
       </label>
       <label className="grid gap-1.5 text-sm font-medium text-muted">
-        {t('tripDetails.googleMapsUrl')}
+        {t("tripDetails.googleMapsUrl")}
         <input
           aria-invalid={googleMapsUrlIsInvalid}
           className={`rounded-xl border bg-surface px-3 py-2.5 text-ink outline-none ${
             googleMapsUrlIsInvalid
-              ? 'border-error-strong focus:border-error-strong'
-              : 'border-border focus:border-brand'
+              ? "border-error-strong focus:border-error-strong"
+              : "border-border focus:border-brand"
           }`}
           onChange={(event) => onGoogleMapsUrlChange(event.target.value)}
-          placeholder={t('tripDetails.googleMapsPlaceholder')}
+          placeholder={t("tripDetails.googleMapsPlaceholder")}
           type="url"
           value={googleMapsUrl}
         />
-        <span className="font-normal">{t('tripDetails.googleMapsHelp')}</span>
+        <span className="font-normal">{t("tripDetails.googleMapsHelp")}</span>
         {googleMapsUrlIsInvalid && (
           <span className="font-normal text-error-strong" role="alert">
-            {t('errors.googleMapsInvalid')}
+            {t("errors.googleMapsInvalid")}
           </span>
         )}
         {googleMapsError && (
@@ -115,11 +111,11 @@ export function DayItemForm({
         )}
       </label>
       <label className="grid gap-1.5 text-sm font-medium text-muted">
-        {t('tripDetails.notes')}
+        {t("tripDetails.notes")}
         <textarea
           className="min-h-20 resize-y rounded-xl border border-border bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
           onChange={(event) => onNotesChange(event.target.value)}
-          placeholder={t('tripDetails.notesPlaceholder')}
+          placeholder={t("tripDetails.notesPlaceholder")}
           value={notes}
         />
       </label>
@@ -130,20 +126,12 @@ export function DayItemForm({
           onChange={(event) => onAllDayChange(event.target.checked)}
           type="checkbox"
         />
-        {t('tripDetails.allDay')}
+        {t("tripDetails.allDay")}
       </label>
       {!allDay && (
         <div className="grid gap-3 sm:grid-cols-2">
-          <TimePicker
-            label={t('common.from')}
-            onChange={onStartTimeChange}
-            value={startTime}
-          />
-          <TimePicker
-            label={t('common.to')}
-            onChange={onEndTimeChange}
-            value={endTime}
-          />
+          <TimePicker label={t("common.from")} onChange={onStartTimeChange} value={startTime} />
+          <TimePicker label={t("common.to")} onChange={onEndTimeChange} value={endTime} />
         </div>
       )}
       <div className="flex justify-end gap-2">
@@ -152,7 +140,7 @@ export function DayItemForm({
           onClick={onCancel}
           type="button"
         >
-          {t('common.cancel')}
+          {t("common.cancel")}
         </button>
         <button
           className="rounded-xl bg-brand-surface px-4 py-2.5 text-sm font-semibold text-on-brand hover:bg-brand-surface-hover disabled:opacity-60"
@@ -161,17 +149,17 @@ export function DayItemForm({
         >
           {isSaving
             ? t(
-                editingItemType === 'meal'
-                  ? 'tripDetails.savingMeal'
-                  : 'tripDetails.savingActivity',
+                editingItemType === "meal"
+                  ? "tripDetails.savingMeal"
+                  : "tripDetails.savingActivity",
               )
             : isMealForm
               ? editingItemId
-                ? t('tripDetails.saveMealChanges')
-                : t('tripDetails.saveMeal')
+                ? t("tripDetails.saveMealChanges")
+                : t("tripDetails.saveMeal")
               : editingItemId
-                ? t('tripDetails.saveActivityChanges')
-                : t('tripDetails.saveActivity')}
+                ? t("tripDetails.saveActivityChanges")
+                : t("tripDetails.saveActivity")}
         </button>
       </div>
     </form>

@@ -1,11 +1,8 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 
 type SupabaseEnvironment = NodeJS.ProcessEnv
 
-function getRequiredEnvironmentValue(
-  environment: SupabaseEnvironment,
-  name: string,
-): string {
+function getRequiredEnvironmentValue(environment: SupabaseEnvironment, name: string): string {
   const value = environment[name]
 
   if (!value) {
@@ -19,11 +16,8 @@ export function createUserSupabaseClient(
   accessToken: string,
   environment: SupabaseEnvironment = process.env,
 ): SupabaseClient {
-  const url = getRequiredEnvironmentValue(environment, 'SUPABASE_URL')
-  const publishableKey = getRequiredEnvironmentValue(
-    environment,
-    'SUPABASE_PUBLISHABLE_KEY',
-  )
+  const url = getRequiredEnvironmentValue(environment, "SUPABASE_URL")
+  const publishableKey = getRequiredEnvironmentValue(environment, "SUPABASE_PUBLISHABLE_KEY")
 
   return createClient(url, publishableKey, {
     accessToken: async () => accessToken,
@@ -39,11 +33,8 @@ export function createSupabaseAuthClient(
   accessToken: string,
   environment: SupabaseEnvironment = process.env,
 ): SupabaseClient {
-  const url = getRequiredEnvironmentValue(environment, 'SUPABASE_URL')
-  const publishableKey = getRequiredEnvironmentValue(
-    environment,
-    'SUPABASE_PUBLISHABLE_KEY',
-  )
+  const url = getRequiredEnvironmentValue(environment, "SUPABASE_URL")
+  const publishableKey = getRequiredEnvironmentValue(environment, "SUPABASE_PUBLISHABLE_KEY")
 
   return createClient(url, publishableKey, {
     auth: {

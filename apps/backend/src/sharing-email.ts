@@ -19,24 +19,22 @@ export function createSharingEmailSender(
     async send(email) {
       if (!functionUrl || !functionSecret) {
         console.warn(
-          'Sharing email notifications are not configured; the sharing change was saved without sending email.',
+          "Sharing email notifications are not configured; the sharing change was saved without sending email.",
         )
         return
       }
 
       const response = await fetch(functionUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
           Authorization: `Bearer ${functionSecret}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(email),
       })
 
       if (!response.ok) {
-        throw new Error(
-          `Sharing email notification failed (${response.status})`,
-        )
+        throw new Error(`Sharing email notification failed (${response.status})`)
       }
     },
   }

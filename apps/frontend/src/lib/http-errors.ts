@@ -1,4 +1,4 @@
-const httpErrorEventName = 'planleggreise:http-error'
+const httpErrorEventName = "planleggreise:http-error"
 
 export class HttpError extends Error {
   readonly status: number
@@ -6,7 +6,7 @@ export class HttpError extends Error {
 
   constructor(message: string, status: number) {
     super(message)
-    this.name = 'HttpError'
+    this.name = "HttpError"
     this.status = status
   }
 }
@@ -18,7 +18,7 @@ export function markHttpErrorHandled(reason: unknown) {
 }
 
 export function notifyUnhandledHttpError(error: HttpError) {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return
   }
 
@@ -27,9 +27,7 @@ export function notifyUnhandledHttpError(error: HttpError) {
       return
     }
 
-    window.dispatchEvent(
-      new CustomEvent<HttpError>(httpErrorEventName, { detail: error }),
-    )
+    window.dispatchEvent(new CustomEvent<HttpError>(httpErrorEventName, { detail: error }))
   }, 0)
 }
 

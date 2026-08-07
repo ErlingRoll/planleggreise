@@ -1,11 +1,5 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type DragEvent,
-  type FormEvent,
-} from 'react'
-import { useTranslation } from 'react-i18next'
+import { useEffect, useRef, useState, type DragEvent, type FormEvent } from "react"
+import { useTranslation } from "react-i18next"
 import {
   createActivity,
   createMeal,
@@ -20,33 +14,28 @@ import {
   type Meal,
   type ReorderDayItemInput,
   type TripDetail,
-} from '../../api'
-import { getErrorMessage, isGoogleMapsError } from '../../lib/errors'
+} from "../../api"
+import { getErrorMessage, isGoogleMapsError } from "../../lib/errors"
 import {
   getDayItemTime,
   sortDayItems,
   sortActivities,
   type DayItem,
-} from '../../lib/activity-format'
-import { LoadingCover } from '../../components/LoadingCover'
-import { TripAuxiliaryDetails } from './TripAuxiliaryDetails'
-import { TripSettings } from './TripSettings'
-import { DayItemForm } from './DayItemForm'
-import { DayItemList } from './DayItemList'
-import { MoveDayItemForm } from './MoveDayItemForm'
-import { TripDayCard } from './TripDayCard'
-import { TripDayNavigator } from './TripDayNavigator'
-import { TripDetailsHeader } from './TripDetailsHeader'
-import { useTripRealtime } from './useTripRealtime'
-import type {
-  DayItemRecord,
-  DropTarget,
-  MovingItem,
-  PlannerTab,
-} from './planner-types'
-import { isAllowedGoogleMapsUrl } from '@planleggreise/models'
+} from "../../lib/activity-format"
+import { LoadingCover } from "../../components/LoadingCover"
+import { TripAuxiliaryDetails } from "./TripAuxiliaryDetails"
+import { TripSettings } from "./TripSettings"
+import { DayItemForm } from "./DayItemForm"
+import { DayItemList } from "./DayItemList"
+import { MoveDayItemForm } from "./MoveDayItemForm"
+import { TripDayCard } from "./TripDayCard"
+import { TripDayNavigator } from "./TripDayNavigator"
+import { TripDetailsHeader } from "./TripDetailsHeader"
+import { useTripRealtime } from "./useTripRealtime"
+import type { DayItemRecord, DropTarget, MovingItem, PlannerTab } from "./planner-types"
+import { isAllowedGoogleMapsUrl } from "@planleggreise/models"
 
-const daySelectionCookiePrefix = 'planleggreise-selected-days-'
+const daySelectionCookiePrefix = "planleggreise-selected-days-"
 const daySelectionCookieMaxAge = 60 * 60 * 24 * 365
 
 function getDaySelectionCookieName(tripId: string) {
@@ -55,22 +44,18 @@ function getDaySelectionCookieName(tripId: string) {
 
 function readSelectedDayDates(tripId: string, validDates: string[]) {
   const cookieName = getDaySelectionCookieName(tripId)
-  const cookie = document.cookie
-    .split('; ')
-    .find((entry) => entry.startsWith(`${cookieName}=`))
+  const cookie = document.cookie.split("; ").find((entry) => entry.startsWith(`${cookieName}=`))
 
   if (!cookie) {
     return null
   }
 
   try {
-    const storedDates: unknown = JSON.parse(
-      decodeURIComponent(cookie.slice(cookieName.length + 1)),
-    )
+    const storedDates: unknown = JSON.parse(decodeURIComponent(cookie.slice(cookieName.length + 1)))
 
     if (
       !Array.isArray(storedDates) ||
-      !storedDates.every((date): date is string => typeof date === 'string')
+      !storedDates.every((date): date is string => typeof date === "string")
     ) {
       return null
     }
@@ -86,9 +71,9 @@ function writeSelectedDayDates(tripId: string, selectedDates: string[]) {
   document.cookie = [
     `${cookieName}=${encodeURIComponent(JSON.stringify(selectedDates))}`,
     `max-age=${daySelectionCookieMaxAge}`,
-    'path=/',
-    'samesite=lax',
-  ].join('; ')
+    "path=/",
+    "samesite=lax",
+  ].join("; ")
 }
 
 type TripDetailsProps = {
@@ -104,16 +89,14 @@ function shiftTime(value: string, hours: number) {
   const match = /^(\d{2}):(\d{2})$/.exec(value)
 
   if (!match) {
-    return ''
+    return ""
   }
 
-  const totalMinutes =
-    (Number(match[1]) * 60 + Number(match[2]) + hours * 60 + 24 * 60) %
-    (24 * 60)
+  const totalMinutes = (Number(match[1]) * 60 + Number(match[2]) + hours * 60 + 24 * 60) % (24 * 60)
 
-  return `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(
+  return `${String(Math.floor(totalMinutes / 60)).padStart(2, "0")}:${String(
     totalMinutes % 60,
-  ).padStart(2, '0')}`
+  ).padStart(2, "0")}`
 }
 
 export function TripDetails({
@@ -127,31 +110,29 @@ export function TripDetails({
   const { t } = useTranslation()
   const [openDay, setOpenDay] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
-  const [title, setTitle] = useState('')
-  const [googleMapsUrl, setGoogleMapsUrl] = useState('')
-  const [notes, setNotes] = useState('')
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
+  const [title, setTitle] = useState("")
+  const [googleMapsUrl, setGoogleMapsUrl] = useState("")
+  const [notes, setNotes] = useState("")
+  const [startTime, setStartTime] = useState("")
+  const [endTime, setEndTime] = useState("")
   const [allDay, setAllDay] = useState(false)
-  const [editingItemType, setEditingItemType] = useState<
-    DayItemRecord['itemType'] | null
-  >(null)
+  const [editingItemType, setEditingItemType] = useState<DayItemRecord["itemType"] | null>(null)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [activityError, setActivityError] = useState<string | null>(null)
   const [googleMapsError, setGoogleMapsError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null)
   const [editingDayDate, setEditingDayDate] = useState<string | null>(null)
-  const [dayTitle, setDayTitle] = useState('')
-  const [dayNotes, setDayNotes] = useState('')
+  const [dayTitle, setDayTitle] = useState("")
+  const [dayNotes, setDayNotes] = useState("")
   const [isSavingDayDetails, setIsSavingDayDetails] = useState(false)
-  const [selectedDayDate, setSelectedDayDate] = useState('')
+  const [selectedDayDate, setSelectedDayDate] = useState("")
   const [selectedDayDates, setSelectedDayDates] = useState<string[]>([])
-  const [lastClickedDayDate, setLastClickedDayDate] = useState('')
-  const [plannerTab, setPlannerTab] = useState<PlannerTab>('all')
+  const [lastClickedDayDate, setLastClickedDayDate] = useState("")
+  const [plannerTab, setPlannerTab] = useState<PlannerTab>("all")
   const [draggedItem, setDraggedItem] = useState<DayItemRecord | null>(null)
   const [movingItem, setMovingItem] = useState<MovingItem | null>(null)
-  const [moveTargetDate, setMoveTargetDate] = useState('')
+  const [moveTargetDate, setMoveTargetDate] = useState("")
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
   const reorderQueueRef = useRef(Promise.resolve())
   const pendingReorderCountRef = useRef(0)
@@ -172,20 +153,16 @@ export function TripDetails({
 
       setSelectedDayDates(persistedDates ?? validDates)
       setSelectedDayDate((currentDate) =>
-        validDates.includes(currentDate)
-          ? currentDate
-          : validDates[0] ?? '',
+        validDates.includes(currentDate) ? currentDate : (validDates[0] ?? ""),
       )
       setLastClickedDayDate((currentDate) =>
-        validDates.includes(currentDate)
-          ? currentDate
-          : validDates[0] ?? '',
+        validDates.includes(currentDate) ? currentDate : (validDates[0] ?? ""),
       )
     }
   }, [trip])
 
   if (isLoading) {
-    return <LoadingCover message={t('common.loadingTrip')} />
+    return <LoadingCover message={t("common.loadingTrip")} />
   }
 
   if (error) {
@@ -195,7 +172,7 @@ export function TripDetails({
   if (!trip) {
     return (
       <p className="mt-6 rounded-2xl border border-dashed border-border-dashed p-6 text-sm text-muted">
-        {t('tripDetails.selectTrip')}
+        {t("tripDetails.selectTrip")}
       </p>
     )
   }
@@ -203,25 +180,23 @@ export function TripDetails({
   const currentTrip = trip
   const normalizedGoogleMapsUrl = googleMapsUrl.trim()
   const googleMapsUrlIsInvalid =
-    normalizedGoogleMapsUrl.length > 0 &&
-    !isAllowedGoogleMapsUrl(normalizedGoogleMapsUrl)
+    normalizedGoogleMapsUrl.length > 0 && !isAllowedGoogleMapsUrl(normalizedGoogleMapsUrl)
   const selectedDay =
-    currentTrip.days.find((day) => day.date === selectedDayDate) ??
-    currentTrip.days[0]
+    currentTrip.days.find((day) => day.date === selectedDayDate) ?? currentTrip.days[0]
 
   function resetActivityForm() {
-    setTitle('')
-    setGoogleMapsUrl('')
-    setNotes('')
-    setStartTime('')
-    setEndTime('')
+    setTitle("")
+    setGoogleMapsUrl("")
+    setNotes("")
+    setStartTime("")
+    setEndTime("")
     setAllDay(true)
     setEditingItemType(null)
     setEditingItemId(null)
     setActivityError(null)
     setGoogleMapsError(null)
     setMovingItem(null)
-    setMoveTargetDate('')
+    setMoveTargetDate("")
   }
 
   function toggleActivityForm(date: string) {
@@ -229,7 +204,7 @@ export function TripDetails({
       const nextDate = currentDate === date ? null : date
       resetActivityForm()
       if (nextDate !== null) {
-        setEditingItemType(plannerTab === 'meals' ? 'meal' : 'activity')
+        setEditingItemType(plannerTab === "meals" ? "meal" : "activity")
       }
       return nextDate
     })
@@ -239,13 +214,13 @@ export function TripDetails({
   function editActivity(activity: Activity) {
     setMovingItem(null)
     setOpenDay(activity.tripDate)
-    setEditingItemType('activity')
+    setEditingItemType("activity")
     setEditingItemId(activity.id)
-    setTitle(activity.title ?? '')
-    setGoogleMapsUrl(activity.googleMapsUrl ?? '')
-    setNotes(activity.notes ?? '')
-    setStartTime(activity.startTime ?? '')
-    setEndTime(activity.endTime ?? '')
+    setTitle(activity.title ?? "")
+    setGoogleMapsUrl(activity.googleMapsUrl ?? "")
+    setNotes(activity.notes ?? "")
+    setStartTime(activity.startTime ?? "")
+    setEndTime(activity.endTime ?? "")
     setAllDay(activity.allDay)
     setActivityError(null)
   }
@@ -253,13 +228,13 @@ export function TripDetails({
   function editMeal(meal: Meal) {
     setMovingItem(null)
     setOpenDay(meal.tripDate)
-    setEditingItemType('meal')
+    setEditingItemType("meal")
     setEditingItemId(meal.id)
-    setTitle(meal.title ?? '')
-    setGoogleMapsUrl(meal.googleMapsUrl ?? '')
-    setNotes(meal.notes ?? '')
-    setStartTime(meal.startTime ?? '')
-    setEndTime(meal.endTime ?? '')
+    setTitle(meal.title ?? "")
+    setGoogleMapsUrl(meal.googleMapsUrl ?? "")
+    setNotes(meal.notes ?? "")
+    setStartTime(meal.startTime ?? "")
+    setEndTime(meal.endTime ?? "")
     setAllDay(meal.allDay)
     setActivityError(null)
   }
@@ -281,12 +256,8 @@ export function TripDetails({
   }
 
   function getDayRange(startDate: string, endDate: string) {
-    const startIndex = currentTrip.days.findIndex(
-      (day) => day.date === startDate,
-    )
-    const endIndex = currentTrip.days.findIndex(
-      (day) => day.date === endDate,
-    )
+    const startIndex = currentTrip.days.findIndex((day) => day.date === startDate)
+    const endIndex = currentTrip.days.findIndex((day) => day.date === endDate)
 
     if (startIndex < 0 || endIndex < 0) {
       return [endDate]
@@ -294,16 +265,11 @@ export function TripDetails({
 
     const rangeStart = Math.min(startIndex, endIndex)
     const rangeEnd = Math.max(startIndex, endIndex)
-    return currentTrip.days
-      .slice(rangeStart, rangeEnd + 1)
-      .map((day) => day.date)
+    return currentTrip.days.slice(rangeStart, rangeEnd + 1).map((day) => day.date)
   }
 
   function selectOnlyDay(date: string, shiftKey: boolean) {
-    const dates =
-      shiftKey && lastClickedDayDate
-        ? getDayRange(lastClickedDayDate, date)
-        : [date]
+    const dates = shiftKey && lastClickedDayDate ? getDayRange(lastClickedDayDate, date) : [date]
 
     setSelectedDayDate(date)
     setSelectedDayDates(dates)
@@ -329,10 +295,7 @@ export function TripDetails({
       writeSelectedDayDates(currentTrip.id, nextDates)
       setLastClickedDayDate(date)
 
-      if (
-        nextDates.length > 0 &&
-        !nextDates.includes(selectedDayDate)
-      ) {
+      if (nextDates.length > 0 && !nextDates.includes(selectedDayDate)) {
         setSelectedDayDate(nextDates[0])
       }
 
@@ -346,54 +309,36 @@ export function TripDetails({
     writeSelectedDayDates(currentTrip.id, allDates)
   }
 
-  function getDropIndex(
-    event: DragEvent<HTMLDivElement>,
-    itemIndex: number,
-  ) {
+  function getDropIndex(event: DragEvent<HTMLDivElement>, itemIndex: number) {
     const bounds = event.currentTarget.getBoundingClientRect()
-    return event.clientY >= bounds.top + bounds.height / 2
-      ? itemIndex + 1
-      : itemIndex
+    return event.clientY >= bounds.top + bounds.height / 2 ? itemIndex + 1 : itemIndex
   }
 
-  function getDayItems(
-    day: TripDetail['days'][number],
-    meals = currentTrip.meals,
-  ) {
-    return sortDayItems([
-      ...day.activities,
-      ...meals.filter((meal) => meal.tripDate === day.date),
-    ])
+  function getDayItems(day: TripDetail["days"][number], meals = currentTrip.meals) {
+    return sortDayItems([...day.activities, ...meals.filter((meal) => meal.tripDate === day.date)])
   }
 
-  function getDayScheduleSummary(day: TripDetail['days'][number]) {
+  function getDayScheduleSummary(day: TripDetail["days"][number]) {
     const items = getDayItems(day)
 
     return items.length === 0
-      ? t('tripDetails.noPlans')
-      : t('tripDetails.plansCount', { count: items.length })
+      ? t("tripDetails.noPlans")
+      : t("tripDetails.plansCount", { count: items.length })
   }
 
   function getDayItemRecord(item: DayItem, meals = currentTrip.meals): DayItemRecord {
-    const meal = meals.find(
-      (currentMeal) => currentMeal.id === item.id,
-    )
+    const meal = meals.find((currentMeal) => currentMeal.id === item.id)
 
     return meal
-      ? { itemType: 'meal', item: meal }
-      : { itemType: 'activity', item: item as Activity }
+      ? { itemType: "meal", item: meal }
+      : { itemType: "activity", item: item as Activity }
   }
 
-  function buildOptimisticTrip(
-    trip: TripDetail,
-    affectedDays: Map<string, DayItem[]>,
-  ) {
+  function buildOptimisticTrip(trip: TripDetail, affectedDays: Map<string, DayItem[]>) {
     const normalizedItemsByDate = new Map(
       trip.days.map((day) => [
         day.date,
-        normalizeTimedDayItems(
-          affectedDays.get(day.date) ?? getDayItems(day, trip.meals),
-        ),
+        normalizeTimedDayItems(affectedDays.get(day.date) ?? getDayItems(day, trip.meals)),
       ]),
     )
 
@@ -407,20 +352,18 @@ export function TripDetails({
           activities: normalizedItems
             .filter(
               (item): item is Activity =>
-                getDayItemRecord(item, trip.meals).itemType === 'activity',
+                getDayItemRecord(item, trip.meals).itemType === "activity",
             )
             .map((activity) => ({
               ...activity,
               tripDate: day.date,
-              sortOrder: normalizedItems.findIndex(
-                (currentItem) => currentItem.id === activity.id,
-              ),
+              sortOrder: normalizedItems.findIndex((currentItem) => currentItem.id === activity.id),
             })),
         }
       }),
       meals: trip.meals.map((meal) => {
-        const normalizedEntry = Array.from(normalizedItemsByDate.entries()).find(
-          ([, items]) => items.some((item) => item.id === meal.id),
+        const normalizedEntry = Array.from(normalizedItemsByDate.entries()).find(([, items]) =>
+          items.some((item) => item.id === meal.id),
         )
 
         if (!normalizedEntry) {
@@ -431,9 +374,7 @@ export function TripDetails({
         return {
           ...meal,
           tripDate: dayDate,
-          sortOrder: normalizedItems.findIndex(
-            (item) => item.id === meal.id,
-          ),
+          sortOrder: normalizedItems.findIndex((item) => item.id === meal.id),
         }
       }),
     }
@@ -443,7 +384,7 @@ export function TripDetails({
     const timedItems = items
       .filter((item) => getDayItemTime(item) !== null)
       .sort((left, right) =>
-        (getDayItemTime(left) ?? '').localeCompare(getDayItemTime(right) ?? ''),
+        (getDayItemTime(left) ?? "").localeCompare(getDayItemTime(right) ?? ""),
       )
     let timedItemIndex = 0
 
@@ -469,47 +410,29 @@ export function TripDetails({
     )
   }
 
-  function insertDayItemByTime(
-    items: DayItem[],
-    item: DayItem,
-    treatAsNewItem = false,
-  ) {
-    const currentIndex = items.findIndex(
-      (currentItem) => currentItem.id === item.id,
-    )
+  function insertDayItemByTime(items: DayItem[], item: DayItem, treatAsNewItem = false) {
+    const currentIndex = items.findIndex((currentItem) => currentItem.id === item.id)
     const itemTime = getDayItemTime(item)
 
     if (itemTime === null && currentIndex >= 0 && !treatAsNewItem) {
-      return items.map((currentItem) =>
-        currentItem.id === item.id ? item : currentItem,
-      )
+      return items.map((currentItem) => (currentItem.id === item.id ? item : currentItem))
     }
 
-    const itemsWithoutItem = items.filter(
-      (currentItem) => currentItem.id !== item.id,
-    )
+    const itemsWithoutItem = items.filter((currentItem) => currentItem.id !== item.id)
 
     if (itemTime === null) {
       return [item, ...itemsWithoutItem]
     }
 
     if (currentIndex >= 0) {
-      const timedItems = items.filter(
-        (currentItem) => getDayItemTime(currentItem) !== null,
-      )
-      const timedItemsWithoutItem = timedItems.filter(
-        (currentItem) => currentItem.id !== item.id,
-      )
-      const firstLaterTimedIndex = timedItemsWithoutItem.findIndex(
-        (currentItem) => {
-          const candidateTime = getDayItemTime(currentItem)
-          return candidateTime !== null && candidateTime > itemTime
-        },
-      )
+      const timedItems = items.filter((currentItem) => getDayItemTime(currentItem) !== null)
+      const timedItemsWithoutItem = timedItems.filter((currentItem) => currentItem.id !== item.id)
+      const firstLaterTimedIndex = timedItemsWithoutItem.findIndex((currentItem) => {
+        const candidateTime = getDayItemTime(currentItem)
+        return candidateTime !== null && candidateTime > itemTime
+      })
       const insertionIndex =
-        firstLaterTimedIndex >= 0
-          ? firstLaterTimedIndex
-          : timedItemsWithoutItem.length
+        firstLaterTimedIndex >= 0 ? firstLaterTimedIndex : timedItemsWithoutItem.length
       const reorderedTimedItems = [
         ...timedItemsWithoutItem.slice(0, insertionIndex),
         item,
@@ -532,10 +455,7 @@ export function TripDetails({
       const candidateTime = getDayItemTime(currentItem)
       return candidateTime !== null && candidateTime > itemTime
     })
-    const insertionIndex =
-      firstLaterItemIndex >= 0
-        ? firstLaterItemIndex
-        : itemsWithoutItem.length
+    const insertionIndex = firstLaterItemIndex >= 0 ? firstLaterItemIndex : itemsWithoutItem.length
 
     return [
       ...itemsWithoutItem.slice(0, insertionIndex),
@@ -554,7 +474,7 @@ export function TripDetails({
 
   function cancelMovingItem() {
     setMovingItem(null)
-    setMoveTargetDate('')
+    setMoveTargetDate("")
   }
 
   function handleMoveItem(event: FormEvent<HTMLFormElement>) {
@@ -565,22 +485,16 @@ export function TripDetails({
       return
     }
 
-    const sourceDay = currentTrip.days.find(
-      (day) => day.date === movingItem.item.tripDate,
-    )
+    const sourceDay = currentTrip.days.find((day) => day.date === movingItem.item.tripDate)
     const targetDay = currentTrip.days.find((day) => day.date === moveTargetDate)
 
     if (!sourceDay || !targetDay) {
-      setActivityError(t('errors.activityOutsideTrip'))
+      setActivityError(t("errors.activityOutsideTrip"))
       return
     }
 
     const sourceItems = getDayItems(sourceDay)
-    const nextTargetItems = insertDayItemByTime(
-      getDayItems(targetDay),
-      movingItem.item,
-      true,
-    )
+    const nextTargetItems = insertDayItemByTime(getDayItems(targetDay), movingItem.item, true)
     const affectedDays = new Map<string, DayItem[]>([
       [sourceDay.date, sourceItems.filter((item) => item.id !== movingItem.item.id)],
       [targetDay.date, nextTargetItems],
@@ -589,25 +503,19 @@ export function TripDetails({
 
     setActivityError(null)
     setMovingItem(null)
-    setMoveTargetDate('')
+    setMoveTargetDate("")
     onTripUpdated(optimisticTrip)
     queueDayItemReorder(optimisticTrip, getReorderInput(optimisticTrip))
   }
 
-  function handleDayItemDragStart(
-    event: DragEvent<HTMLDivElement>,
-    record: DayItemRecord,
-  ) {
+  function handleDayItemDragStart(event: DragEvent<HTMLDivElement>, record: DayItemRecord) {
     if (window.innerWidth < 1024) {
       event.preventDefault()
       return
     }
 
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData(
-      'text/plain',
-      `${record.itemType}:${record.item.id}`,
-    )
+    event.dataTransfer.effectAllowed = "move"
+    event.dataTransfer.setData("text/plain", `${record.itemType}:${record.item.id}`)
     setDraggedItem(record)
   }
 
@@ -621,7 +529,7 @@ export function TripDetails({
     }
 
     event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
+    event.dataTransfer.dropEffect = "move"
     const nextDropTarget = {
       dayDate,
       index: getDropIndex(event, itemIndex),
@@ -635,15 +543,12 @@ export function TripDetails({
   }
 
   function handleDayDragOver(event: DragEvent<HTMLDivElement>, dayDate: string) {
-    if (
-      !draggedItem ||
-      event.target !== event.currentTarget
-    ) {
+    if (!draggedItem || event.target !== event.currentTarget) {
       return
     }
 
     event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
+    event.dataTransfer.dropEffect = "move"
     const day = currentTrip.days.find((currentDay) => currentDay.date === dayDate)
     const nextDropTarget = {
       dayDate,
@@ -657,10 +562,7 @@ export function TripDetails({
     )
   }
 
-  function queueDayItemReorder(
-    trip: TripDetail,
-    items: ReorderDayItemInput[],
-  ) {
+  function queueDayItemReorder(trip: TripDetail, items: ReorderDayItemInput[]) {
     const reorderGeneration = ++reorderGenerationRef.current
     pendingReorderCountRef.current += 1
     const queuedRequest = reorderQueueRef.current.then(() =>
@@ -691,9 +593,7 @@ export function TripDetails({
             onTripUpdated(refreshedTrip)
           }
         } catch (refreshReason: unknown) {
-          setActivityError(
-            `${getErrorMessage(reason)} ${getErrorMessage(refreshReason)}`,
-          )
+          setActivityError(`${getErrorMessage(reason)} ${getErrorMessage(refreshReason)}`)
         }
       })
       .finally(() => {
@@ -709,10 +609,9 @@ export function TripDetails({
     event.preventDefault()
     event.stopPropagation()
 
-    const draggedItemKey =
-      draggedItem
-        ? `${draggedItem.itemType}:${draggedItem.item.id}`
-        : event.dataTransfer.getData('text/plain')
+    const draggedItemKey = draggedItem
+      ? `${draggedItem.itemType}:${draggedItem.item.id}`
+      : event.dataTransfer.getData("text/plain")
     setDropTarget(null)
     setDraggedItem(null)
 
@@ -720,27 +619,23 @@ export function TripDetails({
       return
     }
 
-    const [itemType, itemId] = draggedItemKey.split(':')
-    if (itemType !== 'activity' && itemType !== 'meal') {
+    const [itemType, itemId] = draggedItemKey.split(":")
+    if (itemType !== "activity" && itemType !== "meal") {
       return
     }
 
     const draggedRecord =
       draggedItem ??
-      (itemType === 'meal'
+      (itemType === "meal"
         ? (() => {
-            const meal = currentTrip.meals.find(
-              (currentMeal) => currentMeal.id === itemId,
-            )
-            return meal ? { itemType: 'meal' as const, item: meal } : null
+            const meal = currentTrip.meals.find((currentMeal) => currentMeal.id === itemId)
+            return meal ? { itemType: "meal" as const, item: meal } : null
           })()
         : (() => {
             const activity = currentTrip.days
               .flatMap((day) => day.activities)
               .find((currentActivity) => currentActivity.id === itemId)
-            return activity
-              ? { itemType: 'activity' as const, item: activity }
-              : null
+            return activity ? { itemType: "activity" as const, item: activity } : null
           })())
     const sourceDay = currentTrip.days.find((day) =>
       getDayItems(day).some((item) => item.id === itemId),
@@ -752,18 +647,13 @@ export function TripDetails({
     }
 
     const sourceItems = getDayItems(sourceDay)
-    const targetItems = getDayItems(targetDay).filter(
-      (item) => item.id !== itemId,
-    )
+    const targetItems = getDayItems(targetDay).filter((item) => item.id !== itemId)
     const sourceIndex = sourceItems.findIndex((item) => item.id === itemId)
     const targetIndex =
       sourceDay.date === targetDate && sourceIndex < rawTargetIndex
         ? rawTargetIndex - 1
         : rawTargetIndex
-    const desiredIndex = Math.max(
-      0,
-      Math.min(targetIndex, targetItems.length),
-    )
+    const desiredIndex = Math.max(0, Math.min(targetIndex, targetItems.length))
     const itemTime = getDayItemTime(draggedRecord.item)
     const firstLaterActivityIndex =
       itemTime === null
@@ -775,28 +665,17 @@ export function TripDetails({
     const lastEarlierActivityIndex =
       itemTime === null
         ? -1
-        : targetItems.reduce(
-            (lastIndex, item, index) => {
-              const candidateTime = getDayItemTime(item)
-              return candidateTime !== null && candidateTime < itemTime
-                ? index
-                : lastIndex
-            },
-            -1,
-          )
-    const earliestLegalIndex =
-      itemTime === null ? 0 : lastEarlierActivityIndex + 1
+        : targetItems.reduce((lastIndex, item, index) => {
+            const candidateTime = getDayItemTime(item)
+            return candidateTime !== null && candidateTime < itemTime ? index : lastIndex
+          }, -1)
+    const earliestLegalIndex = itemTime === null ? 0 : lastEarlierActivityIndex + 1
     const latestLegalIndex =
-      firstLaterActivityIndex >= 0
-        ? firstLaterActivityIndex
-        : targetItems.length
+      firstLaterActivityIndex >= 0 ? firstLaterActivityIndex : targetItems.length
     const insertionIndex =
       itemTime === null
         ? desiredIndex
-        : Math.max(
-            earliestLegalIndex,
-            Math.min(desiredIndex, latestLegalIndex),
-          )
+        : Math.max(earliestLegalIndex, Math.min(desiredIndex, latestLegalIndex))
     const nextTargetItems = [
       ...targetItems.slice(0, insertionIndex),
       draggedRecord.item,
@@ -810,18 +689,16 @@ export function TripDetails({
       [sourceDay.date, nextSourceItems],
       [targetDate, nextTargetItems],
     ])
-    const updates = Array.from(affectedDays.entries()).flatMap(
-      ([dayDate, items]) =>
-        items.map((item, sortOrder) => ({
-          item,
-          dayDate,
-          sortOrder,
-          itemType: getDayItemRecord(item).itemType,
-        })),
+    const updates = Array.from(affectedDays.entries()).flatMap(([dayDate, items]) =>
+      items.map((item, sortOrder) => ({
+        item,
+        dayDate,
+        sortOrder,
+        itemType: getDayItemRecord(item).itemType,
+      })),
     )
     const changedUpdates = updates.filter(
-      ({ item, dayDate, sortOrder }) =>
-        item.tripDate !== dayDate || item.sortOrder !== sortOrder,
+      ({ item, dayDate, sortOrder }) => item.tripDate !== dayDate || item.sortOrder !== sortOrder,
     )
 
     if (changedUpdates.length === 0) {
@@ -837,7 +714,7 @@ export function TripDetails({
     queueDayItemReorder(optimisticTrip, reorderInput)
   }
 
-  function selectNewItemType(itemType: DayItemRecord['itemType']) {
+  function selectNewItemType(itemType: DayItemRecord["itemType"]) {
     resetActivityForm()
     setEditingItemType(itemType)
   }
@@ -853,8 +730,7 @@ export function TripDetails({
         googleMapsUrl={googleMapsUrl}
         googleMapsUrlIsInvalid={googleMapsUrlIsInvalid}
         isMealForm={
-          editingItemType === 'meal' ||
-          (editingItemId === null && plannerTab === 'meals')
+          editingItemType === "meal" || (editingItemId === null && plannerTab === "meals")
         }
         isSaving={isSaving}
         notes={notes}
@@ -892,17 +768,11 @@ export function TripDetails({
     )
   }
 
-  async function handleSaveDayItem(
-    event: FormEvent<HTMLFormElement>,
-    date: string,
-  ) {
+  async function handleSaveDayItem(event: FormEvent<HTMLFormElement>, date: string) {
     event.preventDefault()
     const normalizedGoogleMapsUrl = googleMapsUrl.trim()
 
-    if (
-      normalizedGoogleMapsUrl &&
-      !isAllowedGoogleMapsUrl(normalizedGoogleMapsUrl)
-    ) {
+    if (normalizedGoogleMapsUrl && !isAllowedGoogleMapsUrl(normalizedGoogleMapsUrl)) {
       setGoogleMapsError(null)
       setActivityError(null)
       return
@@ -927,7 +797,7 @@ export function TripDetails({
       let nextTrip: TripDetail
       let savedItem: DayItem
 
-      if (editingItemType === 'meal') {
+      if (editingItemType === "meal") {
         const meal = editingItemId
           ? await updateMeal(accessToken, currentTrip.id, editingItemId, input)
           : await createMeal(accessToken, currentTrip.id, {
@@ -947,12 +817,7 @@ export function TripDetails({
         }
       } else {
         const activity = editingItemId
-          ? await updateActivity(
-              accessToken,
-              currentTrip.id,
-              editingItemId,
-              input,
-            )
+          ? await updateActivity(accessToken, currentTrip.id, editingItemId, input)
           : await createActivity(accessToken, currentTrip.id, input)
 
         savedItem = activity
@@ -965,9 +830,7 @@ export function TripDetails({
                   activities: sortActivities(
                     editingItemId
                       ? day.activities.map((currentActivity) =>
-                          currentActivity.id === editingItemId
-                            ? activity
-                            : currentActivity,
+                          currentActivity.id === editingItemId ? activity : currentActivity,
                         )
                       : [...day.activities, activity],
                   ),
@@ -979,25 +842,18 @@ export function TripDetails({
 
       const shouldReorderItem =
         editingItemId !== null ||
-        (editingItemType === 'activity' &&
-          getDayItemTime(savedItem) === null)
+        (editingItemType === "activity" && getDayItemTime(savedItem) === null)
       const targetDay = nextTrip.days.find((day) => day.date === date)
 
       if (shouldReorderItem && targetDay) {
         const targetItems = insertDayItemByTime(
           getDayItems(targetDay, nextTrip.meals),
           savedItem,
-          !editingItemId && editingItemType === 'activity',
+          !editingItemId && editingItemType === "activity",
         )
-        const optimisticTrip = buildOptimisticTrip(
-          nextTrip,
-          new Map([[date, targetItems]]),
-        )
+        const optimisticTrip = buildOptimisticTrip(nextTrip, new Map([[date, targetItems]]))
         onTripUpdated(optimisticTrip)
-        queueDayItemReorder(
-          optimisticTrip,
-          getReorderInput(optimisticTrip),
-        )
+        queueDayItemReorder(optimisticTrip, getReorderInput(optimisticTrip))
       } else {
         onTripUpdated(nextTrip)
       }
@@ -1052,14 +908,10 @@ export function TripDetails({
     }
   }
 
-  function editDayDetails(
-    date: string,
-    title: string | null,
-    note: string | null,
-  ) {
+  function editDayDetails(date: string, title: string | null, note: string | null) {
     setEditingDayDate(date)
-    setDayTitle(title ?? '')
-    setDayNotes(note ?? '')
+    setDayTitle(title ?? "")
+    setDayNotes(note ?? "")
   }
 
   async function handleSaveDayDetails(date: string) {
@@ -1074,9 +926,7 @@ export function TripDetails({
       onTripUpdated({
         ...currentTrip,
         days: currentTrip.days.map((day) =>
-          day.date === date
-            ? { ...day, title: updatedDay.title, notes: updatedDay.notes }
-            : day,
+          day.date === date ? { ...day, title: updatedDay.title, notes: updatedDay.notes } : day,
         ),
       })
       setEditingDayDate(null)
@@ -1121,22 +971,20 @@ export function TripDetails({
 
         <div className="min-w-0">
           <div className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-surface-muted p-1">
-            {(['all', 'activities', 'meals'] as const).map((tab) => (
+            {(["all", "activities", "meals"] as const).map((tab) => (
               <button
                 className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-                  plannerTab === tab
-                    ? 'bg-surface text-on-surface shadow-sm'
-                    : 'text-muted'
+                  plannerTab === tab ? "bg-surface text-on-surface shadow-sm" : "text-muted"
                 }`}
                 key={tab}
                 onClick={() => setPlannerTab(tab)}
                 type="button"
               >
-                {tab === 'all'
-                  ? t('tripDetails.all')
-                  : tab === 'activities'
-                    ? t('tripDetails.activities')
-                    : t('tripDetails.meals')}
+                {tab === "all"
+                  ? t("tripDetails.all")
+                  : tab === "activities"
+                    ? t("tripDetails.activities")
+                    : t("tripDetails.meals")}
               </button>
             ))}
           </div>

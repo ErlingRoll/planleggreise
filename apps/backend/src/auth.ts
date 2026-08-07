@@ -1,4 +1,4 @@
-import { createSupabaseAuthClient } from './supabase.js'
+import { createSupabaseAuthClient } from "./supabase.js"
 
 export type AuthenticatedUser = {
   id: string

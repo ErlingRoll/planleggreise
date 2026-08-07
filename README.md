@@ -60,13 +60,13 @@ Shared models belong in `packages/models/src`. Define each model's Zod schema th
 
 ## Scripts
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Run frontend and backend together |
-| `npm run build` | Build both workspaces |
-| `npm run lint` | Lint the frontend |
-| `npm test` | Run the backend test suite |
-| `npm run start` | Start the built backend |
+| Command         | Purpose                           |
+| --------------- | --------------------------------- |
+| `npm run dev`   | Run frontend and backend together |
+| `npm run build` | Build both workspaces             |
+| `npm run lint`  | Lint the frontend                 |
+| `npm test`      | Run the backend test suite        |
+| `npm run start` | Start the built backend           |
 
 ## Configuration
 

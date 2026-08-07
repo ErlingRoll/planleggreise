@@ -181,6 +181,7 @@ or progress tracking until the relevant product behavior is requested.
 
   export type Example = z.infer<typeof ExampleSchema>
   ```
+
 - Export public models from `src/index.ts`.
 - Both frontend and backend may import this package.
 - Do not put secrets, database clients, Express types, React types, or ORM
@@ -268,21 +269,21 @@ The following remain to be specified:
    seed data.
 3. **Row-level security:** verify the final sharing policies as members and
    access links are implemented.
-3. **Persistence model boundary:** decide which database fields are exposed by
+4. **Persistence model boundary:** decide which database fields are exposed by
    the API and map ORM entities to shared API models in the backend.
-4. **Authentication details:** configure Google OAuth redirect URLs, account
+5. **Authentication details:** configure Google OAuth redirect URLs, account
    linking, logout behavior, and the exact persisted-session opt-in UX.
-5. **Travel mode behavior:** decide whether it is read-only, supports marking
+6. **Travel mode behavior:** decide whether it is read-only, supports marking
    items complete/skipped, or allows full editing.
-6. **Entry fields:** decide when to add locations, links, notes, costs,
+7. **Entry fields:** decide when to add locations, links, notes, costs,
    transport, and other details.
-7. **Access links:** define expiration, revocation, and whether links can be
+8. **Access links:** define expiration, revocation, and whether links can be
    limited to specific trips or permissions.
-8. **Cross-day entries:** decide whether activities or meals may span multiple
+9. **Cross-day entries:** decide whether activities or meals may span multiple
    dates.
-9. **API contract:** decide whether request/response schemas should be split
-   from domain models and how breaking API changes are versioned.
-10. **Backend test stack:** choose the backend test runner and add route,
+10. **API contract:** decide whether request/response schemas should be split
+    from domain models and how breaking API changes are versioned.
+11. **Backend test stack:** choose the backend test runner and add route,
     validation, authentication, and persistence tests as those features land.
-11. **Quality automation:** add backend/models linting and CI checks once the
+12. **Quality automation:** add backend/models linting and CI checks once the
     codebase grows beyond the initial prototype.

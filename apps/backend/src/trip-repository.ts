@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { randomUUID } from "node:crypto"
 import {
   ActivitySchema,
   CreateActivityInputSchema,
@@ -50,10 +50,10 @@ import {
   type TripSharing,
   type InviteTripMemberInput,
   type RequestTripAccessInput,
-} from '@planleggreise/models'
-import { z } from 'zod'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { createUserSupabaseClient } from './supabase.js'
+} from "@planleggreise/models"
+import { z } from "zod"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import { createUserSupabaseClient } from "./supabase.js"
 
 const tripRowSchema = z.object({
   id: z.string(),
@@ -127,7 +127,7 @@ const tripInvitationRowSchema = z.object({
   id: z.string(),
   trip_id: z.string(),
   email: z.string(),
-  status: z.enum(['pending', 'accepted', 'declined', 'revoked']),
+  status: z.enum(["pending", "accepted", "declined", "revoked"]),
   created_at: databaseDateTimeSchema,
 })
 
@@ -144,16 +144,16 @@ const tripAccessRequestRowSchema = z.object({
   trip_id: z.string(),
   requester_id: z.string(),
   email: z.string(),
-  source: z.enum(['email', 'link']),
-  status: z.enum(['pending', 'approved', 'denied']),
+  source: z.enum(["email", "link"]),
+  status: z.enum(["pending", "approved", "denied"]),
   created_at: databaseDateTimeSchema,
 })
 
 const activityColumns =
-  'id, trip_id, trip_date, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order'
-const housingStayColumns = 'id, trip_id, name, check_in, check_out, notes'
+  "id, trip_id, trip_date, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order"
+const housingStayColumns = "id, trip_id, name, check_in, check_out, notes"
 const mealColumns =
-  'id, trip_id, trip_date, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order'
+  "id, trip_id, trip_date, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order"
 
 async function getHighestDayItemSortOrder(
   client: SupabaseClient,
@@ -163,18 +163,18 @@ async function getHighestDayItemSortOrder(
   const [{ data: activities, error: activitiesError }, { data: meals, error: mealsError }] =
     await Promise.all([
       client
-        .from('activities')
-        .select('sort_order')
-        .eq('trip_id', tripId)
-        .eq('trip_date', tripDate)
-        .order('sort_order', { ascending: false })
+        .from("activities")
+        .select("sort_order")
+        .eq("trip_id", tripId)
+        .eq("trip_date", tripDate)
+        .order("sort_order", { ascending: false })
         .limit(1),
       client
-        .from('meals')
-        .select('sort_order')
-        .eq('trip_id', tripId)
-        .eq('trip_date', tripDate)
-        .order('sort_order', { ascending: false })
+        .from("meals")
+        .select("sort_order")
+        .eq("trip_id", tripId)
+        .eq("trip_date", tripDate)
+        .order("sort_order", { ascending: false })
         .limit(1),
     ])
 
@@ -194,11 +194,7 @@ async function getHighestDayItemSortOrder(
 
 export interface TripRepository {
   listTrips(userId: string, accessToken: string): Promise<Trip[]>
-  getTrip(
-    userId: string,
-    accessToken: string,
-    tripId: string,
-  ): Promise<TripDetail | null>
+  getTrip(userId: string, accessToken: string, tripId: string): Promise<TripDetail | null>
   createTrip(
     userId: string,
     accessToken: string,
@@ -211,11 +207,7 @@ export interface TripRepository {
     tripId: string,
     input: UpdateTripInput,
   ): Promise<TripDetail | null>
-  deleteTrip(
-    userId: string,
-    accessToken: string,
-    tripId: string,
-  ): Promise<boolean>
+  deleteTrip(userId: string, accessToken: string, tripId: string): Promise<boolean>
   updateDay(
     userId: string,
     accessToken: string,
@@ -248,12 +240,7 @@ export interface TripRepository {
     tripId: string,
     housingStayId: string,
   ): Promise<boolean>
-  getMeal(
-    userId: string,
-    accessToken: string,
-    tripId: string,
-    mealId: string,
-  ): Promise<Meal | null>
+  getMeal(userId: string, accessToken: string, tripId: string, mealId: string): Promise<Meal | null>
   createMeal(
     userId: string,
     accessToken: string,
@@ -267,12 +254,7 @@ export interface TripRepository {
     mealId: string,
     input: UpdateMealInput,
   ): Promise<Meal | null>
-  deleteMeal(
-    userId: string,
-    accessToken: string,
-    tripId: string,
-    mealId: string,
-  ): Promise<boolean>
+  deleteMeal(userId: string, accessToken: string, tripId: string, mealId: string): Promise<boolean>
   getActivity(
     userId: string,
     accessToken: string,
@@ -304,16 +286,8 @@ export interface TripRepository {
     tripId: string,
     input: ReorderDayItemsInput,
   ): Promise<{ activities: Activity[]; meals: Meal[] } | null>
-  getTripSharing(
-    userId: string,
-    accessToken: string,
-    tripId: string,
-  ): Promise<TripSharing | null>
-  getTripOwnerEmail(
-    userId: string,
-    accessToken: string,
-    tripId: string,
-  ): Promise<string | null>
+  getTripSharing(userId: string, accessToken: string, tripId: string): Promise<TripSharing | null>
+  getTripOwnerEmail(userId: string, accessToken: string, tripId: string): Promise<string | null>
   getTripAccessStatus(
     userId: string,
     accessToken: string,
@@ -376,7 +350,7 @@ export interface TripRepository {
 }
 
 function dateToUtcDate(date: string): Date {
-  const [year, month, day] = date.split('-').map(Number)
+  const [year, month, day] = date.split("-").map(Number)
   const utcDate = new Date(Date.UTC(year, month - 1, day))
 
   if (utcDate.toISOString().slice(0, 10) !== date) {
@@ -395,17 +369,13 @@ export function isValidDateRange(startDate: string, endDate: string): boolean {
 }
 
 export function isDateWithinTrip(trip: Trip, date: string): boolean {
-  return (
-    isValidDateRange(date, date) &&
-    date >= trip.startDate &&
-    date <= trip.endDate
-  )
+  return isValidDateRange(date, date) && date >= trip.startDate && date <= trip.endDate
 }
 
-export function buildTripDays(trip: Trip): TripDetail['days'] {
+export function buildTripDays(trip: Trip): TripDetail["days"] {
   const currentDate = dateToUtcDate(trip.startDate)
   const endDate = dateToUtcDate(trip.endDate)
-  const days: TripDetail['days'] = []
+  const days: TripDetail["days"] = []
   let dayNumber = 1
 
   while (currentDate <= endDate) {
@@ -435,9 +405,7 @@ function mapTripRow(row: unknown): Trip {
   })
 }
 
-function mapTripDayRow(
-  row: unknown,
-): Pick<TripDay, 'date' | 'title' | 'notes'> {
+function mapTripDayRow(row: unknown): Pick<TripDay, "date" | "title" | "notes"> {
   const parsedRow = tripDayRowSchema.parse(row)
 
   return {
@@ -504,7 +472,7 @@ function mapTripMemberRow(row: unknown, ownerId: string): TripMember {
   return TripMemberSchema.parse({
     userId: parsedRow.user_id,
     email: parsedRow.email,
-    role: parsedRow.user_id === ownerId ? 'owner' : 'member',
+    role: parsedRow.user_id === ownerId ? "owner" : "member",
     joinedAt: parsedRow.created_at,
   })
 }
@@ -546,24 +514,17 @@ function mapTripAccessRequestRow(row: unknown): TripAccessRequest {
   })
 }
 
-function mapTripAccessStatus(
-  status: TripAccessStatus['status'],
-  isNew = false,
-): TripAccessStatus {
+function mapTripAccessStatus(status: TripAccessStatus["status"], isNew = false): TripAccessStatus {
   return TripAccessStatusSchema.parse({ status, isNew })
 }
 
-async function getLatestTripAccessRequest(
-  client: SupabaseClient,
-  userId: string,
-  tripId: string,
-) {
+async function getLatestTripAccessRequest(client: SupabaseClient, userId: string, tripId: string) {
   const { data, error } = await client
-    .from('trip_access_requests')
-    .select('id, trip_id, requester_id, email, source, status, created_at')
-    .eq('trip_id', tripId)
-    .eq('requester_id', userId)
-    .order('created_at', { ascending: false })
+    .from("trip_access_requests")
+    .select("id, trip_id, requester_id, email, source, status, created_at")
+    .eq("trip_id", tripId)
+    .eq("requester_id", userId)
+    .order("created_at", { ascending: false })
     .limit(1)
 
   if (error) {
@@ -574,14 +535,11 @@ async function getLatestTripAccessRequest(
   return rows[0] ?? null
 }
 
-async function getTripOwnerId(
-  client: SupabaseClient,
-  tripId: string,
-): Promise<string | null> {
+async function getTripOwnerId(client: SupabaseClient, tripId: string): Promise<string | null> {
   const { data, error } = await client
-    .from('trips')
-    .select('id, owner_id')
-    .eq('id', tripId)
+    .from("trips")
+    .select("id, owner_id")
+    .eq("id", tripId)
     .maybeSingle()
 
   if (error) {
@@ -597,10 +555,10 @@ async function selectActivity(
   activityId: string,
 ): Promise<Activity | null> {
   const { data, error } = await client
-    .from('activities')
+    .from("activities")
     .select(activityColumns)
-    .eq('trip_id', tripId)
-    .eq('id', activityId)
+    .eq("trip_id", tripId)
+    .eq("id", activityId)
     .maybeSingle()
 
   if (error) {
@@ -615,12 +573,12 @@ async function listActivities(
   tripId: string,
 ): Promise<Activity[]> {
   const { data, error } = await client
-    .from('activities')
+    .from("activities")
     .select(activityColumns)
-    .eq('trip_id', tripId)
-    .order('trip_date', { ascending: true })
-    .order('sort_order', { ascending: true })
-    .order('start_time', { ascending: true, nullsFirst: false })
+    .eq("trip_id", tripId)
+    .order("trip_date", { ascending: true })
+    .order("sort_order", { ascending: true })
+    .order("start_time", { ascending: true, nullsFirst: false })
 
   if (error) {
     throw error
@@ -632,11 +590,11 @@ async function listActivities(
 async function listTripDays(
   client: ReturnType<typeof createUserSupabaseClient>,
   tripId: string,
-): Promise<Array<Pick<TripDay, 'date' | 'title' | 'notes'>>> {
+): Promise<Array<Pick<TripDay, "date" | "title" | "notes">>> {
   const { data, error } = await client
-    .from('trip_days')
-    .select('trip_id, trip_date, title, notes')
-    .eq('trip_id', tripId)
+    .from("trip_days")
+    .select("trip_id, trip_date, title, notes")
+    .eq("trip_id", tripId)
 
   if (error) {
     throw error
@@ -650,10 +608,10 @@ async function listHousingStays(
   tripId: string,
 ): Promise<HousingStay[]> {
   const { data, error } = await client
-    .from('housing_stays')
+    .from("housing_stays")
     .select(housingStayColumns)
-    .eq('trip_id', tripId)
-    .order('check_in', { ascending: true })
+    .eq("trip_id", tripId)
+    .order("check_in", { ascending: true })
 
   if (error) {
     throw error
@@ -667,12 +625,12 @@ async function listMeals(
   tripId: string,
 ): Promise<Meal[]> {
   const { data, error } = await client
-    .from('meals')
+    .from("meals")
     .select(mealColumns)
-    .eq('trip_id', tripId)
-    .order('trip_date', { ascending: true })
-    .order('sort_order', { ascending: true })
-    .order('start_time', { ascending: true, nullsFirst: false })
+    .eq("trip_id", tripId)
+    .order("trip_date", { ascending: true })
+    .order("sort_order", { ascending: true })
+    .order("start_time", { ascending: true, nullsFirst: false })
 
   if (error) {
     throw error
@@ -682,10 +640,10 @@ async function listMeals(
 }
 
 function addActivitiesToDays(
-  days: TripDetail['days'],
+  days: TripDetail["days"],
   activities: Activity[],
-  tripDays: Array<Pick<TripDay, 'date' | 'title' | 'notes'>>,
-): TripDetail['days'] {
+  tripDays: Array<Pick<TripDay, "date" | "title" | "notes">>,
+): TripDetail["days"] {
   const activitiesByDate = new Map<string, Activity[]>()
   const dayDetailsByDate = new Map(tripDays.map((day) => [day.date, day]))
 
@@ -708,10 +666,10 @@ export function createSupabaseTripRepository(): TripRepository {
     async listTrips(userId, accessToken) {
       const client = createUserSupabaseClient(accessToken)
       const { data, error } = await client
-        .from('trips')
-        .select('id, name, start_date, end_date, notes')
-        .is('deleted_at', null)
-        .order('start_date', { ascending: true })
+        .from("trips")
+        .select("id, name, start_date, end_date, notes")
+        .is("deleted_at", null)
+        .order("start_date", { ascending: true })
 
       if (error) {
         throw error
@@ -723,10 +681,10 @@ export function createSupabaseTripRepository(): TripRepository {
     async getTrip(userId, accessToken, tripId) {
       const client = createUserSupabaseClient(accessToken)
       const { data, error } = await client
-        .from('trips')
-        .select('id, name, start_date, end_date, notes')
-        .eq('id', tripId)
-        .is('deleted_at', null)
+        .from("trips")
+        .select("id, name, start_date, end_date, notes")
+        .eq("id", tripId)
+        .is("deleted_at", null)
         .maybeSingle()
 
       if (error) {
@@ -756,22 +714,20 @@ export function createSupabaseTripRepository(): TripRepository {
       const parsedInput = CreateTripInputSchema.parse(input)
       const client = createUserSupabaseClient(accessToken)
       const tripId = randomUUID()
-      const { error } = await client
-        .from('trips')
-        .insert({
-          id: tripId,
-          owner_id: userId,
-          name: parsedInput.name,
-          start_date: parsedInput.startDate,
-          end_date: parsedInput.endDate,
-          notes: parsedInput.notes,
-        })
+      const { error } = await client.from("trips").insert({
+        id: tripId,
+        owner_id: userId,
+        name: parsedInput.name,
+        start_date: parsedInput.startDate,
+        end_date: parsedInput.endDate,
+        notes: parsedInput.notes,
+      })
 
       if (error) {
         throw error
       }
 
-      const { error: memberError } = await client.from('trip_members').insert({
+      const { error: memberError } = await client.from("trip_members").insert({
         trip_id: tripId,
         user_id: userId,
         email: userEmail?.trim().toLowerCase() ?? null,
@@ -782,10 +738,10 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       const { data, error: readError } = await client
-        .from('trips')
-        .select('id, name, start_date, end_date, notes')
-        .eq('id', tripId)
-        .eq('owner_id', userId)
+        .from("trips")
+        .select("id, name, start_date, end_date, notes")
+        .eq("id", tripId)
+        .eq("owner_id", userId)
         .single()
 
       if (readError) {
@@ -812,7 +768,7 @@ export function createSupabaseTripRepository(): TripRepository {
       })
       const client = createUserSupabaseClient(accessToken)
       const { error } = await client
-        .from('trips')
+        .from("trips")
         .update({
           name: updatedTrip.name,
           start_date: updatedTrip.startDate,
@@ -820,7 +776,7 @@ export function createSupabaseTripRepository(): TripRepository {
           notes: updatedTrip.notes,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', tripId)
+        .eq("id", tripId)
 
       if (error) {
         throw error
@@ -832,11 +788,11 @@ export function createSupabaseTripRepository(): TripRepository {
     async deleteTrip(userId, accessToken, tripId) {
       const client = createUserSupabaseClient(accessToken)
       const { data, error: readError } = await client
-        .from('trips')
-        .select('id')
-        .eq('id', tripId)
-        .eq('owner_id', userId)
-        .is('deleted_at', null)
+        .from("trips")
+        .select("id")
+        .eq("id", tripId)
+        .eq("owner_id", userId)
+        .is("deleted_at", null)
         .maybeSingle()
 
       if (readError) {
@@ -848,10 +804,10 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       const { error } = await client
-        .from('trips')
+        .from("trips")
         .update({ deleted_at: new Date().toISOString() })
-        .eq('id', tripId)
-        .eq('owner_id', userId)
+        .eq("id", tripId)
+        .eq("owner_id", userId)
 
       if (error) {
         throw error
@@ -876,24 +832,18 @@ export function createSupabaseTripRepository(): TripRepository {
       const parsedInput = UpdateTripDayInputSchema.parse(input)
       const client = createUserSupabaseClient(accessToken)
       const { data, error } = await client
-        .from('trip_days')
+        .from("trip_days")
         .upsert(
           {
             trip_id: tripId,
             trip_date: tripDate,
-            title:
-              parsedInput.title === undefined
-                ? day.title
-                : parsedInput.title,
-            notes:
-              parsedInput.notes === undefined
-                ? day.notes
-                : parsedInput.notes,
+            title: parsedInput.title === undefined ? day.title : parsedInput.title,
+            notes: parsedInput.notes === undefined ? day.notes : parsedInput.notes,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: 'trip_id,trip_date' },
+          { onConflict: "trip_id,trip_date" },
         )
-        .select('trip_id, trip_date, title, notes')
+        .select("trip_id, trip_date, title, notes")
         .single()
 
       if (error) {
@@ -911,10 +861,10 @@ export function createSupabaseTripRepository(): TripRepository {
     async getHousingStay(_userId, accessToken, tripId, housingStayId) {
       const client = createUserSupabaseClient(accessToken)
       const { data, error } = await client
-        .from('housing_stays')
+        .from("housing_stays")
         .select(housingStayColumns)
-        .eq('trip_id', tripId)
-        .eq('id', housingStayId)
+        .eq("trip_id", tripId)
+        .eq("id", housingStayId)
         .maybeSingle()
 
       if (error) {
@@ -928,7 +878,7 @@ export function createSupabaseTripRepository(): TripRepository {
       const parsedInput = CreateHousingStayInputSchema.parse(input)
       const client = createUserSupabaseClient(accessToken)
       const housingStayId = randomUUID()
-      const { error } = await client.from('housing_stays').insert({
+      const { error } = await client.from("housing_stays").insert({
         id: housingStayId,
         trip_id: tripId,
         name: parsedInput.name,
@@ -942,10 +892,10 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       const { data, error: readError } = await client
-        .from('housing_stays')
+        .from("housing_stays")
         .select(housingStayColumns)
-        .eq('trip_id', tripId)
-        .eq('id', housingStayId)
+        .eq("trip_id", tripId)
+        .eq("id", housingStayId)
         .single()
 
       if (readError) {
@@ -955,20 +905,9 @@ export function createSupabaseTripRepository(): TripRepository {
       return mapHousingStayRow(data)
     },
 
-    async updateHousingStay(
-      _userId,
-      accessToken,
-      tripId,
-      housingStayId,
-      input,
-    ) {
+    async updateHousingStay(_userId, accessToken, tripId, housingStayId, input) {
       const client = createUserSupabaseClient(accessToken)
-      const currentStay = await this.getHousingStay(
-        _userId,
-        accessToken,
-        tripId,
-        housingStayId,
-      )
+      const currentStay = await this.getHousingStay(_userId, accessToken, tripId, housingStayId)
 
       if (!currentStay) {
         return null
@@ -982,15 +921,15 @@ export function createSupabaseTripRepository(): TripRepository {
         ...input,
       })
       const { error } = await client
-        .from('housing_stays')
+        .from("housing_stays")
         .update({
           name: parsedInput.name,
           check_in: parsedInput.checkIn,
           check_out: parsedInput.checkOut,
           notes: parsedInput.notes,
         })
-        .eq('trip_id', tripId)
-        .eq('id', housingStayId)
+        .eq("trip_id", tripId)
+        .eq("id", housingStayId)
 
       if (error) {
         throw error
@@ -1001,22 +940,17 @@ export function createSupabaseTripRepository(): TripRepository {
 
     async deleteHousingStay(_userId, accessToken, tripId, housingStayId) {
       const client = createUserSupabaseClient(accessToken)
-      const currentStay = await this.getHousingStay(
-        _userId,
-        accessToken,
-        tripId,
-        housingStayId,
-      )
+      const currentStay = await this.getHousingStay(_userId, accessToken, tripId, housingStayId)
 
       if (!currentStay) {
         return false
       }
 
       const { error } = await client
-        .from('housing_stays')
+        .from("housing_stays")
         .delete()
-        .eq('trip_id', tripId)
-        .eq('id', housingStayId)
+        .eq("trip_id", tripId)
+        .eq("id", housingStayId)
 
       if (error) {
         throw error
@@ -1028,10 +962,10 @@ export function createSupabaseTripRepository(): TripRepository {
     async getMeal(_userId, accessToken, tripId, mealId) {
       const client = createUserSupabaseClient(accessToken)
       const { data, error } = await client
-        .from('meals')
+        .from("meals")
         .select(mealColumns)
-        .eq('trip_id', tripId)
-        .eq('id', mealId)
+        .eq("trip_id", tripId)
+        .eq("id", mealId)
         .maybeSingle()
 
       if (error) {
@@ -1050,7 +984,7 @@ export function createSupabaseTripRepository(): TripRepository {
         tripId,
         parsedInput.tripDate,
       )
-      const { error } = await client.from('meals').insert({
+      const { error } = await client.from("meals").insert({
         id: mealId,
         trip_id: tripId,
         trip_date: parsedInput.tripDate,
@@ -1070,10 +1004,10 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       const { data, error: readError } = await client
-        .from('meals')
+        .from("meals")
         .select(mealColumns)
-        .eq('trip_id', tripId)
-        .eq('id', mealId)
+        .eq("trip_id", tripId)
+        .eq("id", mealId)
         .single()
 
       if (readError) {
@@ -1085,12 +1019,7 @@ export function createSupabaseTripRepository(): TripRepository {
 
     async updateMeal(_userId, accessToken, tripId, mealId, input) {
       const client = createUserSupabaseClient(accessToken)
-      const currentMeal = await this.getMeal(
-        _userId,
-        accessToken,
-        tripId,
-        mealId,
-      )
+      const currentMeal = await this.getMeal(_userId, accessToken, tripId, mealId)
 
       if (!currentMeal) {
         return null
@@ -1106,7 +1035,7 @@ export function createSupabaseTripRepository(): TripRepository {
         ...input,
       })
       const { error } = await client
-        .from('meals')
+        .from("meals")
         .update({
           trip_date: parsedInput.tripDate,
           title: parsedInput.title,
@@ -1118,8 +1047,8 @@ export function createSupabaseTripRepository(): TripRepository {
           place_name: parsedInput.placeName,
           place_address: parsedInput.placeAddress,
         })
-        .eq('trip_id', tripId)
-        .eq('id', mealId)
+        .eq("trip_id", tripId)
+        .eq("id", mealId)
 
       if (error) {
         throw error
@@ -1136,11 +1065,7 @@ export function createSupabaseTripRepository(): TripRepository {
         return false
       }
 
-      const { error } = await client
-        .from('meals')
-        .delete()
-        .eq('trip_id', tripId)
-        .eq('id', mealId)
+      const { error } = await client.from("meals").delete().eq("trip_id", tripId).eq("id", mealId)
 
       if (error) {
         throw error
@@ -1150,11 +1075,7 @@ export function createSupabaseTripRepository(): TripRepository {
     },
 
     async getActivity(_userId, accessToken, tripId, activityId) {
-      return selectActivity(
-        createUserSupabaseClient(accessToken),
-        tripId,
-        activityId,
-      )
+      return selectActivity(createUserSupabaseClient(accessToken), tripId, activityId)
     },
 
     async createActivity(_userId, accessToken, tripId, input) {
@@ -1166,7 +1087,7 @@ export function createSupabaseTripRepository(): TripRepository {
         tripId,
         parsedInput.tripDate,
       )
-      const { error } = await client.from('activities').insert({
+      const { error } = await client.from("activities").insert({
         id: activityId,
         trip_id: tripId,
         trip_date: parsedInput.tripDate,
@@ -1188,13 +1109,7 @@ export function createSupabaseTripRepository(): TripRepository {
       return selectActivity(client, tripId, activityId)
     },
 
-    async updateActivity(
-      _userId,
-      accessToken,
-      tripId,
-      activityId,
-      input,
-    ) {
+    async updateActivity(_userId, accessToken, tripId, activityId, input) {
       const client = createUserSupabaseClient(accessToken)
       const currentActivity = await selectActivity(client, tripId, activityId)
 
@@ -1213,7 +1128,7 @@ export function createSupabaseTripRepository(): TripRepository {
       })
       const parsedUpdateInput = UpdateActivityInputSchema.parse(input)
       const { error } = await client
-        .from('activities')
+        .from("activities")
         .update({
           trip_date: parsedInput.tripDate,
           title: parsedInput.title,
@@ -1224,11 +1139,10 @@ export function createSupabaseTripRepository(): TripRepository {
           google_maps_url: parsedInput.googleMapsUrl,
           place_name: parsedInput.placeName,
           place_address: parsedInput.placeAddress,
-          sort_order:
-            parsedUpdateInput.sortOrder ?? currentActivity.sortOrder,
+          sort_order: parsedUpdateInput.sortOrder ?? currentActivity.sortOrder,
         })
-        .eq('trip_id', tripId)
-        .eq('id', activityId)
+        .eq("trip_id", tripId)
+        .eq("id", activityId)
 
       if (error) {
         throw error
@@ -1241,28 +1155,22 @@ export function createSupabaseTripRepository(): TripRepository {
       const parsedInput = ReorderActivitiesInputSchema.parse(input)
       const client = createUserSupabaseClient(accessToken)
       const currentActivities = await listActivities(client, tripId)
-      const currentActivityIds = new Set(
-        currentActivities.map((activity) => activity.id),
-      )
+      const currentActivityIds = new Set(currentActivities.map((activity) => activity.id))
 
-      if (
-        parsedInput.activities.some(
-          (activity) => !currentActivityIds.has(activity.activityId),
-        )
-      ) {
+      if (parsedInput.activities.some((activity) => !currentActivityIds.has(activity.activityId))) {
         return null
       }
 
       const updatedActivities = await Promise.all(
         parsedInput.activities.map(async (activity) => {
           const { data, error } = await client
-            .from('activities')
+            .from("activities")
             .update({
               trip_date: activity.tripDate,
               sort_order: activity.sortOrder,
             })
-            .eq('trip_id', tripId)
-            .eq('id', activity.activityId)
+            .eq("trip_id", tripId)
+            .eq("id", activity.activityId)
             .select(activityColumns)
             .single()
 
@@ -1290,25 +1198,23 @@ export function createSupabaseTripRepository(): TripRepository {
       ])
 
       if (
-        parsedInput.items.some((item) =>
-          !currentItemKeys.has(`${item.itemType}:${item.itemId}`),
-        )
+        parsedInput.items.some((item) => !currentItemKeys.has(`${item.itemType}:${item.itemId}`))
       ) {
         return null
       }
 
       const updatedActivities = await Promise.all(
         parsedInput.items
-          .filter((item) => item.itemType === 'activity')
+          .filter((item) => item.itemType === "activity")
           .map(async (item) => {
             const { data, error } = await client
-              .from('activities')
+              .from("activities")
               .update({
                 trip_date: item.tripDate,
                 sort_order: item.sortOrder,
               })
-              .eq('trip_id', tripId)
-              .eq('id', item.itemId)
+              .eq("trip_id", tripId)
+              .eq("id", item.itemId)
               .select(activityColumns)
               .single()
 
@@ -1321,16 +1227,16 @@ export function createSupabaseTripRepository(): TripRepository {
       )
       const updatedMeals = await Promise.all(
         parsedInput.items
-          .filter((item) => item.itemType === 'meal')
+          .filter((item) => item.itemType === "meal")
           .map(async (item) => {
             const { data, error } = await client
-              .from('meals')
+              .from("meals")
               .update({
                 trip_date: item.tripDate,
                 sort_order: item.sortOrder,
               })
-              .eq('trip_id', tripId)
-              .eq('id', item.itemId)
+              .eq("trip_id", tripId)
+              .eq("id", item.itemId)
               .select(mealColumns)
               .single()
 
@@ -1359,20 +1265,20 @@ export function createSupabaseTripRepository(): TripRepository {
         { data: requestRows, error: requestsError },
       ] = await Promise.all([
         client
-          .from('trip_members')
-          .select('trip_id, user_id, email, created_at')
-          .eq('trip_id', tripId)
-          .order('created_at', { ascending: true }),
+          .from("trip_members")
+          .select("trip_id, user_id, email, created_at")
+          .eq("trip_id", tripId)
+          .order("created_at", { ascending: true }),
         client
-          .from('trip_invitations')
-          .select('id, trip_id, email, status, created_at')
-          .eq('trip_id', tripId)
-          .order('created_at', { ascending: false }),
+          .from("trip_invitations")
+          .select("id, trip_id, email, status, created_at")
+          .eq("trip_id", tripId)
+          .order("created_at", { ascending: false }),
         client
-          .from('trip_access_requests')
-          .select('id, trip_id, requester_id, email, source, status, created_at')
-          .eq('trip_id', tripId)
-          .order('created_at', { ascending: false }),
+          .from("trip_access_requests")
+          .select("id, trip_id, requester_id, email, source, status, created_at")
+          .eq("trip_id", tripId)
+          .order("created_at", { ascending: false }),
       ])
 
       if (membersError) {
@@ -1388,19 +1294,16 @@ export function createSupabaseTripRepository(): TripRepository {
       let accessLinks: TripAccessLink[] = []
       if (ownerId === userId) {
         const { data: linkRows, error: linksError } = await client
-          .from('trip_access_links')
-          .select('id, trip_id, token, revoked_at, created_at')
-          .eq('trip_id', tripId)
-          .order('created_at', { ascending: false })
+          .from("trip_access_links")
+          .select("id, trip_id, token, revoked_at, created_at")
+          .eq("trip_id", tripId)
+          .order("created_at", { ascending: false })
 
         if (linksError) {
           throw linksError
         }
 
-        accessLinks = z
-          .array(tripAccessLinkRowSchema)
-          .parse(linkRows)
-          .map(mapTripAccessLinkRow)
+        accessLinks = z.array(tripAccessLinkRowSchema).parse(linkRows).map(mapTripAccessLinkRow)
       }
 
       return TripSharingSchema.parse({
@@ -1424,7 +1327,7 @@ export function createSupabaseTripRepository(): TripRepository {
 
     async getTripOwnerEmail(_userId, accessToken, tripId) {
       const client = createUserSupabaseClient(accessToken)
-      const { data, error } = await client.rpc('get_trip_owner_email', {
+      const { data, error } = await client.rpc("get_trip_owner_email", {
         target_trip_id: tripId,
       })
 
@@ -1438,13 +1341,13 @@ export function createSupabaseTripRepository(): TripRepository {
     async getTripAccessStatus(userId, accessToken, tripId) {
       const trip = await this.getTrip(userId, accessToken, tripId)
       if (trip) {
-        return mapTripAccessStatus('approved')
+        return mapTripAccessStatus("approved")
       }
 
       const client = createUserSupabaseClient(accessToken)
       const request = await getLatestTripAccessRequest(client, userId, tripId)
       return mapTripAccessStatus(
-        request?.status === 'approved' ? 'none' : request?.status ?? 'none',
+        request?.status === "approved" ? "none" : (request?.status ?? "none"),
       )
     },
 
@@ -1456,13 +1359,13 @@ export function createSupabaseTripRepository(): TripRepository {
 
       const parsedInput = InviteTripMemberInputSchema.parse(input)
       const { data, error } = await client
-        .from('trip_invitations')
+        .from("trip_invitations")
         .insert({
           trip_id: tripId,
           inviter_id: userId,
           email: parsedInput.email.toLowerCase(),
         })
-        .select('id, trip_id, email, status, created_at')
+        .select("id, trip_id, email, status, created_at")
         .single()
 
       if (error) {
@@ -1479,13 +1382,13 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       const { data, error } = await client
-        .from('trip_access_links')
+        .from("trip_access_links")
         .insert({
           trip_id: tripId,
           created_by: userId,
           token: randomUUID(),
         })
-        .select('id, trip_id, token, revoked_at, created_at')
+        .select("id, trip_id, token, revoked_at, created_at")
         .single()
 
       if (error) {
@@ -1499,54 +1402,48 @@ export function createSupabaseTripRepository(): TripRepository {
       const parsedInput = RequestTripAccessInputSchema.parse(input)
       const client = createUserSupabaseClient(accessToken)
       if (await this.getTrip(userId, accessToken, tripId)) {
-        return mapTripAccessStatus('approved')
+        return mapTripAccessStatus("approved")
       }
 
-      const existingRequest = await getLatestTripAccessRequest(
-        client,
-        userId,
-        tripId,
-      )
+      const existingRequest = await getLatestTripAccessRequest(client, userId, tripId)
       if (existingRequest) {
-        if (existingRequest.status === 'pending') {
-          return mapTripAccessStatus('pending')
+        if (existingRequest.status === "pending") {
+          return mapTripAccessStatus("pending")
         }
-        if (existingRequest.status === 'denied') {
-          return mapTripAccessStatus('denied')
+        if (existingRequest.status === "denied") {
+          return mapTripAccessStatus("denied")
         }
       }
 
-      let source: 'email' | 'link'
+      let source: "email" | "link"
       let invitationId: string | null = null
       let accessLinkId: string | null = null
 
       if (parsedInput.invitationId) {
         const { data, error } = await client
-          .from('trip_invitations')
-          .select('id, trip_id, email, status, created_at')
-          .eq('id', parsedInput.invitationId)
-          .eq('trip_id', tripId)
+          .from("trip_invitations")
+          .select("id, trip_id, email, status, created_at")
+          .eq("id", parsedInput.invitationId)
+          .eq("trip_id", tripId)
           .maybeSingle()
 
         if (error) {
           throw error
         }
 
-        const invitation = data
-          ? tripInvitationRowSchema.parse(data)
-          : null
+        const invitation = data ? tripInvitationRowSchema.parse(data) : null
         if (
           !invitation ||
-          invitation.status !== 'pending' ||
+          invitation.status !== "pending" ||
           invitation.email.toLowerCase() !== email.toLowerCase()
         ) {
           return null
         }
 
-        source = 'email'
+        source = "email"
         invitationId = invitation.id
       } else if (parsedInput.accessLinkToken) {
-        const { data, error } = await client.rpc('get_trip_access_link', {
+        const { data, error } = await client.rpc("get_trip_access_link", {
           target_trip_id: tripId,
           target_token: parsedInput.accessLinkToken,
         })
@@ -1559,14 +1456,14 @@ export function createSupabaseTripRepository(): TripRepository {
           return null
         }
 
-        source = 'link'
+        source = "link"
         accessLinkId = link[0].id
       } else {
         return null
       }
 
       const { data, error } = await client
-        .from('trip_access_requests')
+        .from("trip_access_requests")
         .insert({
           trip_id: tripId,
           requester_id: userId,
@@ -1575,18 +1472,12 @@ export function createSupabaseTripRepository(): TripRepository {
           invitation_id: invitationId,
           access_link_id: accessLinkId,
         })
-        .select(
-          'id, trip_id, requester_id, email, source, status, created_at',
-        )
+        .select("id, trip_id, requester_id, email, source, status, created_at")
         .single()
 
       if (error) {
-        if (error.code === '23505') {
-          const request = await getLatestTripAccessRequest(
-            client,
-            userId,
-            tripId,
-          )
+        if (error.code === "23505") {
+          const request = await getLatestTripAccessRequest(client, userId, tripId)
           if (request) {
             return mapTripAccessStatus(request.status)
           }
@@ -1595,27 +1486,20 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       mapTripAccessRequestRow(data)
-      return mapTripAccessStatus('pending', true)
+      return mapTripAccessStatus("pending", true)
     },
 
-    async approveTripAccessRequest(
-      userId,
-      accessToken,
-      tripId,
-      requestId,
-    ) {
+    async approveTripAccessRequest(userId, accessToken, tripId, requestId) {
       const client = createUserSupabaseClient(accessToken)
       if ((await getTripOwnerId(client, tripId)) !== userId) {
         return null
       }
 
       const { data: requestData, error: requestError } = await client
-        .from('trip_access_requests')
-        .select(
-          'id, trip_id, requester_id, email, source, status, created_at, invitation_id',
-        )
-        .eq('id', requestId)
-        .eq('trip_id', tripId)
+        .from("trip_access_requests")
+        .select("id, trip_id, requester_id, email, source, status, created_at, invitation_id")
+        .eq("id", requestId)
+        .eq("trip_id", tripId)
         .maybeSingle()
 
       if (requestError) {
@@ -1631,22 +1515,22 @@ export function createSupabaseTripRepository(): TripRepository {
           trip_id: z.string(),
           requester_id: z.string(),
           email: z.string(),
-          source: z.enum(['email', 'link']),
-          status: z.enum(['pending', 'approved', 'denied']),
+          source: z.enum(["email", "link"]),
+          status: z.enum(["pending", "approved", "denied"]),
           created_at: databaseDateTimeSchema,
           invitation_id: z.string().nullable(),
         })
         .parse(requestData)
 
-      if (request.status !== 'pending') {
+      if (request.status !== "pending") {
         return null
       }
 
       const { data: existingMember, error: memberLookupError } = await client
-        .from('trip_members')
-        .select('trip_id, user_id, email, created_at')
-        .eq('trip_id', tripId)
-        .eq('user_id', request.requester_id)
+        .from("trip_members")
+        .select("trip_id, user_id, email, created_at")
+        .eq("trip_id", tripId)
+        .eq("user_id", request.requester_id)
         .maybeSingle()
 
       if (memberLookupError) {
@@ -1656,13 +1540,13 @@ export function createSupabaseTripRepository(): TripRepository {
       let memberRow = existingMember
       if (!memberRow) {
         const { data: insertedMember, error: memberError } = await client
-          .from('trip_members')
+          .from("trip_members")
           .insert({
             trip_id: tripId,
             user_id: request.requester_id,
             email: request.email,
           })
-          .select('trip_id, user_id, email, created_at')
+          .select("trip_id, user_id, email, created_at")
           .single()
 
         if (memberError) {
@@ -1672,10 +1556,10 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       const { error: updateError } = await client
-        .from('trip_access_requests')
-        .update({ status: 'approved' })
-        .eq('id', requestId)
-        .eq('trip_id', tripId)
+        .from("trip_access_requests")
+        .update({ status: "approved" })
+        .eq("id", requestId)
+        .eq("trip_id", tripId)
 
       if (updateError) {
         throw updateError
@@ -1683,10 +1567,10 @@ export function createSupabaseTripRepository(): TripRepository {
 
       if (request.invitation_id) {
         const { error: invitationError } = await client
-          .from('trip_invitations')
-          .update({ status: 'accepted' })
-          .eq('id', request.invitation_id)
-          .eq('trip_id', tripId)
+          .from("trip_invitations")
+          .update({ status: "accepted" })
+          .eq("id", request.invitation_id)
+          .eq("trip_id", tripId)
 
         if (invitationError) {
           throw invitationError
@@ -1703,12 +1587,12 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       const { data, error } = await client
-        .from('trip_access_requests')
-        .update({ status: 'denied' })
-        .eq('id', requestId)
-        .eq('trip_id', tripId)
-        .eq('status', 'pending')
-        .select('id, trip_id, requester_id, email, source, status, created_at')
+        .from("trip_access_requests")
+        .update({ status: "denied" })
+        .eq("id", requestId)
+        .eq("trip_id", tripId)
+        .eq("status", "pending")
+        .select("id, trip_id, requester_id, email, source, status, created_at")
         .maybeSingle()
 
       if (error) {
@@ -1724,12 +1608,12 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       const { data, error } = await client
-        .from('trip_invitations')
-        .update({ status: 'revoked' })
-        .eq('id', invitationId)
-        .eq('trip_id', tripId)
-        .eq('status', 'pending')
-        .select('id, trip_id, email, status, created_at')
+        .from("trip_invitations")
+        .update({ status: "revoked" })
+        .eq("id", invitationId)
+        .eq("trip_id", tripId)
+        .eq("status", "pending")
+        .select("id, trip_id, email, status, created_at")
         .maybeSingle()
 
       if (error) {
@@ -1745,12 +1629,12 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       const { data, error } = await client
-        .from('trip_access_links')
+        .from("trip_access_links")
         .update({ revoked_at: new Date().toISOString() })
-        .eq('id', linkId)
-        .eq('trip_id', tripId)
-        .is('revoked_at', null)
-        .select('id, trip_id, token, revoked_at, created_at')
+        .eq("id", linkId)
+        .eq("trip_id", tripId)
+        .is("revoked_at", null)
+        .select("id, trip_id, token, revoked_at, created_at")
         .maybeSingle()
 
       if (error) {
@@ -1766,10 +1650,10 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       const { data: member, error: memberError } = await client
-        .from('trip_members')
-        .select('email')
-        .eq('trip_id', tripId)
-        .eq('user_id', memberId)
+        .from("trip_members")
+        .select("email")
+        .eq("trip_id", tripId)
+        .eq("user_id", memberId)
         .maybeSingle()
 
       if (memberError) {
@@ -1780,10 +1664,10 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       const { error } = await client
-        .from('trip_members')
+        .from("trip_members")
         .delete()
-        .eq('trip_id', tripId)
-        .eq('user_id', memberId)
+        .eq("trip_id", tripId)
+        .eq("user_id", memberId)
 
       if (error) {
         throw error
@@ -1801,10 +1685,10 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       const { error } = await client
-        .from('activities')
+        .from("activities")
         .delete()
-        .eq('trip_id', tripId)
-        .eq('id', activityId)
+        .eq("trip_id", tripId)
+        .eq("id", activityId)
 
       if (error) {
         throw error

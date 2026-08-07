@@ -1,6 +1,6 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 
-const persistencePreferenceKey = 'planleggreise.remember-session'
+const persistencePreferenceKey = "planleggreise.remember-session"
 
 function getSupabaseConfig() {
   const url = import.meta.env.VITE_SUPABASE_URL
@@ -8,7 +8,7 @@ function getSupabaseConfig() {
 
   if (!url || !publishableKey) {
     throw new Error(
-      'Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to apps/frontend/.env.local.',
+      "Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to apps/frontend/.env.local.",
     )
   }
 
@@ -16,17 +16,14 @@ function getSupabaseConfig() {
 }
 
 function getStoredPersistencePreference(): boolean {
-  return window.localStorage.getItem(persistencePreferenceKey) !== 'false'
+  return window.localStorage.getItem(persistencePreferenceKey) !== "false"
 }
 
 let client: SupabaseClient | null = null
 let clientPersistence: boolean | null = null
 
 export function setSessionPersistencePreference(rememberSession: boolean) {
-  window.localStorage.setItem(
-    persistencePreferenceKey,
-    String(rememberSession),
-  )
+  window.localStorage.setItem(persistencePreferenceKey, String(rememberSession))
 }
 
 export function getSupabaseClient(

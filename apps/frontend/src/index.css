@@ -1,8 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap");
 @import "tailwindcss";
 
 :root {
-  font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -72,9 +72,9 @@ input {
 
 button:not(:disabled),
 a[href],
-[role='button'],
-input[type='checkbox'],
-input[type='date'] {
+[role="button"],
+input[type="checkbox"],
+input[type="date"] {
   cursor: pointer;
 }
 
@@ -137,4 +137,15 @@ button:disabled {
   --shadow-popover: 0 16px 40px rgb(0 0 0 / 0.35);
   --shadow-popover-wide: 0 12px 30px rgb(0 0 0 / 0.35);
   --shadow-bottom-sheet: 0 -16px 40px rgb(0 0 0 / 0.35);
+}
+
+@media (min-width: 640px) {
+  .time-picker-popover {
+    bottom: auto;
+    left: var(--picker-left);
+    position: absolute;
+    right: auto;
+    top: var(--picker-top);
+    width: var(--picker-width);
+  }
 }

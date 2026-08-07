@@ -1,15 +1,12 @@
-import { useTranslation } from 'react-i18next'
-import type { Toast } from './ToastContext'
+import { useTranslation } from "react-i18next"
+import type { Toast } from "./ToastContext"
 
 type ToastContainerProps = {
   toasts: Toast[]
   onDismiss: (id: string) => void
 }
 
-export function ToastContainer({
-  toasts,
-  onDismiss,
-}: ToastContainerProps) {
+export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
   const { t } = useTranslation()
 
   return (
@@ -27,12 +24,12 @@ export function ToastContainer({
           <div className="flex items-start justify-between gap-3">
             <p>{toast.message}</p>
             <button
-              aria-label={t('common.close')}
+              aria-label={t("common.close")}
               className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface"
               onClick={() => onDismiss(toast.id)}
               type="button"
             >
-              {t('common.close')}
+              {t("common.close")}
             </button>
           </div>
         </div>

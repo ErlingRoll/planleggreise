@@ -1,20 +1,11 @@
-import type { DragEvent, ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
-import {
-  formatActivityTime,
-  getDayItemTitle,
-  type DayItem,
-} from '../../lib/activity-format'
-import type { Activity, Meal, TripDetail } from '../../api'
-import type {
-  DayItemRecord,
-  DropTarget,
-  MovingItem,
-  PlannerTab,
-} from './planner-types'
+import type { DragEvent, ReactNode } from "react"
+import { useTranslation } from "react-i18next"
+import { formatActivityTime, getDayItemTitle, type DayItem } from "../../lib/activity-format"
+import type { Activity, Meal, TripDetail } from "../../api"
+import type { DayItemRecord, DropTarget, MovingItem, PlannerTab } from "./planner-types"
 
 type DayItemListProps = {
-  day: TripDetail['days'][number]
+  day: TripDetail["days"][number]
   items: DayItem[]
   itemType: PlannerTab
   draggedItem: DayItemRecord | null
@@ -25,25 +16,10 @@ type DayItemListProps = {
   getDayItemRecord: (item: DayItem) => DayItemRecord
   getDropIndex: (event: DragEvent<HTMLDivElement>, itemIndex: number) => number
   onDayDragOver: (event: DragEvent<HTMLDivElement>, dayDate: string) => void
-  onDayDrop: (
-    event: DragEvent<HTMLDivElement>,
-    dayDate: string,
-    itemCount: number,
-  ) => void
-  onItemDragStart: (
-    event: DragEvent<HTMLDivElement>,
-    record: DayItemRecord,
-  ) => void
-  onItemDragOver: (
-    event: DragEvent<HTMLDivElement>,
-    dayDate: string,
-    itemIndex: number,
-  ) => void
-  onItemDrop: (
-    event: DragEvent<HTMLDivElement>,
-    dayDate: string,
-    itemIndex: number,
-  ) => void
+  onDayDrop: (event: DragEvent<HTMLDivElement>, dayDate: string, itemCount: number) => void
+  onItemDragStart: (event: DragEvent<HTMLDivElement>, record: DayItemRecord) => void
+  onItemDragOver: (event: DragEvent<HTMLDivElement>, dayDate: string, itemIndex: number) => void
+  onItemDrop: (event: DragEvent<HTMLDivElement>, dayDate: string, itemIndex: number) => void
   onItemDragEnd: () => void
   onStartMoving: (record: DayItemRecord) => void
   onEditActivity: (activity: Activity) => void
@@ -81,10 +57,10 @@ export function DayItemList({
 }: DayItemListProps) {
   const { t } = useTranslation()
   const orderedItems =
-    itemType === 'meals'
-      ? items.filter((item) => getDayItemRecord(item).itemType === 'meal')
-      : itemType === 'activities'
-        ? items.filter((item) => getDayItemRecord(item).itemType === 'activity')
+    itemType === "meals"
+      ? items.filter((item) => getDayItemRecord(item).itemType === "meal")
+      : itemType === "activities"
+        ? items.filter((item) => getDayItemRecord(item).itemType === "activity")
         : items
   const draggedItemIndex = draggedItem
     ? orderedItems.findIndex((item) => item.id === draggedItem.item.id)
@@ -92,8 +68,7 @@ export function DayItemList({
 
   function shouldShowDropIndicator(index: number) {
     const isDraggingWithinThisDay = draggedItemIndex >= 0
-    const isCurrentPosition =
-      index === draggedItemIndex || index === draggedItemIndex + 1
+    const isCurrentPosition = index === draggedItemIndex || index === draggedItemIndex + 1
 
     return !isDraggingWithinThisDay || !isCurrentPosition
   }
@@ -101,22 +76,17 @@ export function DayItemList({
   return (
     <div
       className={`mt-4 grid gap-2 border-t border-border-divider pt-3 ${
-        orderedItems.length === 0 ? 'min-h-2' : ''
+        orderedItems.length === 0 ? "min-h-2" : ""
       }`}
       onDragOver={(event) => onDayDragOver(event, day.date)}
       onDrop={(event) => onDayDrop(event, day.date, items.length)}
     >
       {orderedItems.map((item, itemIndex) => {
         const record = getDayItemRecord(item)
-        const fullItemIndex = items.findIndex(
-          (currentItem) => currentItem.id === item.id,
-        )
+        const fullItemIndex = items.findIndex((currentItem) => currentItem.id === item.id)
 
         return (
-          <div
-            className="rounded-xl bg-surface p-3"
-            key={`${record.itemType}:${item.id}`}
-          >
+          <div className="rounded-xl bg-surface p-3" key={`${record.itemType}:${item.id}`}>
             {dropTarget?.dayDate === day.date &&
               dropTarget.index === fullItemIndex &&
               shouldShowDropIndicator(itemIndex) && (
@@ -126,36 +96,26 @@ export function DayItemList({
               className="flex items-start gap-3 lg:cursor-grab lg:active:cursor-grabbing"
               draggable
               onDragEnd={onItemDragEnd}
-              onDragOver={(event) =>
-                onItemDragOver(event, day.date, fullItemIndex)
-              }
+              onDragOver={(event) => onItemDragOver(event, day.date, fullItemIndex)}
               onDragStart={(event) => onItemDragStart(event, record)}
-              onDrop={(event) =>
-                onItemDrop(
-                  event,
-                  day.date,
-                  getDropIndex(event, fullItemIndex),
-                )
-              }
+              onDrop={(event) => onItemDrop(event, day.date, getDropIndex(event, fullItemIndex))}
             >
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-brand">
-                  {getDayItemTitle(item, t('tripDetails.untitledItem'))}
+                  {getDayItemTitle(item, t("tripDetails.untitledItem"))}
                 </p>
-                {record.itemType === 'meal' && (
+                {record.itemType === "meal" && (
                   <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-accent-text">
-                    {t('tripDetails.meal')}
+                    {t("tripDetails.meal")}
                   </p>
                 )}
                 {item.placeAddress && (
-                  <p className="mt-1 text-sm text-muted">
-                    {item.placeAddress}
-                  </p>
+                  <p className="mt-1 text-sm text-muted">{item.placeAddress}</p>
                 )}
                 <p className="mt-1 text-sm text-muted">
                   {formatActivityTime(item, {
-                    allDay: t('tripDetails.allDay'),
-                    timeNotSet: t('tripDetails.timeNotSet'),
+                    allDay: t("tripDetails.allDay"),
+                    timeNotSet: t("tripDetails.timeNotSet"),
                   })}
                 </p>
                 {item.googleMapsUrl && (
@@ -165,7 +125,7 @@ export function DayItemList({
                     rel="noreferrer"
                     target="_blank"
                   >
-                    {t('tripDetails.openGoogleMaps')}
+                    {t("tripDetails.openGoogleMaps")}
                   </a>
                 )}
               </div>
@@ -176,37 +136,33 @@ export function DayItemList({
                   onClick={() => onStartMoving(record)}
                   type="button"
                 >
-                  {t('common.move')}
+                  {t("common.move")}
                 </button>
                 <button
                   className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
                   disabled={movingItem !== null}
                   onClick={() =>
-                    record.itemType === 'meal'
+                    record.itemType === "meal"
                       ? onEditMeal(record.item)
                       : onEditActivity(record.item)
                   }
                   type="button"
                 >
-                  {t('common.edit')}
+                  {t("common.edit")}
                 </button>
                 <button
                   className="rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface disabled:opacity-50"
                   disabled={
-                    deletingItemId === item.id ||
-                    editingItemId !== null ||
-                    movingItem !== null
+                    deletingItemId === item.id || editingItemId !== null || movingItem !== null
                   }
                   onClick={() =>
-                    record.itemType === 'meal'
+                    record.itemType === "meal"
                       ? onDeleteMeal(record.item)
                       : onDeleteActivity(record.item)
                   }
                   type="button"
                 >
-                  {deletingItemId === item.id
-                    ? '...'
-                    : t('common.delete')}
+                  {deletingItemId === item.id ? "..." : t("common.delete")}
                 </button>
               </div>
             </div>

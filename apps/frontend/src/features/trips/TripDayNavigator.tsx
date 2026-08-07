@@ -1,15 +1,15 @@
-import { useTranslation } from 'react-i18next'
-import { formatDate } from '../../lib/date-format'
-import type { TripDetail } from '../../api'
+import { useTranslation } from "react-i18next"
+import { formatDate } from "../../lib/date-format"
+import type { TripDetail } from "../../api"
 
 type TripDayNavigatorProps = {
-  days: TripDetail['days']
-  selectedDay: TripDetail['days'][number]
+  days: TripDetail["days"]
+  selectedDay: TripDetail["days"][number]
   selectedDayDates: string[]
   onSelectAll: () => void
   onSelectDay: (date: string, shiftKey: boolean) => void
   onToggleDay: (date: string, shiftKey: boolean) => void
-  getDayScheduleSummary: (day: TripDetail['days'][number]) => string
+  getDayScheduleSummary: (day: TripDetail["days"][number]) => string
 }
 
 export function TripDayNavigator({
@@ -27,15 +27,13 @@ export function TripDayNavigator({
     <aside className="sticky top-5 hidden self-start lg:block">
       <div className="rounded-2xl border border-border-card bg-page p-3">
         <div className="flex items-center justify-between gap-2 px-2 py-2">
-          <h4 className="text-sm font-semibold text-brand">
-            {t('tripDetails.dayNavigator')}
-          </h4>
+          <h4 className="text-sm font-semibold text-brand">{t("tripDetails.dayNavigator")}</h4>
           <button
             className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted"
             onClick={onSelectAll}
             type="button"
           >
-            {t('tripDetails.selectAllDays')}
+            {t("tripDetails.selectAllDays")}
           </button>
         </div>
         <div className="mt-1 grid gap-1">
@@ -47,13 +45,13 @@ export function TripDayNavigator({
               <div
                 className={`flex items-center gap-2 rounded-xl px-2 py-2 transition ${
                   isActive
-                    ? 'bg-brand-surface text-on-brand'
-                    : 'text-muted hover:bg-surface-muted hover:text-on-surface'
+                    ? "bg-brand-surface text-on-brand"
+                    : "text-muted hover:bg-surface-muted hover:text-on-surface"
                 }`}
                 key={day.date}
               >
                 <input
-                  aria-label={t('tripDetails.selectDayForViewing', {
+                  aria-label={t("tripDetails.selectDayForViewing", {
                     date: formatDate(day.date),
                   })}
                   checked={isChecked}
@@ -61,14 +59,13 @@ export function TripDayNavigator({
                   onChange={(event) =>
                     onToggleDay(
                       day.date,
-                      event.nativeEvent instanceof MouseEvent &&
-                        event.nativeEvent.shiftKey,
+                      event.nativeEvent instanceof MouseEvent && event.nativeEvent.shiftKey,
                     )
                   }
                   type="checkbox"
                 />
                 <button
-                  aria-label={t('tripDetails.selectDay', {
+                  aria-label={t("tripDetails.selectDay", {
                     date: formatDate(day.date),
                   })}
                   className="flex min-w-0 flex-1 overflow-hidden text-left"
@@ -82,7 +79,7 @@ export function TripDayNavigator({
                     {day.title?.trim() && (
                       <span
                         className={`mt-0.5 block truncate text-xs ${
-                          isActive ? 'text-soft' : 'text-muted'
+                          isActive ? "text-soft" : "text-muted"
                         }`}
                         title={day.title}
                       >
@@ -91,7 +88,7 @@ export function TripDayNavigator({
                     )}
                     <span
                       className={`mt-0.5 block truncate text-xs ${
-                        isActive ? 'text-soft' : 'text-faint'
+                        isActive ? "text-soft" : "text-faint"
                       }`}
                     >
                       {getDayScheduleSummary(day)}

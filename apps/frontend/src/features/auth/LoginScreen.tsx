@@ -1,13 +1,10 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import {
-  getSupabaseClient,
-  setSessionPersistencePreference,
-} from '../../lib/supabase'
-import { getErrorMessage } from '../../lib/errors'
-import { LanguageSwitcher } from '../../components/LanguageSwitcher'
-import { MobileMenuButton } from '../../components/MobileMenuButton'
-import { ThemeToggle } from '../../components/ThemeToggle'
+import { useState } from "react"
+import { useTranslation } from "react-i18next"
+import { getSupabaseClient, setSessionPersistencePreference } from "../../lib/supabase"
+import { getErrorMessage } from "../../lib/errors"
+import { LanguageSwitcher } from "../../components/LanguageSwitcher"
+import { MobileMenuButton } from "../../components/MobileMenuButton"
+import { ThemeToggle } from "../../components/ThemeToggle"
 
 export function LoginScreen() {
   const { t } = useTranslation()
@@ -24,7 +21,7 @@ export function LoginScreen() {
     try {
       const client = getSupabaseClient(rememberSession)
       const { error: signInError } = await client.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
           redirectTo: `${window.location.origin}${window.location.pathname}${window.location.search}`,
         },
@@ -45,7 +42,9 @@ export function LoginScreen() {
         <div className="mb-8 font-semibold tracking-tight text-brand sm:mb-12">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-xl bg-brand-surface text-lg text-on-brand">✦</span>
+              <span className="grid size-10 place-items-center rounded-xl bg-brand-surface text-lg text-on-brand">
+                ✦
+              </span>
               <span>planleggreise</span>
             </div>
             <div className="hidden items-center gap-2 sm:flex">
@@ -53,11 +52,11 @@ export function LoginScreen() {
               <LanguageSwitcher />
             </div>
             <MobileMenuButton
-              closeLabel={t('common.close')}
+              closeLabel={t("common.close")}
               isOpen={showMobileOptions}
-              menuLabel={t('common.menu')}
+              menuLabel={t("common.menu")}
               onToggle={() => setShowMobileOptions((current) => !current)}
-              openLabel={t('auth.openOptions')}
+              openLabel={t("auth.openOptions")}
             />
           </div>
           {showMobileOptions && (
@@ -67,13 +66,13 @@ export function LoginScreen() {
             </div>
           )}
         </div>
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent-text">{t('auth.tagline')}</p>
-        <h1 className="mt-4 text-4xl font-medium leading-tight tracking-[-0.04em] text-brand">
-          {t('auth.heading')}
-        </h1>
-        <p className="mt-5 leading-7 text-muted">
-          {t('auth.description')}
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent-text">
+          {t("auth.tagline")}
         </p>
+        <h1 className="mt-4 text-4xl font-medium leading-tight tracking-[-0.04em] text-brand">
+          {t("auth.heading")}
+        </h1>
+        <p className="mt-5 leading-7 text-muted">{t("auth.description")}</p>
 
         {error && (
           <p className="mt-6 rounded-xl border border-danger-border bg-error-surface p-4 text-sm text-error">
@@ -87,8 +86,10 @@ export function LoginScreen() {
           onClick={() => void signInWithGoogle()}
           type="button"
         >
-          <span className="grid size-6 place-items-center rounded-full bg-white text-sm font-bold text-google-blue">G</span>
-          {isLoading ? t('auth.openingGoogle') : t('auth.continueWithGoogle')}
+          <span className="grid size-6 place-items-center rounded-full bg-white text-sm font-bold text-google-blue">
+            G
+          </span>
+          {isLoading ? t("auth.openingGoogle") : t("auth.continueWithGoogle")}
         </button>
 
         <label className="mt-5 flex items-center gap-3 text-sm text-muted">
@@ -98,7 +99,7 @@ export function LoginScreen() {
             onChange={(event) => setRememberSession(event.target.checked)}
             type="checkbox"
           />
-          <span>{t('auth.rememberMe')}</span>
+          <span>{t("auth.rememberMe")}</span>
         </label>
       </section>
     </main>

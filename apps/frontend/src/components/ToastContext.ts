@@ -1,9 +1,9 @@
-import { createContext, useContext } from 'react'
+import { createContext, useContext } from "react"
 
 export type Toast = {
   id: string
   message: string
-  tone: 'error'
+  tone: "error"
 }
 
 export type ToastContextValue = {
@@ -17,7 +17,7 @@ export function useToast() {
   const context = useContext(ToastContext)
 
   if (!context) {
-    throw new Error('useToast must be used within ToastProvider')
+    throw new Error("useToast must be used within ToastProvider")
   }
 
   return context

@@ -1,9 +1,9 @@
-import { useState, type FormEvent } from 'react'
-import { useTranslation } from 'react-i18next'
-import { createTrip, type Trip } from '../../api'
-import { DatePicker } from '../../components/DatePicker'
-import { getErrorMessage } from '../../lib/errors'
-import { getTripDurationMessage, shiftDate } from '../../lib/trip-dates'
+import { useState, type FormEvent } from "react"
+import { useTranslation } from "react-i18next"
+import { createTrip, type Trip } from "../../api"
+import { DatePicker } from "../../components/DatePicker"
+import { getErrorMessage } from "../../lib/errors"
+import { getTripDurationMessage, shiftDate } from "../../lib/trip-dates"
 
 type TripFormProps = {
   accessToken: string
@@ -13,10 +13,10 @@ type TripFormProps = {
 
 export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
   const { t } = useTranslation()
-  const [name, setName] = useState('')
-  const [notes, setNotes] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [name, setName] = useState("")
+  const [notes, setNotes] = useState("")
+  const [startDate, setStartDate] = useState("")
+  const [endDate, setEndDate] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -24,12 +24,12 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
     event.preventDefault()
 
     if (!startDate || !endDate) {
-      setError(t('tripForm.datesRequired'))
+      setError(t("tripForm.datesRequired"))
       return
     }
 
     if (endDate < startDate) {
-      setError(t('errors.tripDatesInvalid'))
+      setError(t("errors.tripDatesInvalid"))
       return
     }
 
@@ -63,30 +63,30 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
       className="mt-6 rounded-2xl border border-border-soft bg-surface-soft p-5"
       onSubmit={(event) => void handleSubmit(event)}
     >
-      <h3 className="font-semibold text-brand">{t('tripForm.title')}</h3>
+      <h3 className="font-semibold text-brand">{t("tripForm.title")}</h3>
       <div className="mt-4 grid gap-4">
         <label className="grid gap-2 text-sm font-medium text-muted">
-          {t('tripForm.name')}
+          {t("tripForm.name")}
           <input
             className="rounded-xl border border-border bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
             onChange={(event) => setName(event.target.value)}
-            placeholder={t('tripForm.namePlaceholder')}
+            placeholder={t("tripForm.namePlaceholder")}
             required
             value={name}
           />
         </label>
         <label className="grid gap-2 text-sm font-medium text-muted">
-          {t('tripForm.notes')}
+          {t("tripForm.notes")}
           <textarea
             className="min-h-24 resize-y rounded-xl border border-border bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
             onChange={(event) => setNotes(event.target.value)}
-            placeholder={t('tripForm.notesPlaceholder')}
+            placeholder={t("tripForm.notesPlaceholder")}
             value={notes}
           />
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <DatePicker
-            label={t('tripForm.startDate')}
+            label={t("tripForm.startDate")}
             onChange={(date) => {
               setStartDate(date)
               const maximumEndDate = shiftDate(date, 59)
@@ -100,7 +100,7 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
             value={startDate}
           />
           <DatePicker
-            label={t('tripForm.endDate')}
+            label={t("tripForm.endDate")}
             maxDate={startDate ? shiftDate(startDate, 59) : undefined}
             minDate={startDate}
             onChange={setEndDate}
@@ -115,14 +115,14 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
           onClick={onCancel}
           type="button"
         >
-          {t('tripForm.cancel')}
+          {t("tripForm.cancel")}
         </button>
         <button
           className="rounded-xl bg-brand-surface px-4 py-2.5 text-sm font-semibold text-on-brand hover:bg-brand-surface-hover disabled:opacity-60"
           disabled={isSaving}
           type="submit"
         >
-          {isSaving ? t('tripForm.creating') : t('tripForm.create')}
+          {isSaving ? t("tripForm.creating") : t("tripForm.create")}
         </button>
       </div>
     </form>

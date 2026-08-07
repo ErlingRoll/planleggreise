@@ -1,10 +1,10 @@
-import cors from 'cors'
+import cors from "cors"
 import express, {
   type ErrorRequestHandler,
   type NextFunction,
   type Request,
   type Response,
-} from 'express'
+} from "express"
 import {
   ActivitySchema,
   CreateActivityInputSchema,
@@ -35,27 +35,20 @@ import {
   type TripMember,
   type ReorderDayItemInput,
   type UpdateActivityInput,
-} from '@planleggreise/models'
-import {
-  createSupabaseAuthService,
-  type AuthenticatedUser,
-  type AuthService,
-} from './auth.js'
+} from "@planleggreise/models"
+import { createSupabaseAuthService, type AuthenticatedUser, type AuthService } from "./auth.js"
 import {
   createSupabaseTripRepository,
   isDateWithinTrip,
   isValidDateRange,
   type TripRepository,
-} from './trip-repository.js'
+} from "./trip-repository.js"
 import {
   createGooglePlacesResolver,
   GooglePlacesError,
   type GooglePlacesResolver,
-} from './google-places.js'
-import {
-  createSharingEmailSender,
-  type SharingEmailSender,
-} from './sharing-email.js'
+} from "./google-places.js"
+import { createSharingEmailSender, type SharingEmailSender } from "./sharing-email.js"
 
 type AuthenticatedRequest = Request & {
   accessToken: string
@@ -70,31 +63,26 @@ export type AppDependencies = {
 }
 
 function getAccessToken(request: Request): string | null {
-  const authorization = request.header('authorization')
+  const authorization = request.header("authorization")
 
-  if (!authorization?.startsWith('Bearer ')) {
+  if (!authorization?.startsWith("Bearer ")) {
     return null
   }
 
-  const token = authorization.slice('Bearer '.length).trim()
+  const token = authorization.slice("Bearer ".length).trim()
   return token || null
 }
 
 function getSharingActionUrl(tripId: string, query: string) {
-  const appUrl = process.env.FRONTEND_APP_URL ?? 'http://localhost:3000'
+  const appUrl = process.env.FRONTEND_APP_URL ?? "http://localhost:3000"
   return `${appUrl}/trips/${tripId}/request-access?${query}`
 }
 
-function getReorderedItemStartTime(
-  trip: TripDetail,
-  item: ReorderDayItemInput,
-) {
+function getReorderedItemStartTime(trip: TripDetail, item: ReorderDayItemInput) {
   const dayItem =
-    item.itemType === 'meal'
+    item.itemType === "meal"
       ? trip.meals.find((meal) => meal.id === item.itemId)
-      : trip.days
-          .flatMap((day) => day.activities)
-          .find((activity) => activity.id === item.itemId)
+      : trip.days.flatMap((day) => day.activities).find((activity) => activity.id === item.itemId)
 
   if (!dayItem || dayItem.allDay) {
     return null
@@ -104,10 +92,7 @@ function getReorderedItemStartTime(
   return time?.trim() || null
 }
 
-function hasValidTimedDayItemOrder(
-  trip: TripDetail,
-  items: ReorderDayItemInput[],
-) {
+function hasValidTimedDayItemOrder(trip: TripDetail, items: ReorderDayItemInput[]) {
   const dates = new Set(items.map((item) => item.tripDate))
 
   return Array.from(dates).every((date) => {
@@ -117,9 +102,7 @@ function hasValidTimedDayItemOrder(
       .map((item) => getReorderedItemStartTime(trip, item))
       .filter((time): time is string => time !== null)
 
-    return timedItems.every(
-      (time, index) => index === 0 || timedItems[index - 1] <= time,
-    )
+    return timedItems.every((time, index) => index === 0 || timedItems[index - 1] <= time)
   })
 }
 
@@ -132,7 +115,7 @@ function requireAuthenticatedUser(
   const accessToken = getAccessToken(request)
 
   if (!accessToken) {
-    response.status(401).json({ message: 'Authentication required' })
+    response.status(401).json({ message: "Authentication required" })
     return
   }
 
@@ -140,7 +123,7 @@ function requireAuthenticatedUser(
     .authenticate(accessToken)
     .then((user) => {
       if (!user) {
-        response.status(401).json({ message: 'Invalid authentication token' })
+        response.status(401).json({ message: "Invalid authentication token" })
         return
       }
 
@@ -155,31 +138,27 @@ function requireAuthenticatedUser(
 export function createApp(dependencies: AppDependencies = {}) {
   const app = express()
   const authService = dependencies.authService ?? createSupabaseAuthService()
-  const tripRepository =
-    dependencies.tripRepository ?? createSupabaseTripRepository()
-  const googlePlacesResolver =
-    dependencies.googlePlacesResolver ?? createGooglePlacesResolver()
-  const sharingEmailSender =
-    dependencies.sharingEmailSender ?? createSharingEmailSender()
-  const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:3000')
-    .split(',')
+  const tripRepository = dependencies.tripRepository ?? createSupabaseTripRepository()
+  const googlePlacesResolver = dependencies.googlePlacesResolver ?? createGooglePlacesResolver()
+  const sharingEmailSender = dependencies.sharingEmailSender ?? createSharingEmailSender()
+  const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3000")
+    .split(",")
     .map((origin) => origin.trim())
 
   app.use(cors({ origin: allowedOrigins }))
   app.use(express.json())
 
-  app.get('/api/health', (_request: Request, response: Response) => {
+  app.get("/api/health", (_request: Request, response: Response) => {
     response.json({
-      status: 'ok',
-      service: 'planleggreise-api',
+      status: "ok",
+      service: "planleggreise-api",
       timestamp: new Date().toISOString(),
     })
   })
 
   app.get(
-    '/api/trips',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response<Trip[]>, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
@@ -195,9 +174,8 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.get(
-    '/api/trips/:tripId',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (
       request: Request,
       response: Response<TripDetail | { message: string }>,
@@ -207,8 +185,8 @@ export function createApp(dependencies: AppDependencies = {}) {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId } = request.params
 
-        if (typeof tripId !== 'string') {
-          response.status(400).json({ message: 'Trip id is required' })
+        if (typeof tripId !== "string") {
+          response.status(400).json({ message: "Trip id is required" })
           return
         }
 
@@ -219,7 +197,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!trip) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
@@ -231,15 +209,14 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.get(
-    '/api/trips/:tripId/sharing',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/sharing",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId } = request.params
-        if (typeof tripId !== 'string') {
-          response.status(400).json({ message: 'Trip id is required' })
+        if (typeof tripId !== "string") {
+          response.status(400).json({ message: "Trip id is required" })
           return
         }
 
@@ -249,7 +226,7 @@ export function createApp(dependencies: AppDependencies = {}) {
           tripId,
         )
         if (!sharing) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
@@ -261,16 +238,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.post(
-    '/api/trips/:tripId/sharing/invitations',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/sharing/invitations",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId } = request.params
         const parsedInput = InviteTripMemberInputSchema.safeParse(request.body)
-        if (typeof tripId !== 'string' || !parsedInput.success) {
-          response.status(400).json({ message: 'Invalid invitation data' })
+        if (typeof tripId !== "string" || !parsedInput.success) {
+          response.status(400).json({ message: "Invalid invitation data" })
           return
         }
 
@@ -281,18 +257,18 @@ export function createApp(dependencies: AppDependencies = {}) {
           parsedInput.data,
         )
         if (!invitation) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
         await sharingEmailSender.send({
           to: invitation.email,
-          subject: 'You have been invited to collaborate on a trip',
+          subject: "You have been invited to collaborate on a trip",
           actionUrl: getSharingActionUrl(
             tripId,
             `invitationId=${encodeURIComponent(invitation.id)}`,
           ),
-          actionLabel: 'Request access',
+          actionLabel: "Request access",
         })
 
         response.status(201).json(TripInvitationSchema.parse(invitation))
@@ -303,15 +279,14 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.post(
-    '/api/trips/:tripId/sharing/access-links',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/sharing/access-links",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId } = request.params
-        if (typeof tripId !== 'string') {
-          response.status(400).json({ message: 'Trip id is required' })
+        if (typeof tripId !== "string") {
+          response.status(400).json({ message: "Trip id is required" })
           return
         }
 
@@ -321,7 +296,7 @@ export function createApp(dependencies: AppDependencies = {}) {
           tripId,
         )
         if (!link) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
@@ -333,20 +308,19 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.post(
-    '/api/trips/:tripId/sharing/access-requests',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/sharing/access-requests",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId } = request.params
         const parsedInput = RequestTripAccessInputSchema.safeParse(request.body)
         if (
-          typeof tripId !== 'string' ||
+          typeof tripId !== "string" ||
           !parsedInput.success ||
           !authenticatedRequest.user.email
         ) {
-          response.status(400).json({ message: 'Invalid access request data' })
+          response.status(400).json({ message: "Invalid access request data" })
           return
         }
 
@@ -358,11 +332,11 @@ export function createApp(dependencies: AppDependencies = {}) {
           parsedInput.data,
         )
         if (!accessStatus) {
-          response.status(404).json({ message: 'Invitation or access link not found' })
+          response.status(404).json({ message: "Invitation or access link not found" })
           return
         }
 
-        if (accessStatus.status === 'pending' && accessStatus.isNew) {
+        if (accessStatus.status === "pending" && accessStatus.isNew) {
           const ownerEmail = await tripRepository.getTripOwnerEmail(
             authenticatedRequest.user.id,
             authenticatedRequest.accessToken,
@@ -371,9 +345,9 @@ export function createApp(dependencies: AppDependencies = {}) {
           if (ownerEmail) {
             await sharingEmailSender.send({
               to: ownerEmail,
-              subject: 'A user has requested access to your trip',
-              actionUrl: `${process.env.FRONTEND_APP_URL ?? 'http://localhost:3000'}/trips/${tripId}`,
-              actionLabel: 'Review access request',
+              subject: "A user has requested access to your trip",
+              actionUrl: `${process.env.FRONTEND_APP_URL ?? "http://localhost:3000"}/trips/${tripId}`,
+              actionLabel: "Review access request",
             })
           }
         }
@@ -388,15 +362,14 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.get(
-    '/api/trips/:tripId/sharing/access-status',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/sharing/access-status",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId } = request.params
-        if (typeof tripId !== 'string') {
-          response.status(400).json({ message: 'Trip id is required' })
+        if (typeof tripId !== "string") {
+          response.status(400).json({ message: "Trip id is required" })
           return
         }
 
@@ -413,15 +386,14 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.patch(
-    '/api/trips/:tripId/sharing/requests/:requestId/approve',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/sharing/requests/:requestId/approve",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId, requestId } = request.params
-        if (typeof tripId !== 'string' || typeof requestId !== 'string') {
-          response.status(400).json({ message: 'Access request id is required' })
+        if (typeof tripId !== "string" || typeof requestId !== "string") {
+          response.status(400).json({ message: "Access request id is required" })
           return
         }
 
@@ -432,16 +404,16 @@ export function createApp(dependencies: AppDependencies = {}) {
           requestId,
         )
         if (!member) {
-          response.status(404).json({ message: 'Access request not found' })
+          response.status(404).json({ message: "Access request not found" })
           return
         }
 
         if (member.email) {
           await sharingEmailSender.send({
             to: member.email,
-            subject: 'Your trip access request was approved',
-            actionUrl: `${process.env.FRONTEND_APP_URL ?? 'http://localhost:3000'}/trips/${tripId}`,
-            actionLabel: 'Open trip',
+            subject: "Your trip access request was approved",
+            actionUrl: `${process.env.FRONTEND_APP_URL ?? "http://localhost:3000"}/trips/${tripId}`,
+            actionLabel: "Open trip",
           })
         }
 
@@ -453,15 +425,14 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.patch(
-    '/api/trips/:tripId/sharing/requests/:requestId/deny',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/sharing/requests/:requestId/deny",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId, requestId } = request.params
-        if (typeof tripId !== 'string' || typeof requestId !== 'string') {
-          response.status(400).json({ message: 'Access request id is required' })
+        if (typeof tripId !== "string" || typeof requestId !== "string") {
+          response.status(400).json({ message: "Access request id is required" })
           return
         }
 
@@ -472,15 +443,15 @@ export function createApp(dependencies: AppDependencies = {}) {
           requestId,
         )
         if (!accessRequest) {
-          response.status(404).json({ message: 'Access request not found' })
+          response.status(404).json({ message: "Access request not found" })
           return
         }
 
         await sharingEmailSender.send({
           to: accessRequest.email,
-          subject: 'Your trip access request was denied',
-          actionUrl: `${process.env.FRONTEND_APP_URL ?? 'http://localhost:3000'}/`,
-          actionLabel: 'Open Planleggreise',
+          subject: "Your trip access request was denied",
+          actionUrl: `${process.env.FRONTEND_APP_URL ?? "http://localhost:3000"}/`,
+          actionLabel: "Open Planleggreise",
         })
 
         response.json(TripAccessRequestSchema.parse(accessRequest))
@@ -491,15 +462,14 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.patch(
-    '/api/trips/:tripId/sharing/invitations/:invitationId/revoke',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/sharing/invitations/:invitationId/revoke",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId, invitationId } = request.params
-        if (typeof tripId !== 'string' || typeof invitationId !== 'string') {
-          response.status(400).json({ message: 'Invitation id is required' })
+        if (typeof tripId !== "string" || typeof invitationId !== "string") {
+          response.status(400).json({ message: "Invitation id is required" })
           return
         }
 
@@ -510,7 +480,7 @@ export function createApp(dependencies: AppDependencies = {}) {
           invitationId,
         )
         if (!invitation) {
-          response.status(404).json({ message: 'Invitation not found' })
+          response.status(404).json({ message: "Invitation not found" })
           return
         }
 
@@ -522,15 +492,14 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.patch(
-    '/api/trips/:tripId/sharing/access-links/:linkId/revoke',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/sharing/access-links/:linkId/revoke",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId, linkId } = request.params
-        if (typeof tripId !== 'string' || typeof linkId !== 'string') {
-          response.status(400).json({ message: 'Access link id is required' })
+        if (typeof tripId !== "string" || typeof linkId !== "string") {
+          response.status(400).json({ message: "Access link id is required" })
           return
         }
 
@@ -541,7 +510,7 @@ export function createApp(dependencies: AppDependencies = {}) {
           linkId,
         )
         if (!link) {
-          response.status(404).json({ message: 'Access link not found' })
+          response.status(404).json({ message: "Access link not found" })
           return
         }
 
@@ -553,15 +522,14 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.delete(
-    '/api/trips/:tripId/sharing/members/:memberId',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/sharing/members/:memberId",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId, memberId } = request.params
-        if (typeof tripId !== 'string' || typeof memberId !== 'string') {
-          response.status(400).json({ message: 'Member id is required' })
+        if (typeof tripId !== "string" || typeof memberId !== "string") {
+          response.status(400).json({ message: "Member id is required" })
           return
         }
 
@@ -572,16 +540,16 @@ export function createApp(dependencies: AppDependencies = {}) {
           memberId,
         )
         if (!removed) {
-          response.status(404).json({ message: 'Member not found' })
+          response.status(404).json({ message: "Member not found" })
           return
         }
 
         if (removed.email) {
           await sharingEmailSender.send({
             to: removed.email,
-            subject: 'Your access to a trip was removed',
-            actionUrl: `${process.env.FRONTEND_APP_URL ?? 'http://localhost:3000'}/`,
-            actionLabel: 'Open Planleggreise',
+            subject: "Your access to a trip was removed",
+            actionUrl: `${process.env.FRONTEND_APP_URL ?? "http://localhost:3000"}/`,
+            actionLabel: "Open Planleggreise",
           })
         }
 
@@ -593,16 +561,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.patch(
-    '/api/trips/:tripId',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId } = request.params
 
-        if (typeof tripId !== 'string') {
-          response.status(400).json({ message: 'Trip id is required' })
+        if (typeof tripId !== "string") {
+          response.status(400).json({ message: "Trip id is required" })
           return
         }
 
@@ -610,7 +577,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!parsedInput.success) {
           response.status(400).json({
-            message: 'Invalid trip data',
+            message: "Invalid trip data",
             issues: parsedInput.error.issues,
           })
           return
@@ -623,7 +590,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!currentTrip) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
@@ -632,24 +599,19 @@ export function createApp(dependencies: AppDependencies = {}) {
           name: parsedInput.data.name ?? currentTrip.name,
           startDate: parsedInput.data.startDate ?? currentTrip.startDate,
           endDate: parsedInput.data.endDate ?? currentTrip.endDate,
-          notes:
-            parsedInput.data.notes === undefined
-              ? currentTrip.notes
-              : parsedInput.data.notes,
+          notes: parsedInput.data.notes === undefined ? currentTrip.notes : parsedInput.data.notes,
         }
 
         if (!isValidDateRange(nextTrip.startDate, nextTrip.endDate)) {
           response.status(400).json({
-            message: 'The trip end date must be on or after the start date',
+            message: "The trip end date must be on or after the start date",
           })
           return
         }
 
-        if (
-          !isTripDurationWithinLimit(nextTrip.startDate, nextTrip.endDate)
-        ) {
+        if (!isTripDurationWithinLimit(nextTrip.startDate, nextTrip.endDate)) {
           response.status(400).json({
-            message: 'Trips cannot be longer than 60 days',
+            message: "Trips cannot be longer than 60 days",
           })
           return
         }
@@ -661,7 +623,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (activityOutsideTrip) {
           response.status(400).json({
-            message: 'The new trip dates cannot exclude existing activities',
+            message: "The new trip dates cannot exclude existing activities",
           })
           return
         }
@@ -674,7 +636,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!trip) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
@@ -686,16 +648,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.patch(
-    '/api/trips/:tripId/days/:tripDate',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/days/:tripDate",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId, tripDate } = request.params
 
-        if (typeof tripId !== 'string' || typeof tripDate !== 'string') {
-          response.status(400).json({ message: 'Trip id and date are required' })
+        if (typeof tripId !== "string" || typeof tripDate !== "string") {
+          response.status(400).json({ message: "Trip id and date are required" })
           return
         }
 
@@ -703,7 +664,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!parsedInput.success) {
           response.status(400).json({
-            message: 'Invalid day data',
+            message: "Invalid day data",
             issues: parsedInput.error.issues,
           })
           return
@@ -716,12 +677,12 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!trip) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
         if (!isDateWithinTrip(trip, tripDate)) {
-          response.status(400).json({ message: 'The day must be within the trip dates' })
+          response.status(400).json({ message: "The day must be within the trip dates" })
           return
         }
 
@@ -734,7 +695,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!day) {
-          response.status(404).json({ message: 'Day not found' })
+          response.status(404).json({ message: "Day not found" })
           return
         }
 
@@ -746,16 +707,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.delete(
-    '/api/trips/:tripId',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId } = request.params
 
-        if (typeof tripId !== 'string') {
-          response.status(400).json({ message: 'Trip id is required' })
+        if (typeof tripId !== "string") {
+          response.status(400).json({ message: "Trip id is required" })
           return
         }
 
@@ -766,7 +726,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!deleted) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
@@ -778,9 +738,8 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.post(
-    '/api/trips',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (
       request: Request,
       response: Response<Trip | { message: string; issues?: unknown }>,
@@ -791,32 +750,22 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!parsedInput.success) {
           response.status(400).json({
-            message: 'Invalid trip data',
+            message: "Invalid trip data",
             issues: parsedInput.error.issues,
           })
           return
         }
 
-        if (
-          !isValidDateRange(
-            parsedInput.data.startDate,
-            parsedInput.data.endDate,
-          )
-        ) {
+        if (!isValidDateRange(parsedInput.data.startDate, parsedInput.data.endDate)) {
           response.status(400).json({
-            message: 'The trip end date must be on or after the start date',
+            message: "The trip end date must be on or after the start date",
           })
           return
         }
 
-        if (
-          !isTripDurationWithinLimit(
-            parsedInput.data.startDate,
-            parsedInput.data.endDate,
-          )
-        ) {
+        if (!isTripDurationWithinLimit(parsedInput.data.startDate, parsedInput.data.endDate)) {
           response.status(400).json({
-            message: 'Trips cannot be longer than 60 days',
+            message: "Trips cannot be longer than 60 days",
           })
           return
         }
@@ -836,16 +785,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.post(
-    '/api/trips/:tripId/housing',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/housing",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId } = request.params
 
-        if (typeof tripId !== 'string') {
-          response.status(400).json({ message: 'Trip id is required' })
+        if (typeof tripId !== "string") {
+          response.status(400).json({ message: "Trip id is required" })
           return
         }
 
@@ -853,7 +801,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!parsedInput.success) {
           response.status(400).json({
-            message: 'Invalid housing data',
+            message: "Invalid housing data",
             issues: parsedInput.error.issues,
           })
           return
@@ -866,7 +814,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!trip) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
@@ -878,7 +826,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!housingStay) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
@@ -890,19 +838,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.patch(
-    '/api/trips/:tripId/housing/:housingStayId',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/housing/:housingStayId",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId, housingStayId } = request.params
 
-        if (
-          typeof tripId !== 'string' ||
-          typeof housingStayId !== 'string'
-        ) {
-          response.status(400).json({ message: 'Trip and housing ids are required' })
+        if (typeof tripId !== "string" || typeof housingStayId !== "string") {
+          response.status(400).json({ message: "Trip and housing ids are required" })
           return
         }
 
@@ -910,7 +854,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!parsedInput.success) {
           response.status(400).json({
-            message: 'Invalid housing data',
+            message: "Invalid housing data",
             issues: parsedInput.error.issues,
           })
           return
@@ -924,7 +868,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!currentHousingStay) {
-          response.status(404).json({ message: 'Housing stay not found' })
+          response.status(404).json({ message: "Housing stay not found" })
           return
         }
 
@@ -938,7 +882,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!nextHousingStay.success) {
           response.status(400).json({
-            message: 'Invalid housing data',
+            message: "Invalid housing data",
             issues: nextHousingStay.error.issues,
           })
           return
@@ -953,7 +897,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!housingStay) {
-          response.status(404).json({ message: 'Housing stay not found' })
+          response.status(404).json({ message: "Housing stay not found" })
           return
         }
 
@@ -965,19 +909,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.delete(
-    '/api/trips/:tripId/housing/:housingStayId',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/housing/:housingStayId",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId, housingStayId } = request.params
 
-        if (
-          typeof tripId !== 'string' ||
-          typeof housingStayId !== 'string'
-        ) {
-          response.status(400).json({ message: 'Trip and housing ids are required' })
+        if (typeof tripId !== "string" || typeof housingStayId !== "string") {
+          response.status(400).json({ message: "Trip and housing ids are required" })
           return
         }
 
@@ -989,7 +929,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!deleted) {
-          response.status(404).json({ message: 'Housing stay not found' })
+          response.status(404).json({ message: "Housing stay not found" })
           return
         }
 
@@ -1001,16 +941,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.post(
-    '/api/trips/:tripId/meals',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/meals",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId } = request.params
 
-        if (typeof tripId !== 'string') {
-          response.status(400).json({ message: 'Trip id is required' })
+        if (typeof tripId !== "string") {
+          response.status(400).json({ message: "Trip id is required" })
           return
         }
 
@@ -1018,7 +957,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!parsedInput.success) {
           response.status(400).json({
-            message: 'Invalid meal data',
+            message: "Invalid meal data",
             issues: parsedInput.error.issues,
           })
           return
@@ -1031,12 +970,12 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!trip) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
         if (!isDateWithinTrip(trip, parsedInput.data.tripDate)) {
-          response.status(400).json({ message: 'The meal date must be within the trip dates' })
+          response.status(400).json({ message: "The meal date must be within the trip dates" })
           return
         }
 
@@ -1068,7 +1007,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!meal) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
@@ -1080,16 +1019,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.patch(
-    '/api/trips/:tripId/meals/:mealId',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/meals/:mealId",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId, mealId } = request.params
 
-        if (typeof tripId !== 'string' || typeof mealId !== 'string') {
-          response.status(400).json({ message: 'Trip and meal ids are required' })
+        if (typeof tripId !== "string" || typeof mealId !== "string") {
+          response.status(400).json({ message: "Trip and meal ids are required" })
           return
         }
 
@@ -1097,7 +1035,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!parsedInput.success) {
           response.status(400).json({
-            message: 'Invalid meal data',
+            message: "Invalid meal data",
             issues: parsedInput.error.issues,
           })
           return
@@ -1118,7 +1056,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         ])
 
         if (!trip || !currentMeal) {
-          response.status(404).json({ message: 'Meal not found' })
+          response.status(404).json({ message: "Meal not found" })
           return
         }
 
@@ -1137,14 +1075,14 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!nextMeal.success) {
           response.status(400).json({
-            message: 'Invalid meal data',
+            message: "Invalid meal data",
             issues: nextMeal.error.issues,
           })
           return
         }
 
         if (!isDateWithinTrip(trip, nextMeal.data.tripDate)) {
-          response.status(400).json({ message: 'The meal date must be within the trip dates' })
+          response.status(400).json({ message: "The meal date must be within the trip dates" })
           return
         }
 
@@ -1152,9 +1090,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (parsedInput.data.googleMapsUrl) {
           try {
-            const place = await googlePlacesResolver(
-              parsedInput.data.googleMapsUrl,
-            )
+            const place = await googlePlacesResolver(parsedInput.data.googleMapsUrl)
             mealInput = {
               ...mealInput,
               title:
@@ -1188,7 +1124,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!meal) {
-          response.status(404).json({ message: 'Meal not found' })
+          response.status(404).json({ message: "Meal not found" })
           return
         }
 
@@ -1200,16 +1136,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.delete(
-    '/api/trips/:tripId/meals/:mealId',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/meals/:mealId",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId, mealId } = request.params
 
-        if (typeof tripId !== 'string' || typeof mealId !== 'string') {
-          response.status(400).json({ message: 'Trip and meal ids are required' })
+        if (typeof tripId !== "string" || typeof mealId !== "string") {
+          response.status(400).json({ message: "Trip and meal ids are required" })
           return
         }
 
@@ -1221,7 +1156,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!deleted) {
-          response.status(404).json({ message: 'Meal not found' })
+          response.status(404).json({ message: "Meal not found" })
           return
         }
 
@@ -1233,16 +1168,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.post(
-    '/api/trips/:tripId/activities',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/activities",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId } = request.params
 
-        if (typeof tripId !== 'string') {
-          response.status(400).json({ message: 'Trip id is required' })
+        if (typeof tripId !== "string") {
+          response.status(400).json({ message: "Trip id is required" })
           return
         }
 
@@ -1250,7 +1184,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!parsedInput.success) {
           response.status(400).json({
-            message: 'Invalid activity data',
+            message: "Invalid activity data",
             issues: parsedInput.error.issues,
           })
           return
@@ -1263,13 +1197,13 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!trip) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
         if (!isDateWithinTrip(trip, parsedInput.data.tripDate)) {
           response.status(400).json({
-            message: 'The activity date must be within the trip dates',
+            message: "The activity date must be within the trip dates",
           })
           return
         }
@@ -1302,7 +1236,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!activity) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
@@ -1314,16 +1248,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.patch(
-    '/api/trips/:tripId/activities/reorder',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/activities/reorder",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId } = request.params
 
-        if (typeof tripId !== 'string') {
-          response.status(400).json({ message: 'Trip id is required' })
+        if (typeof tripId !== "string") {
+          response.status(400).json({ message: "Trip id is required" })
           return
         }
 
@@ -1331,19 +1264,17 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!parsedInput.success) {
           response.status(400).json({
-            message: 'Invalid activity order data',
+            message: "Invalid activity order data",
             issues: parsedInput.error.issues,
           })
           return
         }
 
-        const activityIds = parsedInput.data.activities.map(
-          (activity) => activity.activityId,
-        )
+        const activityIds = parsedInput.data.activities.map((activity) => activity.activityId)
 
         if (new Set(activityIds).size !== activityIds.length) {
           response.status(400).json({
-            message: 'Activity ids must be unique',
+            message: "Activity ids must be unique",
           })
           return
         }
@@ -1355,17 +1286,15 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!trip) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
         if (
-          parsedInput.data.activities.some(
-            (activity) => !isDateWithinTrip(trip, activity.tripDate),
-          )
+          parsedInput.data.activities.some((activity) => !isDateWithinTrip(trip, activity.tripDate))
         ) {
           response.status(400).json({
-            message: 'The activity date must be within the trip dates',
+            message: "The activity date must be within the trip dates",
           })
           return
         }
@@ -1378,7 +1307,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!activities) {
-          response.status(404).json({ message: 'Activity not found' })
+          response.status(404).json({ message: "Activity not found" })
           return
         }
 
@@ -1390,16 +1319,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.patch(
-    '/api/trips/:tripId/day-items/reorder',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/day-items/reorder",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId } = request.params
 
-        if (typeof tripId !== 'string') {
-          response.status(400).json({ message: 'Trip id is required' })
+        if (typeof tripId !== "string") {
+          response.status(400).json({ message: "Trip id is required" })
           return
         }
 
@@ -1407,19 +1335,17 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!parsedInput.success) {
           response.status(400).json({
-            message: 'Invalid day item order data',
+            message: "Invalid day item order data",
             issues: parsedInput.error.issues,
           })
           return
         }
 
-        const itemKeys = parsedInput.data.items.map(
-          (item) => `${item.itemType}:${item.itemId}`,
-        )
+        const itemKeys = parsedInput.data.items.map((item) => `${item.itemType}:${item.itemId}`)
 
         if (new Set(itemKeys).size !== itemKeys.length) {
           response.status(400).json({
-            message: 'Day item ids must be unique',
+            message: "Day item ids must be unique",
           })
           return
         }
@@ -1431,24 +1357,20 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!trip) {
-          response.status(404).json({ message: 'Trip not found' })
+          response.status(404).json({ message: "Trip not found" })
           return
         }
 
-        if (
-          parsedInput.data.items.some(
-            (item) => !isDateWithinTrip(trip, item.tripDate),
-          )
-        ) {
+        if (parsedInput.data.items.some((item) => !isDateWithinTrip(trip, item.tripDate))) {
           response.status(400).json({
-            message: 'The day item date must be within the trip dates',
+            message: "The day item date must be within the trip dates",
           })
           return
         }
 
         if (!hasValidTimedDayItemOrder(trip, parsedInput.data.items)) {
           response.status(400).json({
-            message: 'Timed day items must be ordered by start time',
+            message: "Timed day items must be ordered by start time",
           })
           return
         }
@@ -1461,7 +1383,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!reorderedItems) {
-          response.status(404).json({ message: 'Day item not found' })
+          response.status(404).json({ message: "Day item not found" })
           return
         }
 
@@ -1476,16 +1398,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.patch(
-    '/api/trips/:tripId/activities/:activityId',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/activities/:activityId",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId, activityId } = request.params
 
-        if (typeof tripId !== 'string' || typeof activityId !== 'string') {
-          response.status(400).json({ message: 'Trip and activity ids are required' })
+        if (typeof tripId !== "string" || typeof activityId !== "string") {
+          response.status(400).json({ message: "Trip and activity ids are required" })
           return
         }
 
@@ -1493,7 +1414,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!parsedInput.success) {
           response.status(400).json({
-            message: 'Invalid activity data',
+            message: "Invalid activity data",
             issues: parsedInput.error.issues,
           })
           return
@@ -1514,7 +1435,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         ])
 
         if (!trip || !currentActivity) {
-          response.status(404).json({ message: 'Activity not found' })
+          response.status(404).json({ message: "Activity not found" })
           return
         }
 
@@ -1531,7 +1452,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!parsedNextActivity.success) {
           response.status(400).json({
-            message: 'Invalid activity data',
+            message: "Invalid activity data",
             issues: parsedNextActivity.error.issues,
           })
           return
@@ -1539,7 +1460,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         if (!isDateWithinTrip(trip, parsedNextActivity.data.tripDate)) {
           response.status(400).json({
-            message: 'The activity date must be within the trip dates',
+            message: "The activity date must be within the trip dates",
           })
           return
         }
@@ -1582,7 +1503,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!activity) {
-          response.status(404).json({ message: 'Activity not found' })
+          response.status(404).json({ message: "Activity not found" })
           return
         }
 
@@ -1594,16 +1515,15 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.delete(
-    '/api/trips/:tripId/activities/:activityId',
-    (request, response, next) =>
-      requireAuthenticatedUser(authService, request, response, next),
+    "/api/trips/:tripId/activities/:activityId",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
     async (request: Request, response: Response, next: NextFunction) => {
       try {
         const authenticatedRequest = request as AuthenticatedRequest
         const { tripId, activityId } = request.params
 
-        if (typeof tripId !== 'string' || typeof activityId !== 'string') {
-          response.status(400).json({ message: 'Trip and activity ids are required' })
+        if (typeof tripId !== "string" || typeof activityId !== "string") {
+          response.status(400).json({ message: "Trip and activity ids are required" })
           return
         }
 
@@ -1615,7 +1535,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!activity) {
-          response.status(404).json({ message: 'Activity not found' })
+          response.status(404).json({ message: "Activity not found" })
           return
         }
 
@@ -1627,7 +1547,7 @@ export function createApp(dependencies: AppDependencies = {}) {
         )
 
         if (!deleted) {
-          response.status(404).json({ message: 'Activity not found' })
+          response.status(404).json({ message: "Activity not found" })
           return
         }
 
@@ -1639,17 +1559,12 @@ export function createApp(dependencies: AppDependencies = {}) {
   )
 
   app.use((_request: Request, response: Response) => {
-    response.status(404).json({ message: 'Route not found' })
+    response.status(404).json({ message: "Route not found" })
   })
 
-  const errorHandler: ErrorRequestHandler = (
-    error,
-    _request,
-    response,
-    _next,
-  ) => {
+  const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => {
     console.error(error)
-    response.status(500).json({ message: 'Internal server error' })
+    response.status(500).json({ message: "Internal server error" })
   }
 
   app.use(errorHandler)

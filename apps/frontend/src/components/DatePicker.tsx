@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { getDateLocale, getWeekdayLabels } from '../i18n'
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
+import { getDateLocale, getWeekdayLabels } from "../i18n"
+import { getPickerPosition, type PickerPosition } from "../lib/picker-position"
 
 type DatePickerProps = {
   label: string
@@ -15,7 +16,7 @@ function parseDate(value: string) {
     return null
   }
 
-  const [year, month, day] = value.split('-').map(Number)
+  const [year, month, day] = value.split("-").map(Number)
   return new Date(Date.UTC(year, month - 1, day))
 }
 
@@ -44,34 +45,33 @@ function getCalendarDays(viewDate: Date) {
   })
 }
 
-export function DatePicker({
-  label,
-  value,
-  onChange,
-  minDate,
-  maxDate,
-}: DatePickerProps) {
+export function DatePicker({ label, value, onChange, minDate, maxDate }: DatePickerProps) {
   const { i18n, t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const [isOpen, setIsOpen] = useState(false)
+  const [popoverPosition, setPopoverPosition] = useState<PickerPosition | null>(null)
   const [viewDate, setViewDate] = useState(() => parseDate(value) ?? getToday())
   const calendarDays = useMemo(() => getCalendarDays(viewDate), [viewDate])
   const locale = getDateLocale(i18n.language)
   const monthFormatter = new Intl.DateTimeFormat(locale, {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
   })
   const dateFormatter = new Intl.DateTimeFormat(locale, {
-    dateStyle: 'long',
-    timeZone: 'UTC',
+    dateStyle: "long",
+    timeZone: "UTC",
   })
-  const language = i18n.language === 'en' ? 'en' : 'nb'
+  const language = i18n.language === "en" ? "en" : "nb"
   const weekdayLabels = getWeekdayLabels(language)
 
   useEffect(() => {
     if (!isOpen) {
       return
+    }
+
+    function updatePopoverPosition() {
+      setPopoverPosition(getPickerPosition(containerRef.current))
     }
 
     function handlePointerDown(event: PointerEvent) {
@@ -85,22 +85,33 @@ export function DatePicker({
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         setIsOpen(false)
       }
     }
 
-    document.addEventListener('pointerdown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener("pointerdown", handlePointerDown)
+    document.addEventListener("keydown", handleKeyDown)
+    window.addEventListener("resize", updatePopoverPosition)
+    window.addEventListener("scroll", updatePopoverPosition, true)
 
     return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener("pointerdown", handlePointerDown)
+      document.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener("resize", updatePopoverPosition)
+      window.removeEventListener("scroll", updatePopoverPosition, true)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setPopoverPosition(null)
     }
   }, [isOpen])
 
   function openPicker() {
-    setViewDate(parseDate(value) ?? parseDate(minDate ?? '') ?? getToday())
+    setViewDate(parseDate(value) ?? parseDate(minDate ?? "") ?? getToday())
+    setPopoverPosition(getPickerPosition(containerRef.current))
     setIsOpen(true)
   }
 
@@ -108,11 +119,7 @@ export function DatePicker({
     setViewDate(
       (currentDate) =>
         new Date(
-          Date.UTC(
-            currentDate.getUTCFullYear(),
-            currentDate.getUTCMonth() + monthOffset,
-            1,
-          ),
+          Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth() + monthOffset, 1),
         ),
     )
   }
@@ -120,10 +127,7 @@ export function DatePicker({
   function selectDate(date: Date) {
     const nextValue = formatDateValue(date)
 
-    if (
-      (minDate && nextValue < minDate) ||
-      (maxDate && nextValue > maxDate)
-    ) {
+    if ((minDate && nextValue < minDate) || (maxDate && nextValue > maxDate)) {
       return
     }
 
@@ -138,38 +142,47 @@ export function DatePicker({
         <button
           aria-expanded={isOpen}
           aria-haspopup="dialog"
-          aria-label={value ? `${label}: ${dateFormatter.format(parseDate(value)!)}` : t('datePicker.chooseDate')}
+          aria-label={
+            value
+              ? `${label}: ${dateFormatter.format(parseDate(value)!)}`
+              : t("datePicker.chooseDate")
+          }
           className="flex min-h-12 w-full items-center justify-between rounded-xl border border-border bg-surface px-3 text-left text-ink outline-none transition hover:border-brand focus:border-brand focus:ring-2 focus:ring-soft"
           onClick={isOpen ? () => setIsOpen(false) : openPicker}
           type="button"
         >
-          <span className={value ? 'text-ink' : 'text-faint'}>
-            {value ? dateFormatter.format(parseDate(value)!) : t('datePicker.chooseDate')}
+          <span className={value ? "text-ink" : "text-faint"}>
+            {value ? dateFormatter.format(parseDate(value)!) : t("datePicker.chooseDate")}
           </span>
-          <span aria-hidden="true" className="text-lg text-brand">▾</span>
+          <span aria-hidden="true" className="text-lg text-brand">
+            ▾
+          </span>
         </button>
       </span>
 
-      {isOpen && (
+      {isOpen && popoverPosition && (
         <div
-          aria-label={t('datePicker.select', { label: label.toLowerCase() })}
-          className="absolute left-0 right-0 z-20 mt-2 rounded-2xl border border-border bg-surface p-4 shadow-popover"
+          aria-label={t("datePicker.select", { label: label.toLowerCase() })}
+          className="absolute z-20 max-h-[calc(100vh-1rem)] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-2xl border border-border bg-surface p-4 shadow-popover"
           role="dialog"
+          style={{
+            left: popoverPosition.left,
+            top: popoverPosition.top,
+            width: popoverPosition.width,
+          }}
         >
           <div className="flex items-center justify-between gap-3">
             <button
-              aria-label={t('common.previousMonth')}
+              aria-label={t("common.previousMonth")}
               className="grid size-11 place-items-center rounded-xl text-2xl text-on-surface hover:bg-surface-muted"
               onClick={() => moveMonth(-1)}
               type="button"
             >
               ‹
             </button>
-            <p className="capitalize font-semibold text-brand">
-              {monthFormatter.format(viewDate)}
-            </p>
+            <p className="capitalize font-semibold text-brand">{monthFormatter.format(viewDate)}</p>
             <button
-              aria-label={t('common.nextMonth')}
+              aria-label={t("common.nextMonth")}
               className="grid size-11 place-items-center rounded-xl text-2xl text-on-surface hover:bg-surface-muted"
               onClick={() => moveMonth(1)}
               type="button"
@@ -192,8 +205,7 @@ export function DatePicker({
 
               const dateValue = formatDateValue(date)
               const isDisabled = Boolean(
-                (minDate && dateValue < minDate) ||
-                  (maxDate && dateValue > maxDate),
+                (minDate && dateValue < minDate) || (maxDate && dateValue > maxDate),
               )
               const isSelected = value === dateValue
 
@@ -203,10 +215,10 @@ export function DatePicker({
                   aria-pressed={isSelected}
                   className={`min-h-11 rounded-xl text-sm font-medium transition ${
                     isSelected
-                      ? 'bg-brand-surface text-on-brand'
+                      ? "bg-brand-surface text-on-brand"
                       : isDisabled
-                        ? 'cursor-not-allowed text-disabled'
-                        : 'text-ink hover:bg-surface-muted'
+                        ? "cursor-not-allowed text-disabled"
+                        : "text-ink hover:bg-surface-muted"
                   }`}
                   disabled={isDisabled}
                   key={dateValue}

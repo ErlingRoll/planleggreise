@@ -1,5 +1,5 @@
-import { z } from 'zod'
-import { isAllowedGoogleMapsUrl } from '@planleggreise/models'
+import { z } from "zod"
+import { isAllowedGoogleMapsUrl } from "@planleggreise/models"
 
 const placeDetailsSchema = z.object({
   displayName: z.object({ text: z.string().min(1) }),
@@ -15,9 +15,7 @@ export type ResolvedGooglePlace = {
   address: string
 }
 
-export type GooglePlacesResolver = (
-  googleMapsUrl: string,
-) => Promise<ResolvedGooglePlace>
+export type GooglePlacesResolver = (googleMapsUrl: string) => Promise<ResolvedGooglePlace>
 
 export class GooglePlacesError extends Error {
   constructor(
@@ -25,7 +23,7 @@ export class GooglePlacesError extends Error {
     readonly statusCode: 400 | 503 = 400,
   ) {
     super(message)
-    this.name = 'GooglePlacesError'
+    this.name = "GooglePlacesError"
   }
 }
 
@@ -33,7 +31,7 @@ function parseAllowedGoogleUrl(value: string) {
   let url: URL
 
   if (!isAllowedGoogleMapsUrl(value)) {
-    throw new GooglePlacesError('Google Maps link is invalid')
+    throw new GooglePlacesError("Google Maps link is invalid")
   }
 
   url = new URL(value)
@@ -46,74 +44,69 @@ async function resolveRedirectUrl(inputUrl: URL): Promise<URL> {
 
   for (let redirectCount = 0; redirectCount <= 5; redirectCount += 1) {
     const response = await fetch(currentUrl, {
-      headers: { 'User-Agent': 'planleggreise/1.0' },
-      redirect: 'manual',
+      headers: { "User-Agent": "planleggreise/1.0" },
+      redirect: "manual",
     })
 
     if (response.status < 300 || response.status >= 400) {
       if (!response.ok) {
-        throw new GooglePlacesError('Could not resolve Google Maps link')
+        throw new GooglePlacesError("Could not resolve Google Maps link")
       }
       return currentUrl
     }
 
-    const location = response.headers.get('location')
+    const location = response.headers.get("location")
 
     if (!location) {
-      throw new GooglePlacesError('Could not resolve Google Maps link')
+      throw new GooglePlacesError("Could not resolve Google Maps link")
     }
 
     currentUrl = parseAllowedGoogleUrl(new URL(location, currentUrl).toString())
   }
 
-  throw new GooglePlacesError('Could not resolve Google Maps link')
+  throw new GooglePlacesError("Could not resolve Google Maps link")
 }
 
 function getPlaceQuery(url: URL): string | null {
-  const queryParameter = url.searchParams.get('query') ?? url.searchParams.get('q')
+  const queryParameter = url.searchParams.get("query") ?? url.searchParams.get("q")
 
   if (queryParameter) {
     return queryParameter
   }
 
-  const pathParts = url.pathname.split('/').filter(Boolean)
-  const placeIndex = pathParts.findIndex(
-    (part) => part === 'place' || part === 'search',
-  )
+  const pathParts = url.pathname.split("/").filter(Boolean)
+  const placeIndex = pathParts.findIndex((part) => part === "place" || part === "search")
   const placePart = placeIndex >= 0 ? pathParts[placeIndex + 1] : null
 
-  if (!placePart || placePart.startsWith('@')) {
+  if (!placePart || placePart.startsWith("@")) {
     return null
   }
 
-  return decodeURIComponent(placePart.replace(/\+/g, ' '))
+  return decodeURIComponent(placePart.replace(/\+/g, " "))
 }
 
-async function requestGooglePlaces(
-  apiKey: string,
-  url: string,
-): Promise<ResolvedGooglePlace> {
-  const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
-    method: 'POST',
+async function requestGooglePlaces(apiKey: string, url: string): Promise<ResolvedGooglePlace> {
+  const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': apiKey,
-      'X-Goog-FieldMask': 'places.displayName,places.formattedAddress',
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": apiKey,
+      "X-Goog-FieldMask": "places.displayName,places.formattedAddress",
     },
     body: JSON.stringify({
-      languageCode: 'nb',
+      languageCode: "nb",
       textQuery: url,
     }),
   })
 
   if (!response.ok) {
-    throw new GooglePlacesError('Could not resolve Google Maps link')
+    throw new GooglePlacesError("Could not resolve Google Maps link")
   }
 
   const result = placeSearchSchema.safeParse(await response.json())
 
   if (!result.success) {
-    throw new GooglePlacesError('No place found for Google Maps link')
+    throw new GooglePlacesError("No place found for Google Maps link")
   }
 
   return {
@@ -127,16 +120,14 @@ export function createGooglePlacesResolver(
 ): GooglePlacesResolver {
   return async (googleMapsUrl) => {
     if (!apiKey) {
-      throw new GooglePlacesError('Google Places is not configured', 503)
+      throw new GooglePlacesError("Google Places is not configured", 503)
     }
 
     const inputUrl = parseAllowedGoogleUrl(googleMapsUrl)
-    const placeQuery =
-      getPlaceQuery(inputUrl) ??
-      getPlaceQuery(await resolveRedirectUrl(inputUrl))
+    const placeQuery = getPlaceQuery(inputUrl) ?? getPlaceQuery(await resolveRedirectUrl(inputUrl))
 
     if (!placeQuery) {
-      throw new GooglePlacesError('Could not resolve Google Maps link')
+      throw new GooglePlacesError("Could not resolve Google Maps link")
     }
 
     return requestGooglePlaces(apiKey, placeQuery)

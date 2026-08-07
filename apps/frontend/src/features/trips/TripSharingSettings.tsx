@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 import {
   approveTripAccessRequest,
   createTripAccessLink,
@@ -11,8 +11,8 @@ import {
   revokeTripInvitation,
   type TripDetail,
   type TripSharing,
-} from '../../api'
-import { getErrorMessage } from '../../lib/errors'
+} from "../../api"
+import { getErrorMessage } from "../../lib/errors"
 
 type TripSharingSettingsProps = {
   accessToken: string
@@ -27,7 +27,7 @@ export function TripSharingSettings({
 }: TripSharingSettingsProps) {
   const { t } = useTranslation()
   const [sharing, setSharing] = useState<TripSharing | null>(null)
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -63,7 +63,7 @@ export function TripSharingSettings({
   if (isLoading) {
     return (
       <section className="mt-5 border-t border-border-card pt-5">
-        <p className="text-sm text-muted">{t('tripSettings.sharingLoading')}</p>
+        <p className="text-sm text-muted">{t("tripSettings.sharingLoading")}</p>
       </section>
     )
   }
@@ -78,11 +78,9 @@ export function TripSharingSettings({
     try {
       const invitation = await createTripInvitation(accessToken, trip.id, { email })
       setSharing((current) =>
-        current
-          ? { ...current, invitations: [invitation, ...current.invitations] }
-          : current,
+        current ? { ...current, invitations: [invitation, ...current.invitations] } : current,
       )
-      setEmail('')
+      setEmail("")
     } catch (reason: unknown) {
       setError(getErrorMessage(reason))
     } finally {
@@ -96,9 +94,7 @@ export function TripSharingSettings({
     try {
       const link = await createTripAccessLink(accessToken, trip.id)
       setSharing((current) =>
-        current
-          ? { ...current, accessLinks: [link, ...current.accessLinks] }
-          : current,
+        current ? { ...current, accessLinks: [link, ...current.accessLinks] } : current,
       )
     } catch (reason: unknown) {
       setError(getErrorMessage(reason))
@@ -111,20 +107,14 @@ export function TripSharingSettings({
     setIsSaving(true)
     setError(null)
     try {
-      const member = await approveTripAccessRequest(
-        accessToken,
-        trip.id,
-        requestId,
-      )
+      const member = await approveTripAccessRequest(accessToken, trip.id, requestId)
       setSharing((current) =>
         current
           ? {
               ...current,
               members: [...current.members, member],
               requests: current.requests.map((request) =>
-                request.id === requestId
-                  ? { ...request, status: 'approved' as const }
-                  : request,
+                request.id === requestId ? { ...request, status: "approved" as const } : request,
               ),
             }
           : current,
@@ -140,11 +130,7 @@ export function TripSharingSettings({
     setIsSaving(true)
     setError(null)
     try {
-      const accessRequest = await denyTripAccessRequest(
-        accessToken,
-        trip.id,
-        requestId,
-      )
+      const accessRequest = await denyTripAccessRequest(accessToken, trip.id, requestId)
       setSharing((current) =>
         current
           ? {
@@ -186,11 +172,7 @@ export function TripSharingSettings({
     setIsSaving(true)
     setError(null)
     try {
-      const invitation = await revokeTripInvitation(
-        accessToken,
-        trip.id,
-        invitationId,
-      )
+      const invitation = await revokeTripInvitation(accessToken, trip.id, invitationId)
       setSharing((current) =>
         current
           ? {
@@ -217,9 +199,7 @@ export function TripSharingSettings({
         current
           ? {
               ...current,
-              accessLinks: current.accessLinks.map((item) =>
-                item.id === linkId ? link : item,
-              ),
+              accessLinks: current.accessLinks.map((item) => (item.id === linkId ? link : item)),
             }
           : current,
       )
@@ -240,27 +220,23 @@ export function TripSharingSettings({
     }
   }
 
-  const pendingRequests = sharing.requests.filter(
-    (request) => request.status === 'pending',
-  )
+  const pendingRequests = sharing.requests.filter((request) => request.status === "pending")
   const activeLinks = sharing.accessLinks.filter((link) => !link.revokedAt)
   const pendingInvitations = sharing.invitations.filter(
-    (invitation) => invitation.status === 'pending',
+    (invitation) => invitation.status === "pending",
   )
 
   return (
     <section className="mt-5 border-t border-border-card pt-5">
-      <h4 className="font-semibold text-brand">{t('tripSettings.sharingTitle')}</h4>
-      <p className="mt-1 text-sm text-muted">
-        {t('tripSettings.sharingDescription')}
-      </p>
+      <h4 className="font-semibold text-brand">{t("tripSettings.sharingTitle")}</h4>
+      <p className="mt-1 text-sm text-muted">{t("tripSettings.sharingDescription")}</p>
 
       <div className="mt-4 grid gap-3">
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
             className="min-w-0 flex-1 rounded-xl border border-border bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
             onChange={(event) => setEmail(event.target.value)}
-            placeholder={t('tripSettings.sharingEmailPlaceholder')}
+            placeholder={t("tripSettings.sharingEmailPlaceholder")}
             type="email"
             value={email}
           />
@@ -270,7 +246,7 @@ export function TripSharingSettings({
             onClick={() => void handleInvite()}
             type="button"
           >
-            {t('tripSettings.invite')}
+            {t("tripSettings.invite")}
           </button>
         </div>
         <button
@@ -279,7 +255,7 @@ export function TripSharingSettings({
           onClick={() => void handleCreateLink()}
           type="button"
         >
-          {t('tripSettings.createAccessLink')}
+          {t("tripSettings.createAccessLink")}
         </button>
       </div>
 
@@ -287,9 +263,7 @@ export function TripSharingSettings({
 
       {pendingRequests.length > 0 && (
         <div className="mt-5 grid gap-2">
-          <h5 className="text-sm font-semibold text-muted">
-            {t('tripSettings.pendingRequests')}
-          </h5>
+          <h5 className="text-sm font-semibold text-muted">{t("tripSettings.pendingRequests")}</h5>
           {pendingRequests.map((request) => (
             <div
               className="flex flex-col gap-2 rounded-xl bg-surface p-3 sm:flex-row sm:items-center sm:justify-between"
@@ -303,7 +277,7 @@ export function TripSharingSettings({
                   onClick={() => void handleApprove(request.id)}
                   type="button"
                 >
-                  {t('tripSettings.approve')}
+                  {t("tripSettings.approve")}
                 </button>
                 <button
                   className="rounded-lg px-3 py-1.5 text-xs font-semibold text-error hover:bg-danger-surface disabled:opacity-60"
@@ -311,7 +285,7 @@ export function TripSharingSettings({
                   onClick={() => void handleDeny(request.id)}
                   type="button"
                 >
-                  {t('tripSettings.deny')}
+                  {t("tripSettings.deny")}
                 </button>
               </div>
             </div>
@@ -320,9 +294,7 @@ export function TripSharingSettings({
       )}
 
       <div className="mt-5 grid gap-2">
-        <h5 className="text-sm font-semibold text-muted">
-          {t('tripSettings.members')}
-        </h5>
+        <h5 className="text-sm font-semibold text-muted">{t("tripSettings.members")}</h5>
         {sharing.members.map((member) => (
           <div
             className="flex items-center justify-between gap-3 rounded-xl bg-surface p-3"
@@ -331,14 +303,14 @@ export function TripSharingSettings({
             <span className="min-w-0 truncate text-sm text-ink">
               {member.email ?? member.userId}
             </span>
-            {member.role === 'member' && (
+            {member.role === "member" && (
               <button
                 className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface disabled:opacity-60"
                 disabled={isSaving}
                 onClick={() => void handleRemoveMember(member.userId)}
                 type="button"
               >
-                {t('tripSettings.remove')}
+                {t("tripSettings.remove")}
               </button>
             )}
           </div>
@@ -348,23 +320,21 @@ export function TripSharingSettings({
       {pendingInvitations.length > 0 && (
         <div className="mt-5 grid gap-2">
           <h5 className="text-sm font-semibold text-muted">
-            {t('tripSettings.pendingInvitations')}
+            {t("tripSettings.pendingInvitations")}
           </h5>
           {pendingInvitations.map((invitation) => (
             <div
               className="flex items-center justify-between gap-3 rounded-xl bg-surface p-3"
               key={invitation.id}
             >
-              <span className="min-w-0 truncate text-sm text-ink">
-                {invitation.email}
-              </span>
+              <span className="min-w-0 truncate text-sm text-ink">{invitation.email}</span>
               <button
                 className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface disabled:opacity-60"
                 disabled={isSaving}
                 onClick={() => void handleRevokeInvitation(invitation.id)}
                 type="button"
               >
-                {t('tripSettings.revoke')}
+                {t("tripSettings.revoke")}
               </button>
             </div>
           ))}
@@ -373,9 +343,7 @@ export function TripSharingSettings({
 
       {activeLinks.length > 0 && (
         <div className="mt-5 grid gap-2">
-          <h5 className="text-sm font-semibold text-muted">
-            {t('tripSettings.accessLinks')}
-          </h5>
+          <h5 className="text-sm font-semibold text-muted">{t("tripSettings.accessLinks")}</h5>
           {activeLinks.map((link) => (
             <div
               className="flex flex-col gap-2 rounded-xl bg-surface p-3 sm:flex-row sm:items-center sm:justify-between"
@@ -390,9 +358,7 @@ export function TripSharingSettings({
                   onClick={() => void handleCopyLink(link.id, link.token)}
                   type="button"
                 >
-                  {copiedLinkId === link.id
-                    ? t('tripSettings.copied')
-                    : t('tripSettings.copy')}
+                  {copiedLinkId === link.id ? t("tripSettings.copied") : t("tripSettings.copy")}
                 </button>
                 <button
                   className="rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface disabled:opacity-60"
@@ -400,7 +366,7 @@ export function TripSharingSettings({
                   onClick={() => void handleRevokeLink(link.id)}
                   type="button"
                 >
-                  {t('tripSettings.revoke')}
+                  {t("tripSettings.revoke")}
                 </button>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef } from "react"
 
 type MobileMenuButtonProps = {
   closeLabel: string
@@ -55,12 +55,7 @@ export function MobileMenuButton({
       type="button"
       title={isOpen ? closeLabel : menuLabel}
     >
-      <svg
-        aria-hidden="true"
-        className="size-5"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
+      <svg aria-hidden="true" className="size-5" fill="none" viewBox="0 0 24 24">
         {isOpen ? (
           <path
             d="m6 6 12 12M18 6 6 18"

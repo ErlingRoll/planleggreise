@@ -1,6 +1,6 @@
-import { useTranslation } from 'react-i18next'
-import { formatDateRange } from '../../lib/date-format'
-import type { TripDetail } from '../../api'
+import { useTranslation } from "react-i18next"
+import { formatDateRange } from "../../lib/date-format"
+import type { TripDetail } from "../../api"
 
 type TripDetailsHeaderProps = {
   trip: TripDetail
@@ -22,12 +22,12 @@ export function TripDetailsHeader({
           <p className="text-sm text-soft">{formatDateRange(trip)}</p>
           <h3 className="mt-2 text-2xl font-medium">{trip.name}</h3>
           <p className="mt-2 text-sm text-soft">
-            {t('tripDetails.daysToFill', { count: trip.days.length })}
+            {t("tripDetails.daysToFill", { count: trip.days.length })}
           </p>
         </div>
         <button
           aria-expanded={showSettings}
-          aria-label={t('tripDetails.settings')}
+          aria-label={t("tripDetails.settings")}
           className="grid size-10 shrink-0 place-items-center rounded-xl text-xl text-on-brand hover:bg-brand-soft"
           onClick={onToggleSettings}
           type="button"
