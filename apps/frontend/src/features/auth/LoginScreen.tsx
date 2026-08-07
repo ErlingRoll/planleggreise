@@ -7,6 +7,16 @@ import { MobileMenuButton } from "../../components/MobileMenuButton"
 import { ThemeToggle } from "../../components/ThemeToggle"
 import { PRODUCT_NAME } from "../../lib/brand"
 
+function getAuthRedirectUrl() {
+  const configuredAppUrl = import.meta.env.VITE_APP_URL?.trim()
+  const appOrigin = configuredAppUrl || window.location.origin
+
+  return new URL(
+    `${window.location.pathname}${window.location.search}`,
+    appOrigin.endsWith("/") ? appOrigin : `${appOrigin}/`,
+  ).toString()
+}
+
 export function LoginScreen() {
   const { t } = useTranslation()
   const [rememberSession, setRememberSession] = useState(true)
@@ -24,7 +34,7 @@ export function LoginScreen() {
       const { error: signInError } = await client.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}${window.location.pathname}${window.location.search}`,
+          redirectTo: getAuthRedirectUrl(),
         },
       })
 

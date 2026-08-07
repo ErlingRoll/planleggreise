@@ -75,6 +75,9 @@ Shared models belong in `packages/models/src`. Define each model's Zod schema th
 
 - Copy `apps/backend/.env.example` to `apps/backend/.env`.
 - Copy `apps/frontend/.env.example` to `apps/frontend/.env.local`.
+- Set `VITE_APP_URL=https://turprep.com` in the production frontend environment
+  to make OAuth redirects explicit. It defaults to the current browser origin
+  when unset.
 - `GOOGLE_PLACES_API_KEY` is required for resolving Google Maps activity links.
 - `VITE_SUPABASE_PUBLISHABLE_KEY` is browser-visible configuration, not a
   service secret. Never expose a Supabase `service_role` key through `VITE_*`
