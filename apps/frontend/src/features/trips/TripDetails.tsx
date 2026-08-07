@@ -22,20 +22,27 @@ import {
   type TripDetail,
 } from '../../api'
 import { getErrorMessage, isGoogleMapsError } from '../../lib/errors'
-import { formatDate, formatDateRange } from '../../lib/date-format'
-import { DatePicker } from '../../components/DatePicker'
 import {
-  formatActivityTime,
-  getDayItemTitle,
   getDayItemTime,
   sortDayItems,
   sortActivities,
   type DayItem,
 } from '../../lib/activity-format'
 import { LoadingCover } from '../../components/LoadingCover'
-import { TimePicker } from '../../components/TimePicker'
 import { TripAuxiliaryDetails } from './TripAuxiliaryDetails'
 import { TripSettings } from './TripSettings'
+import { DayItemForm } from './DayItemForm'
+import { DayItemList } from './DayItemList'
+import { MoveDayItemForm } from './MoveDayItemForm'
+import { TripDayCard } from './TripDayCard'
+import { TripDayNavigator } from './TripDayNavigator'
+import { TripDetailsHeader } from './TripDetailsHeader'
+import type {
+  DayItemRecord,
+  DropTarget,
+  MovingItem,
+  PlannerTab,
+} from './planner-types'
 import { isAllowedGoogleMapsUrl } from '@planleggreise/models'
 
 const daySelectionCookiePrefix = 'planleggreise-selected-days-'
@@ -91,19 +98,6 @@ type TripDetailsProps = {
   onTripUpdated: (trip: TripDetail) => void
   onTripDeleted: (trip: TripDetail) => Promise<void>
 }
-
-type DropTarget = {
-  dayDate: string
-  index: number
-}
-
-type MovingItem = DayItemRecord
-
-type PlannerTab = 'all' | 'activities' | 'meals'
-
-type DayItemRecord =
-  | { itemType: 'activity'; item: Activity }
-  | { itemType: 'meal'; item: Meal }
 
 function shiftTime(value: string, hours: number) {
   const match = /^(\d{2}):(\d{2})$/.exec(value)
@@ -185,12 +179,12 @@ export function TripDetails({
   }
 
   if (error) {
-    return <p className="mt-6 text-sm text-[#9b4e36]">{error}</p>
+    return <p className="mt-6 text-sm text-error">{error}</p>
   }
 
   if (!trip) {
     return (
-      <p className="mt-6 rounded-2xl border border-dashed border-[#c9c1b5] p-6 text-sm text-[#69726c]">
+      <p className="mt-6 rounded-2xl border border-dashed border-border-dashed p-6 text-sm text-muted">
         {t('tripDetails.selectTrip')}
       </p>
     )
@@ -771,336 +765,52 @@ export function TripDetails({
   }
 
   function renderDayItemForm(date: string) {
-    const isMealForm =
-      editingItemType === 'meal' ||
-      (editingItemId === null && plannerTab === 'meals')
-
     return (
-      <form
-        className="mt-3 grid gap-3 rounded-xl border border-[#b9d1be] bg-[#f0f5ed] p-3"
-        onSubmit={(event) => void handleSaveDayItem(event, date)}
-      >
-        {editingItemId === null && (
-          <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
-            {t('tripDetails.itemType')}
-            <select
-              className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
-              onChange={(event) =>
-                selectNewItemType(
-                  event.target.value === 'meal' ? 'meal' : 'activity',
-                )
-              }
-              value={editingItemType ?? 'activity'}
-            >
-              <option value="activity">{t('tripDetails.activity')}</option>
-              <option value="meal">{t('tripDetails.meal')}</option>
-            </select>
-          </label>
-        )}
-        <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
-          {isMealForm ? t('tripDetails.mealName') : t('tripDetails.whatToDo')}
-          <input
-            className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder={
-              isMealForm
-                ? t('tripDetails.mealName')
-                : t('tripDetails.activityPlaceholder')
-            }
-            required={!googleMapsUrl.trim()}
-            value={title}
-          />
-        </label>
-        <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
-          {t('tripDetails.googleMapsUrl')}
-          <input
-            aria-invalid={googleMapsUrlIsInvalid}
-            className={`rounded-xl border bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none ${
-              googleMapsUrlIsInvalid
-                ? 'border-[#b42318] focus:border-[#b42318]'
-                : 'border-[#d9d4ca] focus:border-[#274b48]'
-            }`}
-            onChange={(event) => {
-              setGoogleMapsUrl(event.target.value)
-              setGoogleMapsError(null)
-            }}
-            placeholder={t('tripDetails.googleMapsPlaceholder')}
-            type="url"
-            value={googleMapsUrl}
-          />
-          <span className="font-normal">{t('tripDetails.googleMapsHelp')}</span>
-          {googleMapsUrlIsInvalid && (
-            <span className="font-normal text-[#b42318]" role="alert">
-              {t('errors.googleMapsInvalid')}
-            </span>
-          )}
-          {googleMapsError && (
-            <span className="font-normal text-[#b42318]" role="alert">
-              {googleMapsError}
-            </span>
-          )}
-        </label>
-        <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
-          {t('tripDetails.notes')}
-          <textarea
-            className="min-h-20 resize-y rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder={t('tripDetails.notesPlaceholder')}
-            value={notes}
-          />
-        </label>
-        <label className="flex items-center gap-2 text-sm text-[#69726c]">
-          <input
-            checked={allDay}
-            className="size-4 accent-[#274b48]"
-            onChange={(event) => setAllDay(event.target.checked)}
-            type="checkbox"
-          />
-          {t('tripDetails.allDay')}
-        </label>
-        {!allDay && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <TimePicker
-              label={t('common.from')}
-              onChange={handleStartTimeChange}
-              value={startTime}
-            />
-            <TimePicker
-              label={t('common.to')}
-              onChange={handleEndTimeChange}
-              value={endTime}
-            />
-          </div>
-        )}
-        <div className="flex justify-end gap-2">
-          <button
-            className="rounded-xl px-3 py-2.5 text-sm font-semibold text-[#69726c] hover:bg-[#e6eee3]"
-            onClick={() => {
-              resetActivityForm()
-              setOpenDay(null)
-            }}
-            type="button"
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            className="rounded-xl bg-[#274b48] px-4 py-2.5 text-sm font-semibold text-[#f9f5ed] hover:bg-[#1c3b38] disabled:opacity-60"
-            disabled={isSaving}
-            type="submit"
-          >
-            {isSaving
-              ? t(
-                  editingItemType === 'meal'
-                    ? 'tripDetails.savingMeal'
-                    : 'tripDetails.savingActivity',
-                )
-              : isMealForm
-                ? editingItemId
-                  ? t('tripDetails.saveMealChanges')
-                  : t('tripDetails.saveMeal')
-                : editingItemId
-                  ? t('tripDetails.saveActivityChanges')
-                  : t('tripDetails.saveActivity')}
-          </button>
-        </div>
-      </form>
-    )
-  }
-
-  function renderDayItems(
-    day: TripDetail['days'][number],
-    itemType: PlannerTab = 'all',
-  ) {
-    const allItems = getDayItems(day)
-    const orderedItems =
-      itemType === 'meals'
-        ? allItems.filter((item) => getDayItemRecord(item).itemType === 'meal')
-        : itemType === 'activities'
-          ? allItems.filter(
-              (item) => getDayItemRecord(item).itemType === 'activity',
-            )
-          : allItems
-    const draggedItemIndex = draggedItem
-      ? orderedItems.findIndex((item) => item.id === draggedItem.item.id)
-      : -1
-
-    function shouldShowDropIndicator(index: number) {
-      const isDraggingWithinThisDay = draggedItemIndex >= 0
-      const isCurrentPosition =
-        index === draggedItemIndex ||
-        index === draggedItemIndex + 1
-
-      return !isDraggingWithinThisDay || !isCurrentPosition
-    }
-
-    return (
-      <div
-        className={`mt-4 grid gap-2 border-t border-[#ded6ca] pt-3 ${
-          orderedItems.length === 0 ? 'min-h-2' : ''
-        }`}
-        onDragOver={(event) => handleDayDragOver(event, day.date)}
-        onDrop={(event) =>
-          void handleDayItemDrop(event, day.date, getDayItems(day).length)
+      <DayItemForm
+        allDay={allDay}
+        editingItemId={editingItemId}
+        editingItemType={editingItemType}
+        endTime={endTime}
+        googleMapsError={googleMapsError}
+        googleMapsUrl={googleMapsUrl}
+        googleMapsUrlIsInvalid={googleMapsUrlIsInvalid}
+        isMealForm={
+          editingItemType === 'meal' ||
+          (editingItemId === null && plannerTab === 'meals')
         }
-      >
-        {orderedItems.map((item, itemIndex) => {
-          const record = getDayItemRecord(item)
-          const fullItemIndex = allItems.findIndex(
-            (currentItem) => currentItem.id === item.id,
-          )
-
-          return (
-          <div
-            className="rounded-xl bg-[#faf8f3] p-3"
-            key={`${record.itemType}:${item.id}`}
-          >
-            {dropTarget?.dayDate === day.date &&
-              dropTarget.index === fullItemIndex && (
-                shouldShowDropIndicator(itemIndex) && (
-                  <div className="mb-2 h-1 rounded-full bg-[#d06f4c]" />
-                )
-              )}
-            <div
-              className="flex items-start gap-3 lg:cursor-grab lg:active:cursor-grabbing"
-              draggable
-              onDragEnd={() => {
-                setDraggedItem(null)
-                setDropTarget(null)
-              }}
-              onDragOver={(event) =>
-                handleDayItemDragOver(event, day.date, fullItemIndex)
-              }
-              onDragStart={(event) =>
-                handleDayItemDragStart(event, record)
-              }
-              onDrop={(event) =>
-                void handleDayItemDrop(
-                  event,
-                  day.date,
-                  getDropIndex(event, fullItemIndex),
-                )
-              }
-            >
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-[#274b48]">
-                  {getDayItemTitle(item, t('tripDetails.untitledItem'))}
-                </p>
-                {record.itemType === 'meal' && (
-                  <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-[#d06f4c]">
-                    {t('tripDetails.meal')}
-                  </p>
-                )}
-                {item.placeAddress && (
-                  <p className="mt-1 text-sm text-[#69726c]">
-                    {item.placeAddress}
-                  </p>
-                )}
-                <p className="mt-1 text-sm text-[#69726c]">
-                  {formatActivityTime(item, {
-                    allDay: t('tripDetails.allDay'),
-                    timeNotSet: t('tripDetails.timeNotSet'),
-                  })}
-                </p>
-                {item.googleMapsUrl && (
-                  <a
-                    className="mt-2 inline-block text-sm font-semibold text-[#274b48] underline"
-                    href={item.googleMapsUrl}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    {t('tripDetails.openGoogleMaps')}
-                  </a>
-                )}
-              </div>
-              <div className="flex shrink-0 flex-wrap justify-end gap-1">
-                <button
-                  className="rounded-lg px-2 py-1 text-xs font-semibold text-[#274b48] hover:bg-[#e6eee3] disabled:opacity-50"
-                  disabled={editingItemId !== null || movingItem !== null}
-                  onClick={() =>
-                    startMovingItem(record)
-                  }
-                  type="button"
-                >
-                  {t('common.move')}
-                </button>
-                <button
-                  className="rounded-lg px-2 py-1 text-xs font-semibold text-[#274b48] hover:bg-[#e6eee3] disabled:opacity-50"
-                  disabled={movingItem !== null}
-                  onClick={() =>
-                    record.itemType === 'meal'
-                      ? editMeal(record.item)
-                      : editActivity(record.item)
-                  }
-                  type="button"
-                >
-                  {t('common.edit')}
-                </button>
-                <button
-                  className="rounded-lg px-2 py-1 text-xs font-semibold text-[#9b4e36] hover:bg-[#fff0e9] disabled:opacity-50"
-                  disabled={
-                    deletingActivityId === item.id ||
-                    editingItemId !== null ||
-                    movingItem !== null
-                  }
-                  onClick={() =>
-                    void (record.itemType === 'meal'
-                      ? handleDeleteMeal(record.item)
-                      : handleDeleteActivity(record.item))
-                  }
-                  type="button"
-                >
-                  {deletingActivityId === item.id
-                    ? '...'
-                    : t('common.delete')}
-                </button>
-              </div>
-            </div>
-            {openDay === day.date && editingItemId === item.id &&
-              renderDayItemForm(day.date)}
-            {movingItem?.item.id === item.id && renderMoveItemForm()}
-            {dropTarget?.dayDate === day.date &&
-              dropTarget.index === fullItemIndex + 1 &&
-              itemIndex === orderedItems.length - 1 && (
-                shouldShowDropIndicator(itemIndex + 1) && (
-                  <div className="mt-2 h-1 rounded-full bg-[#d06f4c]" />
-                )
-              )}
-          </div>
-          )
-        })}
-      </div>
+        isSaving={isSaving}
+        notes={notes}
+        onAllDayChange={setAllDay}
+        onCancel={() => {
+          resetActivityForm()
+          setOpenDay(null)
+        }}
+        onEndTimeChange={handleEndTimeChange}
+        onGoogleMapsUrlChange={(value) => {
+          setGoogleMapsUrl(value)
+          setGoogleMapsError(null)
+        }}
+        onNotesChange={setNotes}
+        onSelectItemType={selectNewItemType}
+        onStartTimeChange={handleStartTimeChange}
+        onSubmit={(event) => void handleSaveDayItem(event, date)}
+        onTitleChange={setTitle}
+        startTime={startTime}
+        title={title}
+      />
     )
   }
 
   function renderMoveItemForm() {
     return (
-      <form
-        className="mt-3 grid gap-3 rounded-xl border border-[#b9d1be] bg-[#f0f5ed] p-3"
+      <MoveDayItemForm
+        endDate={currentTrip.endDate}
+        onCancel={cancelMovingItem}
         onSubmit={handleMoveItem}
-      >
-        <DatePicker
-          label={t('tripDetails.moveToDate')}
-          maxDate={currentTrip.endDate}
-          minDate={currentTrip.startDate}
-          onChange={setMoveTargetDate}
-          value={moveTargetDate}
-        />
-        <div className="flex justify-end gap-2">
-          <button
-            className="rounded-xl px-3 py-2 text-sm font-semibold text-[#69726c] hover:bg-[#e6eee3]"
-            onClick={cancelMovingItem}
-            type="button"
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            className="rounded-xl bg-[#274b48] px-3 py-2 text-sm font-semibold text-[#f9f5ed] hover:bg-[#1c3b38]"
-            type="submit"
-          >
-            {t('common.move')}
-          </button>
-        </div>
-      </form>
+        onTargetDateChange={setMoveTargetDate}
+        startDate={currentTrip.startDate}
+        targetDate={moveTargetDate}
+      />
     )
   }
 
@@ -1301,26 +1011,11 @@ export function TripDetails({
 
   return (
     <div className="mt-6">
-      <div className="rounded-2xl bg-[#274b48] p-5 text-[#f9f5ed]">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm text-[#b9d1be]">{formatDateRange(trip)}</p>
-            <h3 className="mt-2 text-2xl font-medium">{trip.name}</h3>
-            <p className="mt-2 text-sm text-[#b9d1be]">
-              {t('tripDetails.daysToFill', { count: trip.days.length })}
-            </p>
-          </div>
-          <button
-            aria-expanded={showSettings}
-            aria-label={t('tripDetails.settings')}
-            className="grid size-10 shrink-0 place-items-center rounded-xl text-xl text-[#f9f5ed] hover:bg-[#35605c]"
-            onClick={() => setShowSettings((current) => !current)}
-            type="button"
-          >
-            ⚙
-          </button>
-        </div>
-      </div>
+      <TripDetailsHeader
+        onToggleSettings={() => setShowSettings((current) => !current)}
+        showSettings={showSettings}
+        trip={trip}
+      />
       {showSettings && (
         <TripSettings
           accessToken={accessToken}
@@ -1331,102 +1026,29 @@ export function TripDetails({
         />
       )}
       {activityError && (
-        <p className="mt-4 rounded-xl border border-[#e7b5a3] bg-[#fff6f1] p-3 text-sm text-[#9b4e36]">
+        <p className="mt-4 rounded-xl border border-danger-border bg-error-surface p-3 text-sm text-error">
           {activityError}
         </p>
       )}
       <div className="mt-4 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)_18rem] lg:items-start lg:gap-5">
-        <aside className="sticky top-5 hidden self-start lg:block">
-          <div className="rounded-2xl border border-[#e1dbd0] bg-[#f5f1ea] p-3">
-            <div className="flex items-center justify-between gap-2 px-2 py-2">
-              <h4 className="text-sm font-semibold text-[#274b48]">
-                {t('tripDetails.dayNavigator')}
-              </h4>
-              <button
-                className="rounded-lg px-2 py-1 text-xs font-semibold text-[#274b48] hover:bg-[#e6eee3]"
-                onClick={selectAllDays}
-                type="button"
-              >
-                {t('tripDetails.selectAllDays')}
-              </button>
-            </div>
-            <div className="mt-1 grid gap-1">
-              {trip.days.map((day) => {
-                const isActive = day.date === selectedDay.date
-                const isChecked = selectedDayDates.includes(day.date)
-
-                return (
-                  <div
-                    className={`flex items-center gap-2 rounded-xl px-2 py-2 transition ${
-                      isActive
-                        ? 'bg-[#274b48] text-[#f9f5ed]'
-                        : 'text-[#69726c] hover:bg-[#e6eee3] hover:text-[#274b48]'
-                    }`}
-                    key={day.date}
-                  >
-                    <input
-                      aria-label={t('tripDetails.selectDayForViewing', {
-                        date: formatDate(day.date),
-                      })}
-                      checked={isChecked}
-                      className="size-4 shrink-0 accent-[#e5b76b]"
-                      onChange={(event) =>
-                        toggleDaySelection(
-                          day.date,
-                          event.nativeEvent instanceof MouseEvent &&
-                            event.nativeEvent.shiftKey,
-                        )
-                      }
-                      type="checkbox"
-                    />
-                    <button
-                      aria-label={t('tripDetails.selectDay', {
-                        date: formatDate(day.date),
-                      })}
-                      className="flex min-w-0 flex-1 overflow-hidden text-left"
-                      onClick={(event) =>
-                        selectOnlyDay(day.date, event.shiftKey)
-                      }
-                      type="button"
-                    >
-                      <span className="w-0 min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold">
-                          {formatDate(day.date)}
-                        </span>
-                        {day.title?.trim() && (
-                          <span
-                            className={`mt-0.5 block truncate text-xs ${
-                              isActive ? 'text-[#b9d1be]' : 'text-[#69726c]'
-                            }`}
-                            title={day.title}
-                          >
-                            {day.title}
-                          </span>
-                        )}
-                        <span
-                          className={`mt-0.5 block truncate text-xs ${
-                            isActive ? 'text-[#b9d1be]' : 'text-[#8a918b]'
-                          }`}
-                        >
-                          {getDayScheduleSummary(day)}
-                        </span>
-                      </span>
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </aside>
+        <TripDayNavigator
+          days={trip.days}
+          getDayScheduleSummary={getDayScheduleSummary}
+          onSelectAll={selectAllDays}
+          onSelectDay={selectOnlyDay}
+          onToggleDay={toggleDaySelection}
+          selectedDay={selectedDay}
+          selectedDayDates={selectedDayDates}
+        />
 
         <div className="min-w-0">
-          <div className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-[#e6eee3] p-1">
+          <div className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-surface-muted p-1">
             {(['all', 'activities', 'meals'] as const).map((tab) => (
               <button
                 className={`rounded-lg px-3 py-2 text-sm font-semibold ${
                   plannerTab === tab
-                    ? 'bg-[#faf8f3] text-[#274b48] shadow-sm'
-                    : 'text-[#69726c]'
+                    ? 'bg-surface text-brand shadow-sm'
+                    : 'text-muted'
                 }`}
                 key={tab}
                 onClick={() => setPlannerTab(tab)}
@@ -1442,108 +1064,62 @@ export function TripDetails({
           </div>
           <div className="grid gap-3">
             {trip.days.map((day) => (
-              <div
-                className={`rounded-2xl border border-[#e1dbd0] bg-[#f5f1ea] p-4 ${
-                  selectedDayDates.includes(day.date) ? '' : 'lg:hidden'
-                }`}
+              <TripDayCard
+                day={day}
+                dayNotes={dayNotes}
+                dayTitle={dayTitle}
+                editingDayDate={editingDayDate}
+                editingItemId={editingItemId}
+                isSavingDayDetails={isSavingDayDetails}
+                isSelected={selectedDayDates.includes(day.date)}
                 key={day.date}
+                onCancelDayDetails={() => setEditingDayDate(null)}
+                onDayNotesChange={setDayNotes}
+                onDayTitleChange={setDayTitle}
+                onEditDayDetails={editDayDetails}
+                onSaveDayDetails={(date) => void handleSaveDayDetails(date)}
+                onToggleActivityForm={toggleActivityForm}
+                openDay={openDay}
+                renderItemForm={renderDayItemForm}
+                scheduleSummary={getDayScheduleSummary(day)}
               >
-            <div className="flex items-start gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-[#274b48]">
-                  {formatDate(day.date)}
-                  {day.title?.trim() && (
-                    <span className="ml-2 font-normal text-[#69726c]">
-                      {day.title}
-                    </span>
-                  )}
-                </p>
-                <p className="mt-1 text-sm text-[#69726c]">
-                  {getDayScheduleSummary(day)}
-                </p>
-                {day.notes?.trim() && (
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-[#69726c]">
-                    {day.notes}
-                  </p>
-                )}
-              </div>
-              <div className="ml-auto flex shrink-0 flex-col items-end gap-1">
-                <button
-                  className="rounded-lg px-2 py-1 text-sm font-semibold text-[#274b48] hover:bg-[#e6eee3]"
-                  disabled={editingItemId !== null}
-                  onClick={() => {
-                    if (editingItemId !== null) {
-                      return
-                    }
-
-                    toggleActivityForm(day.date)
+                <DayItemList
+                  day={day}
+                  deletingItemId={deletingActivityId}
+                  draggedItem={draggedItem}
+                  dropTarget={dropTarget}
+                  editingItemId={editingItemId}
+                  getDayItemRecord={getDayItemRecord}
+                  getDropIndex={getDropIndex}
+                  itemType={plannerTab}
+                  items={getDayItems(day)}
+                  movingItem={movingItem}
+                  onDayDragOver={handleDayDragOver}
+                  onDayDrop={(event, date, itemCount) => {
+                    void handleDayItemDrop(event, date, itemCount)
                   }}
-                  type="button"
-                >
-                  {openDay === day.date && editingItemId === null
-                    ? t('common.close')
-                    : t('tripDetails.add')}
-                </button>
-                <button
-                  className="rounded-lg px-2 py-1 text-xs font-semibold text-[#69726c] hover:bg-[#e6eee3]"
-                  onClick={() => editDayDetails(day.date, day.title, day.notes)}
-                  type="button"
-                >
-                  {day.title?.trim() || day.notes?.trim()
-                    ? t('tripDetails.editDayDetails')
-                    : t('tripDetails.addDayDetails')}
-                </button>
-              </div>
-            </div>
-
-            {openDay === day.date && editingItemId === null &&
-              renderDayItemForm(day.date)}
-
-            {editingDayDate === day.date && (
-              <div className="mt-4 grid gap-3 border-t border-[#ded6ca] pt-4">
-                <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
-                  {t('tripDetails.dayTitle')}
-                  <input
-                    className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
-                    maxLength={200}
-                    onChange={(event) => setDayTitle(event.target.value)}
-                    placeholder={t('tripDetails.dayTitlePlaceholder')}
-                    type="text"
-                    value={dayTitle}
-                  />
-                </label>
-                <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
-                  {t('tripDetails.dayNote')}
-                  <textarea
-                    className="min-h-20 resize-y rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
-                    onChange={(event) => setDayNotes(event.target.value)}
-                    placeholder={t('tripDetails.notesPlaceholder')}
-                    value={dayNotes}
-                  />
-                </label>
-                <div className="flex justify-end gap-2">
-                  <button
-                    className="rounded-xl px-3 py-2 text-sm font-semibold text-[#69726c] hover:bg-[#e6eee3]"
-                    onClick={() => setEditingDayDate(null)}
-                    type="button"
-                  >
-                    {t('common.cancel')}
-                  </button>
-                  <button
-                    className="rounded-xl bg-[#274b48] px-3 py-2 text-sm font-semibold text-[#f9f5ed] hover:bg-[#1c3b38] disabled:opacity-60"
-                    disabled={isSavingDayDetails}
-                    onClick={() => void handleSaveDayDetails(day.date)}
-                    type="button"
-                  >
-                    {isSavingDayDetails ? t('common.saving') : t('common.save')}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {renderDayItems(day, plannerTab)}
-
-              </div>
+                  onDeleteActivity={(activity) => {
+                    void handleDeleteActivity(activity)
+                  }}
+                  onDeleteMeal={(meal) => {
+                    void handleDeleteMeal(meal)
+                  }}
+                  onEditActivity={editActivity}
+                  onEditMeal={editMeal}
+                  onItemDragEnd={() => {
+                    setDraggedItem(null)
+                    setDropTarget(null)
+                  }}
+                  onItemDragOver={handleDayItemDragOver}
+                  onItemDragStart={handleDayItemDragStart}
+                  onItemDrop={(event, date, itemIndex) => {
+                    void handleDayItemDrop(event, date, itemIndex)
+                  }}
+                  onStartMoving={startMovingItem}
+                  renderEditForm={renderDayItemForm}
+                  renderMoveForm={renderMoveItemForm}
+                />
+              </TripDayCard>
             ))}
           </div>
           <div className="lg:hidden">

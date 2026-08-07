@@ -62,8 +62,8 @@ export default function App() {
 
   if (authError) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#f5f1ea] px-5 text-center text-[#9b4e36]">
-        <p className="max-w-md rounded-2xl border border-[#e7b5a3] bg-[#fff6f1] p-5">{authError}</p>
+      <main className="grid min-h-screen place-items-center bg-page px-5 text-center text-error">
+        <p className="max-w-md rounded-2xl border border-danger-border bg-error-surface p-5">{authError}</p>
       </main>
     )
   }

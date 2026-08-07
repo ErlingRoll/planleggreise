@@ -152,18 +152,18 @@ export function TripDashboard({ session }: TripDashboardProps) {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f1ea] text-[#27302f]">
+    <main className="min-h-screen bg-page text-ink">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
-        <Link className="flex items-center gap-3 font-semibold tracking-tight text-[#274b48]" to="/">
-          <span className="grid size-9 place-items-center rounded-xl bg-[#274b48] text-lg text-[#f9f5ed]">✦</span>
+        <Link className="flex items-center gap-3 font-semibold tracking-tight text-brand" to="/">
+          <span className="grid size-9 place-items-center rounded-xl bg-brand text-lg text-on-brand">✦</span>
           <span>Planleggreise</span>
         </Link>
         <div className="flex items-center gap-3">
           <ThemeToggle />
           <LanguageSwitcher />
-          <span className="hidden max-w-48 truncate text-sm text-[#69726c] sm:block">{session.user.email}</span>
+          <span className="hidden max-w-48 truncate text-sm text-muted sm:block">{session.user.email}</span>
           <button
-            className="rounded-full border border-[#d9d4ca] bg-[#faf8f3] px-4 py-2 text-sm font-semibold transition hover:border-[#274b48]"
+            className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold transition hover:border-brand"
             onClick={() => void signOut()}
             type="button"
           >
@@ -179,25 +179,25 @@ export function TripDashboard({ session }: TripDashboardProps) {
           } px-5 pb-12 pt-6 sm:px-8 sm:pt-10`}
         >
           <button
-            className="inline-flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-[#69726c] transition hover:bg-[#e6eee3] hover:text-[#274b48]"
+            className="inline-flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-muted transition hover:bg-surface-muted hover:text-brand"
             onClick={goBackToOverview}
             type="button"
           >
             <span aria-hidden="true">←</span>
             {t('dashboard.backToTrips')}
           </button>
-          <h1 className="mt-5 text-3xl font-medium tracking-[-0.04em] text-[#274b48]">
+          <h1 className="mt-5 text-3xl font-medium tracking-[-0.04em] text-brand">
             {isTravelMode ? t('travelMode.title') : t('dashboard.plan')}
           </h1>
           <nav
             aria-label={t('tripModes.plan')}
-            className="mt-5 grid grid-cols-2 rounded-xl bg-[#e6eee3] p-1"
+            className="mt-5 grid grid-cols-2 rounded-xl bg-surface-muted p-1"
           >
             <Link
               className={`rounded-lg px-3 py-2 text-center text-sm font-semibold ${
                 !isTravelMode
-                  ? 'bg-[#faf8f3] text-[#274b48] shadow-sm'
-                  : 'text-[#69726c]'
+                  ? 'bg-surface text-brand shadow-sm'
+                  : 'text-muted'
               }`}
               to={`/trips/${tripId}`}
             >
@@ -206,8 +206,8 @@ export function TripDashboard({ session }: TripDashboardProps) {
             <Link
               className={`rounded-lg px-3 py-2 text-center text-sm font-semibold ${
                 isTravelMode
-                  ? 'bg-[#faf8f3] text-[#274b48] shadow-sm'
-                  : 'text-[#69726c]'
+                  ? 'bg-surface text-brand shadow-sm'
+                  : 'text-muted'
               }`}
               to={`/trips/${tripId}/travel`}
             >
@@ -229,18 +229,18 @@ export function TripDashboard({ session }: TripDashboardProps) {
         </section>
       ) : (
         <section className="mx-auto max-w-2xl px-5 pb-12 pt-10 sm:px-8 sm:pt-16">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#d06f4c]">{t('dashboard.myTrips')}</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent-text">{t('dashboard.myTrips')}</p>
           <div className="mt-3 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
             <div>
-              <h1 className="text-4xl font-medium tracking-[-0.05em] text-[#274b48] sm:text-5xl">
+              <h1 className="text-4xl font-medium tracking-[-0.05em] text-brand sm:text-5xl">
                 {t('dashboard.heading')}
               </h1>
-              <p className="mt-4 max-w-lg leading-7 text-[#69726c]">
+              <p className="mt-4 max-w-lg leading-7 text-muted">
                 {t('dashboard.intro')}
               </p>
             </div>
             <button
-              className="rounded-xl bg-[#274b48] px-5 py-3 font-semibold text-[#f9f5ed] transition hover:bg-[#1c3b38]"
+              className="rounded-xl bg-brand px-5 py-3 font-semibold text-on-brand transition hover:bg-brand-hover"
               onClick={() => setIsCreating((current) => !current)}
               type="button"
             >
@@ -257,17 +257,17 @@ export function TripDashboard({ session }: TripDashboardProps) {
           )}
 
           {error && (
-            <div className="mt-8 rounded-2xl border border-[#e7b5a3] bg-[#fff6f1] p-5 text-sm text-[#9b4e36]">
+            <div className="mt-8 rounded-2xl border border-danger-border bg-error-surface p-5 text-sm text-error">
               {error}
             </div>
           )}
 
           <section className="mt-10">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-xl font-semibold text-[#274b48]">{t('dashboard.tripOverview')}</h2>
+              <h2 className="text-xl font-semibold text-brand">{t('dashboard.tripOverview')}</h2>
               <label className="sr-only" htmlFor="trip-search">{t('dashboard.searchTrips')}</label>
               <input
-                className="w-40 rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2 text-sm outline-none focus:border-[#274b48]"
+                className="w-40 rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
                 id="trip-search"
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={t('dashboard.search')}
@@ -277,25 +277,25 @@ export function TripDashboard({ session }: TripDashboardProps) {
             {isLoading ? (
               <div className="mt-5 grid gap-3">
                 {Array.from({ length: 2 }).map((_, index) => (
-                  <div className="h-24 animate-pulse rounded-2xl bg-[#eee8dd]" key={index} />
+                  <div className="h-24 animate-pulse rounded-2xl bg-surface-inset" key={index} />
                 ))}
               </div>
             ) : filteredTrips.length > 0 ? (
               <div className="mt-5 grid gap-3">
                 {filteredTrips.map((trip) => (
                   <button
-                    className="w-full rounded-2xl border border-[#e1dbd0] bg-[#faf8f3] p-4 text-left transition hover:border-[#274b48] hover:bg-[#f0f5ed]"
+                    className="w-full rounded-2xl border border-border-card bg-surface p-4 text-left transition hover:border-brand hover:bg-surface-soft"
                     key={trip.id}
                     onClick={() => navigate(`/trips/${trip.id}`)}
                     type="button"
                   >
-                    <p className="font-semibold text-[#274b48]">{trip.name}</p>
-                    <p className="mt-2 text-sm text-[#69726c]">{formatDateRange(trip)}</p>
+                    <p className="font-semibold text-brand">{trip.name}</p>
+                    <p className="mt-2 text-sm text-muted">{formatDateRange(trip)}</p>
                   </button>
                 ))}
               </div>
             ) : (
-              <p className="mt-5 rounded-2xl border border-dashed border-[#c9c1b5] p-6 text-sm text-[#69726c]">
+              <p className="mt-5 rounded-2xl border border-dashed border-border-dashed p-6 text-sm text-muted">
                 {t('dashboard.noTrips')}
               </p>
             )}

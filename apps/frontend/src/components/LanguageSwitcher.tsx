@@ -70,7 +70,7 @@ export function LanguageSwitcher() {
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-label={t('language.label')}
-        className="flex cursor-pointer items-center gap-2 rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2 text-sm font-semibold text-[#274b48] outline-none transition hover:border-[#274b48] focus:border-[#274b48]"
+        className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-brand outline-none transition hover:border-brand focus:border-brand"
         onClick={() => setIsOpen((current) => !current)}
         type="button"
       >
@@ -81,12 +81,12 @@ export function LanguageSwitcher() {
       {isOpen && (
         <div
           aria-label={t('language.label')}
-          className="absolute right-0 z-30 mt-2 grid min-w-full gap-1 rounded-xl border border-[#d9d4ca] bg-[#faf8f3] p-1 shadow-[0_12px_30px_rgba(39,75,72,0.14)]"
+          className="absolute right-0 z-30 mt-2 grid min-w-full gap-1 rounded-xl border border-border bg-surface p-1 shadow-popover-wide"
           role="listbox"
         >
           <button
             aria-selected={language === 'nb'}
-            className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-semibold text-[#274b48] hover:bg-[#e6eee3]"
+            className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-semibold text-brand hover:bg-surface-muted"
             onClick={() => selectLanguage('nb')}
             role="option"
             type="button"
@@ -96,7 +96,7 @@ export function LanguageSwitcher() {
           </button>
           <button
             aria-selected={language === 'en'}
-            className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-semibold text-[#274b48] hover:bg-[#e6eee3]"
+            className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-semibold text-brand hover:bg-surface-muted"
             onClick={() => selectLanguage('en')}
             role="option"
             type="button"

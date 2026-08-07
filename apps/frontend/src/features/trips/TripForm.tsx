@@ -60,25 +60,25 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
 
   return (
     <form
-      className="mt-6 rounded-2xl border border-[#b9d1be] bg-[#f0f5ed] p-5"
+      className="mt-6 rounded-2xl border border-border-soft bg-surface-soft p-5"
       onSubmit={(event) => void handleSubmit(event)}
     >
-      <h3 className="font-semibold text-[#274b48]">{t('tripForm.title')}</h3>
+      <h3 className="font-semibold text-brand">{t('tripForm.title')}</h3>
       <div className="mt-4 grid gap-4">
-        <label className="grid gap-2 text-sm font-medium text-[#69726c]">
+        <label className="grid gap-2 text-sm font-medium text-muted">
           {t('tripForm.name')}
           <input
-            className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
+            className="rounded-xl border border-border bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
             onChange={(event) => setName(event.target.value)}
             placeholder={t('tripForm.namePlaceholder')}
             required
             value={name}
           />
         </label>
-        <label className="grid gap-2 text-sm font-medium text-[#69726c]">
+        <label className="grid gap-2 text-sm font-medium text-muted">
           {t('tripForm.notes')}
           <textarea
-            className="min-h-24 resize-y rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
+            className="min-h-24 resize-y rounded-xl border border-border bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
             onChange={(event) => setNotes(event.target.value)}
             placeholder={t('tripForm.notesPlaceholder')}
             value={notes}
@@ -108,17 +108,17 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
           />
         </div>
       </div>
-      {error && <p className="mt-4 text-sm text-[#9b4e36]">{error}</p>}
+      {error && <p className="mt-4 text-sm text-error">{error}</p>}
       <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <button
-          className="rounded-xl px-4 py-2.5 text-sm font-semibold text-[#69726c] hover:bg-[#e6eee3]"
+          className="rounded-xl px-4 py-2.5 text-sm font-semibold text-muted hover:bg-surface-muted"
           onClick={onCancel}
           type="button"
         >
           {t('tripForm.cancel')}
         </button>
         <button
-          className="rounded-xl bg-[#274b48] px-4 py-2.5 text-sm font-semibold text-[#f9f5ed] hover:bg-[#1c3b38] disabled:opacity-60"
+          className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
           disabled={isSaving}
           type="submit"
         >

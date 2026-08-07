@@ -91,17 +91,17 @@ export function TripSettings({
   }
 
   return (
-    <section className="mt-4 rounded-2xl border border-[#d9d4ca] bg-[#faf8f3] p-5">
+    <section className="mt-4 rounded-2xl border border-border bg-surface p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h4 className="font-semibold text-[#274b48]">{t('tripSettings.title')}</h4>
-          <p className="mt-1 text-sm text-[#69726c]">
+          <h4 className="font-semibold text-brand">{t('tripSettings.title')}</h4>
+          <p className="mt-1 text-sm text-muted">
             {t('tripSettings.description')}
           </p>
         </div>
         <button
           aria-label={t('tripSettings.close')}
-          className="grid size-9 place-items-center rounded-lg text-xl text-[#69726c] hover:bg-[#e6eee3]"
+          className="grid size-9 place-items-center rounded-lg text-xl text-muted hover:bg-surface-muted"
           onClick={onClose}
           type="button"
         >
@@ -110,19 +110,19 @@ export function TripSettings({
       </div>
 
       <form className="mt-5 grid gap-4" onSubmit={(event) => void handleSubmit(event)}>
-        <label className="grid gap-2 text-sm font-medium text-[#69726c]">
+        <label className="grid gap-2 text-sm font-medium text-muted">
           {t('tripSettings.name')}
           <input
-            className="rounded-xl border border-[#d9d4ca] bg-white px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
+            className="rounded-xl border border-border bg-white px-3 py-2.5 text-ink outline-none focus:border-brand"
             onChange={(event) => setName(event.target.value)}
             required
             value={name}
           />
         </label>
-        <label className="grid gap-2 text-sm font-medium text-[#69726c]">
+        <label className="grid gap-2 text-sm font-medium text-muted">
           {t('tripSettings.notes')}
           <textarea
-            className="min-h-24 resize-y rounded-xl border border-[#d9d4ca] bg-white px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
+            className="min-h-24 resize-y rounded-xl border border-border bg-white px-3 py-2.5 text-ink outline-none focus:border-brand"
             onChange={(event) => setNotes(event.target.value)}
             placeholder={t('tripSettings.notesPlaceholder')}
             value={notes}
@@ -152,11 +152,11 @@ export function TripSettings({
           />
         </div>
 
-        {error && <p className="text-sm text-[#9b4e36]">{error}</p>}
+        {error && <p className="text-sm text-error">{error}</p>}
 
-        <div className="flex flex-col-reverse gap-3 border-t border-[#e1dbd0] pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col-reverse gap-3 border-t border-border-card pt-4 sm:flex-row sm:items-center sm:justify-between">
           <button
-            className="rounded-xl border border-[#e7b5a3] px-4 py-2.5 text-sm font-semibold text-[#9b4e36] hover:bg-[#fff0e9] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl border border-danger-border px-4 py-2.5 text-sm font-semibold text-error hover:bg-danger-surface disabled:cursor-not-allowed disabled:opacity-50"
             disabled={isDeleting || isSaving}
             onClick={() => void handleDelete()}
             type="button"
@@ -165,14 +165,14 @@ export function TripSettings({
           </button>
           <div className="flex flex-col-reverse gap-3 sm:flex-row">
             <button
-              className="rounded-xl px-4 py-2.5 text-sm font-semibold text-[#69726c] hover:bg-[#e6eee3]"
+              className="rounded-xl px-4 py-2.5 text-sm font-semibold text-muted hover:bg-surface-muted"
               onClick={onClose}
               type="button"
             >
               {t('tripSettings.cancel')}
             </button>
             <button
-              className="rounded-xl bg-[#274b48] px-4 py-2.5 text-sm font-semibold text-[#f9f5ed] hover:bg-[#1c3b38] disabled:opacity-60"
+              className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
               disabled={isSaving || isDeleting}
               type="submit"
             >

@@ -9,7 +9,7 @@ export function ThemeToggle() {
   return (
     <button
       aria-label={t(isDark ? 'theme.switchToLight' : 'theme.switchToDark')}
-      className="flex items-center gap-2 rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2 text-sm font-semibold text-[#274b48] outline-none transition hover:border-[#274b48] focus:border-[#274b48]"
+      className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-brand outline-none transition hover:border-brand focus:border-brand"
       onClick={toggleTheme}
       title={t(isDark ? 'theme.lightMode' : 'theme.darkMode')}
       type="button"

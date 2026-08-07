@@ -131,11 +131,11 @@ export function TripAuxiliaryDetails({
 
   return (
     <section className="mt-4 grid gap-4">
-      <div className="rounded-2xl border border-[#e1dbd0] bg-[#f5f1ea] p-4">
+      <div className="rounded-2xl border border-border-card bg-page p-4">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="font-semibold text-[#274b48]">{t('tripDetails.housing')}</h3>
+          <h3 className="font-semibold text-brand">{t('tripDetails.housing')}</h3>
           <button
-            className="rounded-lg px-2 py-1 text-sm font-semibold text-[#274b48] hover:bg-[#e6eee3]"
+            className="rounded-lg px-2 py-1 text-sm font-semibold text-brand hover:bg-surface-muted"
             onClick={startNewForm}
             type="button"
           >
@@ -143,32 +143,32 @@ export function TripAuxiliaryDetails({
           </button>
         </div>
         {visibleHousingStays.length === 0 ? (
-          <p className="mt-3 text-sm text-[#69726c]">{t('tripDetails.noHousing')}</p>
+          <p className="mt-3 text-sm text-muted">{t('tripDetails.noHousing')}</p>
         ) : (
           <div className="mt-3 grid gap-2">
             {visibleHousingStays.map((stay) => (
-              <div className="rounded-xl bg-[#faf8f3] p-3" key={stay.id}>
+              <div className="rounded-xl bg-surface p-3" key={stay.id}>
                 <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-[#274b48]">{stay.name}</p>
-                    <p className="mt-1 text-sm text-[#69726c]">
+                    <p className="font-semibold text-brand">{stay.name}</p>
+                    <p className="mt-1 text-sm text-muted">
                       {stay.checkIn} – {stay.checkOut}
                     </p>
                     {stay.notes?.trim() && (
-                      <p className="mt-2 whitespace-pre-wrap text-sm text-[#69726c]">
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-muted">
                         {stay.notes}
                       </p>
                     )}
                   </div>
                   <button
-                    className="rounded-lg px-2 py-1 text-xs font-semibold text-[#274b48] hover:bg-[#e6eee3]"
+                    className="rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-surface-muted"
                     onClick={() => editHousing(stay)}
                     type="button"
                   >
                     {t('common.edit')}
                   </button>
                   <button
-                    className="rounded-lg px-2 py-1 text-xs font-semibold text-[#9b4e36] hover:bg-[#fff0e9]"
+                    className="rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface"
                     onClick={() => void handleDeleteHousing(stay)}
                     type="button"
                   >
@@ -183,17 +183,17 @@ export function TripAuxiliaryDetails({
 
       {formMode && (
         <form
-          className="rounded-2xl border border-[#b9d1be] bg-[#f0f5ed] p-4"
+          className="rounded-2xl border border-border-soft bg-surface-soft p-4"
           onSubmit={(event) => void handleSubmit(event)}
         >
-          <h3 className="font-semibold text-[#274b48]">
+          <h3 className="font-semibold text-brand">
             {t('tripDetails.housingFormTitle')}
           </h3>
           <div className="mt-4 grid gap-3">
-            <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
+            <label className="grid gap-1.5 text-sm font-medium text-muted">
                   {t('tripDetails.housingName')}
                   <input
-                    className="rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
+                    className="rounded-xl border border-border bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
                     onChange={(event) => setName(event.target.value)}
                     required
                     value={name}
@@ -211,26 +211,26 @@ export function TripAuxiliaryDetails({
                 value={checkOut}
               />
             </div>
-            <label className="grid gap-1.5 text-sm font-medium text-[#69726c]">
+            <label className="grid gap-1.5 text-sm font-medium text-muted">
               {t('tripDetails.notes')}
               <textarea
-                className="min-h-20 resize-y rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 py-2.5 text-[#27302f] outline-none focus:border-[#274b48]"
+                className="min-h-20 resize-y rounded-xl border border-border bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
                 onChange={(event) => setNotes(event.target.value)}
                 placeholder={t('tripDetails.notesPlaceholder')}
                 value={notes}
               />
             </label>
-            {error && <p className="text-sm text-[#9b4e36]">{error}</p>}
+            {error && <p className="text-sm text-error">{error}</p>}
             <div className="flex justify-end gap-2">
               <button
-                className="rounded-xl px-3 py-2 text-sm font-semibold text-[#69726c] hover:bg-[#e6eee3]"
+                className="rounded-xl px-3 py-2 text-sm font-semibold text-muted hover:bg-surface-muted"
                 onClick={resetForm}
                 type="button"
               >
                 {t('common.cancel')}
               </button>
               <button
-                className="rounded-xl bg-[#274b48] px-3 py-2 text-sm font-semibold text-[#f9f5ed] hover:bg-[#1c3b38] disabled:opacity-60"
+                className="rounded-xl bg-brand px-3 py-2 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
                 disabled={isSaving}
                 type="submit"
               >

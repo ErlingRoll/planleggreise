@@ -149,6 +149,11 @@ or progress tracking until the relevant product behavior is requested.
 - Vite proxies `/api` to `http://localhost:3001` during development.
 - Frontend API responses must use schemas from `@planleggreise/models`.
 - Keep UI-only state, presentation types, and components in this app.
+- Keep frontend page components focused on orchestration; split substantial UI
+  sections and repeated interaction patterns into focused components rather
+  than allowing a TSX file to grow into a monolith.
+- Use the semantic colors and shadows defined in the frontend Tailwind theme;
+  do not add repeated arbitrary color utilities in React markup.
 
 ### `apps/backend`
 

@@ -133,44 +133,44 @@ export function DatePicker({
 
   return (
     <div className="relative" ref={containerRef}>
-      <span className="grid gap-2 text-sm font-medium text-[#69726c]">
+      <span className="grid gap-2 text-sm font-medium text-muted">
         {label}
         <button
           aria-expanded={isOpen}
           aria-haspopup="dialog"
           aria-label={value ? `${label}: ${dateFormatter.format(parseDate(value)!)}` : t('datePicker.chooseDate')}
-          className="flex min-h-12 w-full items-center justify-between rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 text-left text-[#27302f] outline-none transition hover:border-[#274b48] focus:border-[#274b48] focus:ring-2 focus:ring-[#b9d1be]"
+          className="flex min-h-12 w-full items-center justify-between rounded-xl border border-border bg-surface px-3 text-left text-ink outline-none transition hover:border-brand focus:border-brand focus:ring-2 focus:ring-soft"
           onClick={isOpen ? () => setIsOpen(false) : openPicker}
           type="button"
         >
-          <span className={value ? 'text-[#27302f]' : 'text-[#8b918b]'}>
+          <span className={value ? 'text-ink' : 'text-faint'}>
             {value ? dateFormatter.format(parseDate(value)!) : t('datePicker.chooseDate')}
           </span>
-          <span aria-hidden="true" className="text-lg text-[#274b48]">▾</span>
+          <span aria-hidden="true" className="text-lg text-brand">▾</span>
         </button>
       </span>
 
       {isOpen && (
         <div
           aria-label={t('datePicker.select', { label: label.toLowerCase() })}
-          className="absolute left-0 right-0 z-20 mt-2 rounded-2xl border border-[#d9d4ca] bg-[#faf8f3] p-4 shadow-[0_16px_40px_rgba(39,75,72,0.16)]"
+          className="absolute left-0 right-0 z-20 mt-2 rounded-2xl border border-border bg-surface p-4 shadow-popover"
           role="dialog"
         >
           <div className="flex items-center justify-between gap-3">
             <button
               aria-label={t('common.previousMonth')}
-              className="grid size-11 place-items-center rounded-xl text-2xl text-[#274b48] hover:bg-[#e6eee3]"
+              className="grid size-11 place-items-center rounded-xl text-2xl text-brand hover:bg-surface-muted"
               onClick={() => moveMonth(-1)}
               type="button"
             >
               ‹
             </button>
-            <p className="capitalize font-semibold text-[#274b48]">
+            <p className="capitalize font-semibold text-brand">
               {monthFormatter.format(viewDate)}
             </p>
             <button
               aria-label={t('common.nextMonth')}
-              className="grid size-11 place-items-center rounded-xl text-2xl text-[#274b48] hover:bg-[#e6eee3]"
+              className="grid size-11 place-items-center rounded-xl text-2xl text-brand hover:bg-surface-muted"
               onClick={() => moveMonth(1)}
               type="button"
             >
@@ -178,7 +178,7 @@ export function DatePicker({
             </button>
           </div>
 
-          <div className="mt-3 grid grid-cols-7 gap-1 text-center text-xs font-semibold uppercase text-[#69726c]">
+          <div className="mt-3 grid grid-cols-7 gap-1 text-center text-xs font-semibold uppercase text-muted">
             {weekdayLabels.map((weekday) => (
               <span key={weekday}>{weekday}</span>
             ))}
@@ -203,10 +203,10 @@ export function DatePicker({
                   aria-pressed={isSelected}
                   className={`min-h-11 rounded-xl text-sm font-medium transition ${
                     isSelected
-                      ? 'bg-[#274b48] text-[#f9f5ed]'
+                      ? 'bg-brand text-on-brand'
                       : isDisabled
-                        ? 'cursor-not-allowed text-[#c4c4bd]'
-                        : 'text-[#27302f] hover:bg-[#e6eee3]'
+                        ? 'cursor-not-allowed text-disabled'
+                        : 'text-ink hover:bg-surface-muted'
                   }`}
                   disabled={isDisabled}
                   key={dateValue}

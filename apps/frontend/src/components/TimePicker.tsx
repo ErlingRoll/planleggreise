@@ -156,7 +156,7 @@ export function TimePicker({ label, value, onChange }: TimePickerProps) {
 
   return (
     <div className="relative" ref={containerRef}>
-      <span className="grid gap-2 text-sm font-medium text-[#69726c]">
+      <span className="grid gap-2 text-sm font-medium text-muted">
         {label}
         <button
           aria-expanded={isOpen}
@@ -166,14 +166,14 @@ export function TimePicker({ label, value, onChange }: TimePickerProps) {
               ? `${label}: ${formatTimeValue(value, locale)}`
               : t('timePicker.chooseTime')
           }
-          className="flex min-h-12 w-full items-center justify-between rounded-xl border border-[#d9d4ca] bg-[#faf8f3] px-3 text-left text-[#27302f] outline-none transition hover:border-[#274b48] focus:border-[#274b48] focus:ring-2 focus:ring-[#b9d1be]"
+          className="flex min-h-12 w-full items-center justify-between rounded-xl border border-border bg-surface px-3 text-left text-ink outline-none transition hover:border-brand focus:border-brand focus:ring-2 focus:ring-soft"
           onClick={isOpen ? cancelPicker : openPicker}
           type="button"
         >
-          <span className={value ? 'text-[#27302f]' : 'text-[#8b918b]'}>
+          <span className={value ? 'text-ink' : 'text-faint'}>
             {value ? formatTimeValue(value, locale) : t('timePicker.chooseTime')}
           </span>
-          <span aria-hidden="true" className="text-lg text-[#274b48]">
+          <span aria-hidden="true" className="text-lg text-brand">
             ▾
           </span>
         </button>
@@ -183,21 +183,21 @@ export function TimePicker({ label, value, onChange }: TimePickerProps) {
         <>
           <div
             aria-hidden="true"
-            className="fixed inset-0 z-30 bg-[#27302f]/25 sm:hidden"
+            className="fixed inset-0 z-30 bg-ink/25 sm:hidden"
             onClick={cancelPicker}
           />
           <div
             aria-label={t('timePicker.select', { label: label.toLowerCase() })}
             aria-modal="true"
-            className="fixed inset-x-0 bottom-0 z-40 max-h-[90vh] overflow-y-auto rounded-t-3xl border border-[#d9d4ca] bg-[#faf8f3] p-5 shadow-[0_-16px_40px_rgba(39,75,72,0.16)] sm:absolute sm:inset-x-0 sm:bottom-auto sm:mt-2 sm:max-h-none sm:rounded-2xl sm:p-4 sm:shadow-[0_16px_40px_rgba(39,75,72,0.16)]"
+            className="fixed inset-x-0 bottom-0 z-40 max-h-[90vh] overflow-y-auto rounded-t-3xl border border-border bg-surface p-5 shadow-bottom-sheet sm:absolute sm:inset-x-0 sm:bottom-auto sm:mt-2 sm:max-h-none sm:rounded-2xl sm:p-4 sm:shadow-popover"
             role="dialog"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[#69726c]">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">
                   {label}
                 </p>
-                <p className="mt-1 text-3xl font-semibold tabular-nums text-[#274b48]">
+                <p className="mt-1 text-3xl font-semibold tabular-nums text-brand">
                   {draftTime
                     ? formatTimeValue(
                         formatTime(draftTime.hours, draftTime.minutes),
@@ -208,7 +208,7 @@ export function TimePicker({ label, value, onChange }: TimePickerProps) {
               </div>
               {(value || draftHourInput || draftMinuteInput) && (
                 <button
-                  className="rounded-lg px-2 py-1 text-xs font-semibold text-[#69726c] hover:bg-[#e6eee3]"
+                  className="rounded-lg px-2 py-1 text-xs font-semibold text-muted hover:bg-surface-muted"
                   onClick={clearPicker}
                   type="button"
                 >
@@ -219,17 +219,17 @@ export function TimePicker({ label, value, onChange }: TimePickerProps) {
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               <label className="grid content-start gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-[#69726c]">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted">
                   {t('timePicker.hour')}
                 </span>
                 <input
                   aria-invalid={hasInvalidHour && draftHourInput !== ''}
                   aria-label={t('timePicker.hour')}
                   autoComplete="off"
-                  className={`min-h-12 w-full rounded-xl border bg-[#faf8f3] px-3 text-center text-2xl font-semibold tabular-nums text-[#274b48] outline-none transition focus:ring-2 focus:ring-[#b9d1be] ${
+                  className={`min-h-12 w-full rounded-xl border bg-surface px-3 text-center text-2xl font-semibold tabular-nums text-brand outline-none transition focus:ring-2 focus:ring-soft ${
                     hasInvalidHour && draftHourInput !== ''
-                      ? 'border-[#b42318] focus:border-[#b42318]'
-                      : 'border-[#d9d4ca] focus:border-[#274b48]'
+                      ? 'border-error-strong focus:border-error-strong'
+                      : 'border-border focus:border-brand'
                   }`}
                   inputMode="numeric"
                   maxLength={2}
@@ -240,21 +240,21 @@ export function TimePicker({ label, value, onChange }: TimePickerProps) {
                   type="text"
                   value={draftHourInput}
                 />
-                <span className="text-center text-xs font-normal text-[#69726c]">
+                <span className="text-center text-xs font-normal text-muted">
                   {t('timePicker.hourHint')}
                 </span>
               </label>
               <label className="grid content-start gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-[#69726c]">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted">
                   {t('timePicker.minute')}
                 </span>
                 <input
                   aria-invalid={hasInvalidMinute && draftMinuteInput !== ''}
                   aria-label={t('timePicker.minute')}
-                  className={`min-h-12 w-full rounded-xl border bg-[#faf8f3] px-3 text-center text-2xl font-semibold tabular-nums text-[#274b48] outline-none transition focus:ring-2 focus:ring-[#b9d1be] ${
+                  className={`min-h-12 w-full rounded-xl border bg-surface px-3 text-center text-2xl font-semibold tabular-nums text-brand outline-none transition focus:ring-2 focus:ring-soft ${
                     hasInvalidMinute && draftMinuteInput !== ''
-                      ? 'border-[#b42318] focus:border-[#b42318]'
-                      : 'border-[#d9d4ca] focus:border-[#274b48]'
+                      ? 'border-error-strong focus:border-error-strong'
+                      : 'border-border focus:border-brand'
                   }`}
                   inputMode="numeric"
                   maxLength={2}
@@ -265,33 +265,33 @@ export function TimePicker({ label, value, onChange }: TimePickerProps) {
                   type="text"
                   value={draftMinuteInput}
                 />
-                <span className="text-center text-xs font-normal text-[#69726c]">
+                <span className="text-center text-xs font-normal text-muted">
                   {t('timePicker.minuteHint')}
                 </span>
               </label>
             </div>
 
             {hasInvalidHour && draftHourInput !== '' && (
-              <p className="mt-2 text-sm text-[#b42318]" role="alert">
+              <p className="mt-2 text-sm text-error-strong" role="alert">
                 {t('timePicker.hourInvalid')}
               </p>
             )}
             {hasInvalidMinute && draftMinuteInput !== '' && (
-              <p className="mt-2 text-sm text-[#b42318]" role="alert">
+              <p className="mt-2 text-sm text-error-strong" role="alert">
                 {t('timePicker.minuteInvalid')}
               </p>
             )}
 
-            <div className="mt-5 flex justify-end gap-2 border-t border-[#ded6ca] pt-4">
+            <div className="mt-5 flex justify-end gap-2 border-t border-border-divider pt-4">
               <button
-                className="rounded-xl px-3 py-2.5 text-sm font-semibold text-[#69726c] hover:bg-[#e6eee3]"
+                className="rounded-xl px-3 py-2.5 text-sm font-semibold text-muted hover:bg-surface-muted"
                 onClick={cancelPicker}
                 type="button"
               >
                 {t('common.cancel')}
               </button>
               <button
-                className="rounded-xl bg-[#274b48] px-4 py-2.5 text-sm font-semibold text-[#f9f5ed] hover:bg-[#1c3b38] disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={!draftTime}
                 onClick={savePicker}
                 type="button"
