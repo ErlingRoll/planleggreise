@@ -9,6 +9,7 @@ type DatePickerProps = {
   onChange: (value: string) => void
   minDate?: string
   maxDate?: string
+  clearable?: boolean
 }
 
 function parseDate(value: string) {
@@ -45,7 +46,14 @@ function getCalendarDays(viewDate: Date) {
   })
 }
 
-export function DatePicker({ label, value, onChange, minDate, maxDate }: DatePickerProps) {
+export function DatePicker({
+  label,
+  value,
+  onChange,
+  minDate,
+  maxDate,
+  clearable = false,
+}: DatePickerProps) {
   const { i18n, t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const [isOpen, setIsOpen] = useState(false)
@@ -230,6 +238,18 @@ export function DatePicker({ label, value, onChange, minDate, maxDate }: DatePic
               )
             })}
           </div>
+          {clearable && value && (
+            <button
+              className="mt-3 w-full rounded-xl px-3 py-2 text-sm font-semibold text-muted hover:bg-surface-muted"
+              onClick={() => {
+                onChange("")
+                setIsOpen(false)
+              }}
+              type="button"
+            >
+              {t("datePicker.clear")}
+            </button>
+          )}
         </div>
       )}
     </div>

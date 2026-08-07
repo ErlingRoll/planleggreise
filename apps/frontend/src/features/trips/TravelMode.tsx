@@ -47,7 +47,12 @@ export function TravelMode({ trip }: TravelModeProps) {
   const isBeforeTrip = today < trip.startDate
   const isAfterTrip = today > trip.endDate
   const housingForDay = trip.housingStays.filter(
-    (stay) => stay.checkIn <= selectedDay.date && selectedDay.date < stay.checkOut,
+    (stay) =>
+      !stay.isBackup &&
+      stay.checkIn !== null &&
+      stay.checkOut !== null &&
+      stay.checkIn <= selectedDay.date &&
+      selectedDay.date < stay.checkOut,
   )
   const mealsForDay = trip.meals.filter((meal) => meal.tripDate === selectedDay.date)
 

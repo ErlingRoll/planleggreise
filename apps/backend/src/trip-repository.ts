@@ -77,7 +77,8 @@ const tripDayRowSchema = z.object({
 const activityRowSchema = z.object({
   id: z.string(),
   trip_id: z.string(),
-  trip_date: DateOnlySchema,
+  trip_date: DateOnlySchema.nullable(),
+  is_backup: z.boolean(),
   title: z.string().nullable(),
   start_time: z.string().nullable(),
   end_time: z.string().nullable(),
@@ -93,15 +94,17 @@ const housingStayRowSchema = z.object({
   id: z.string(),
   trip_id: z.string(),
   name: z.string(),
-  check_in: DateOnlySchema,
-  check_out: DateOnlySchema,
+  check_in: DateOnlySchema.nullable(),
+  check_out: DateOnlySchema.nullable(),
+  is_backup: z.boolean(),
   notes: z.string().nullable(),
 })
 
 const mealRowSchema = z.object({
   id: z.string(),
   trip_id: z.string(),
-  trip_date: DateOnlySchema,
+  trip_date: DateOnlySchema.nullable(),
+  is_backup: z.boolean(),
   title: z.string().nullable(),
   start_time: z.string().nullable(),
   end_time: z.string().nullable(),
@@ -167,10 +170,10 @@ const tripItemPreferenceRowSchema = z.object({
 })
 
 const activityColumns =
-  "id, trip_id, trip_date, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order"
-const housingStayColumns = "id, trip_id, name, check_in, check_out, notes"
+  "id, trip_id, trip_date, is_backup, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order"
+const housingStayColumns = "id, trip_id, name, check_in, check_out, is_backup, notes"
 const mealColumns =
-  "id, trip_id, trip_date, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order"
+  "id, trip_id, trip_date, is_backup, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order"
 
 async function getHighestDayItemSortOrder(
   client: SupabaseClient,
@@ -183,6 +186,7 @@ async function getHighestDayItemSortOrder(
         .from("activities")
         .select("sort_order")
         .eq("trip_id", tripId)
+        .eq("is_backup", false)
         .eq("trip_date", tripDate)
         .order("sort_order", { ascending: false })
         .limit(1),
@@ -190,6 +194,7 @@ async function getHighestDayItemSortOrder(
         .from("meals")
         .select("sort_order")
         .eq("trip_id", tripId)
+        .eq("is_backup", false)
         .eq("trip_date", tripDate)
         .order("sort_order", { ascending: false })
         .limit(1),
@@ -447,6 +452,7 @@ function mapActivityRow(row: unknown): Activity {
     id: parsedRow.id,
     tripId: parsedRow.trip_id,
     tripDate: parsedRow.trip_date,
+    isBackup: parsedRow.is_backup,
     title: parsedRow.title,
     startTime: parsedRow.start_time?.slice(0, 5) ?? null,
     endTime: parsedRow.end_time?.slice(0, 5) ?? null,
@@ -468,6 +474,7 @@ function mapHousingStayRow(row: unknown): HousingStay {
     name: parsedRow.name,
     checkIn: parsedRow.check_in,
     checkOut: parsedRow.check_out,
+    isBackup: parsedRow.is_backup,
     notes: parsedRow.notes,
   })
 }
@@ -479,6 +486,7 @@ function mapMealRow(row: unknown): Meal {
     id: parsedRow.id,
     tripId: parsedRow.trip_id,
     tripDate: parsedRow.trip_date,
+    isBackup: parsedRow.is_backup,
     title: parsedRow.title,
     startTime: parsedRow.start_time?.slice(0, 5) ?? null,
     endTime: parsedRow.end_time?.slice(0, 5) ?? null,
@@ -723,6 +731,10 @@ function addActivitiesToDays(
   const dayDetailsByDate = new Map(tripDays.map((day) => [day.date, day]))
 
   for (const activity of activities) {
+    if (activity.isBackup || !activity.tripDate) {
+      continue
+    }
+
     const dateActivities = activitiesByDate.get(activity.tripDate) ?? []
     dateActivities.push(activity)
     activitiesByDate.set(activity.tripDate, dateActivities)
@@ -778,9 +790,17 @@ export function createSupabaseTripRepository(): TripRepository {
         listMeals(client, tripId),
         listTripItemPreferences(client, tripId),
       ])
+      const backupActivities = activities.filter(
+        (activity) => activity.isBackup || !activity.tripDate,
+      )
       return TripDetailSchema.parse({
         ...trip,
-        days: addActivitiesToDays(buildTripDays(trip), activities, tripDays),
+        days: addActivitiesToDays(
+          buildTripDays(trip),
+          activities.filter((activity) => !activity.isBackup && activity.tripDate !== null),
+          tripDays,
+        ),
+        backupActivities,
         housingStays,
         meals,
         preferences,
@@ -1052,6 +1072,7 @@ export function createSupabaseTripRepository(): TripRepository {
         name: parsedInput.name,
         check_in: parsedInput.checkIn,
         check_out: parsedInput.checkOut,
+        is_backup: parsedInput.isBackup,
         notes: parsedInput.notes,
       })
 
@@ -1085,6 +1106,7 @@ export function createSupabaseTripRepository(): TripRepository {
         name: currentStay.name,
         checkIn: currentStay.checkIn,
         checkOut: currentStay.checkOut,
+        isBackup: currentStay.isBackup,
         notes: currentStay.notes,
         ...input,
       })
@@ -1094,6 +1116,7 @@ export function createSupabaseTripRepository(): TripRepository {
           name: parsedInput.name,
           check_in: parsedInput.checkIn,
           check_out: parsedInput.checkOut,
+          is_backup: parsedInput.isBackup,
           notes: parsedInput.notes,
         })
         .eq("trip_id", tripId)
@@ -1147,15 +1170,15 @@ export function createSupabaseTripRepository(): TripRepository {
       const parsedInput = CreateMealInputSchema.parse(input)
       const client = createUserSupabaseClient(accessToken)
       const mealId = randomUUID()
-      const highestSortOrder = await getHighestDayItemSortOrder(
-        client,
-        tripId,
-        parsedInput.tripDate,
-      )
+      const highestSortOrder =
+        parsedInput.isBackup || !parsedInput.tripDate
+          ? -1
+          : await getHighestDayItemSortOrder(client, tripId, parsedInput.tripDate)
       const { error } = await client.from("meals").insert({
         id: mealId,
         trip_id: tripId,
         trip_date: parsedInput.tripDate,
+        is_backup: parsedInput.isBackup,
         title: parsedInput.title,
         start_time: parsedInput.startTime,
         end_time: parsedInput.endTime,
@@ -1195,6 +1218,7 @@ export function createSupabaseTripRepository(): TripRepository {
 
       const parsedInput = CreateMealInputSchema.parse({
         tripDate: currentMeal.tripDate,
+        isBackup: currentMeal.isBackup,
         title: currentMeal.title,
         startTime: currentMeal.startTime,
         endTime: currentMeal.endTime,
@@ -1206,6 +1230,7 @@ export function createSupabaseTripRepository(): TripRepository {
         .from("meals")
         .update({
           trip_date: parsedInput.tripDate,
+          is_backup: parsedInput.isBackup,
           title: parsedInput.title,
           start_time: parsedInput.startTime,
           end_time: parsedInput.endTime,
@@ -1250,15 +1275,15 @@ export function createSupabaseTripRepository(): TripRepository {
       const parsedInput = CreateActivityInputSchema.parse(input)
       const client = createUserSupabaseClient(accessToken)
       const activityId = randomUUID()
-      const highestSortOrder = await getHighestDayItemSortOrder(
-        client,
-        tripId,
-        parsedInput.tripDate,
-      )
+      const highestSortOrder =
+        parsedInput.isBackup || !parsedInput.tripDate
+          ? -1
+          : await getHighestDayItemSortOrder(client, tripId, parsedInput.tripDate)
       const { error } = await client.from("activities").insert({
         id: activityId,
         trip_id: tripId,
         trip_date: parsedInput.tripDate,
+        is_backup: parsedInput.isBackup,
         title: parsedInput.title,
         start_time: parsedInput.startTime,
         end_time: parsedInput.endTime,
@@ -1287,6 +1312,7 @@ export function createSupabaseTripRepository(): TripRepository {
 
       const parsedInput = CreateActivityInputSchema.parse({
         tripDate: currentActivity.tripDate,
+        isBackup: currentActivity.isBackup,
         title: currentActivity.title,
         startTime: currentActivity.startTime,
         endTime: currentActivity.endTime,
@@ -1299,6 +1325,7 @@ export function createSupabaseTripRepository(): TripRepository {
         .from("activities")
         .update({
           trip_date: parsedInput.tripDate,
+          is_backup: parsedInput.isBackup,
           title: parsedInput.title,
           start_time: parsedInput.startTime,
           end_time: parsedInput.endTime,

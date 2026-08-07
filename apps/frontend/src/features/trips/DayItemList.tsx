@@ -26,6 +26,8 @@ type DayItemListProps = {
   onStartMoving: (record: DayItemRecord) => void
   onEditActivity: (activity: Activity) => void
   onEditMeal: (meal: Meal) => void
+  onMoveActivityToBackup: (activity: Activity) => void
+  onMoveMealToBackup: (meal: Meal) => void
   onDeleteActivity: (activity: Activity) => void
   onDeleteMeal: (meal: Meal) => void
   renderEditForm: (date: string) => ReactNode
@@ -60,6 +62,8 @@ export function DayItemList({
   onStartMoving,
   onEditActivity,
   onEditMeal,
+  onMoveActivityToBackup,
+  onMoveMealToBackup,
   onDeleteActivity,
   onDeleteMeal,
   renderEditForm,
@@ -151,6 +155,18 @@ export function DayItemList({
                   type="button"
                 >
                   {t("common.move")}
+                </button>
+                <button
+                  className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
+                  disabled={editingItemId !== null || movingItem !== null}
+                  onClick={() =>
+                    record.itemType === "meal"
+                      ? onMoveMealToBackup(record.item)
+                      : onMoveActivityToBackup(record.item)
+                  }
+                  type="button"
+                >
+                  {t("backup.moveToBackup")}
                 </button>
                 <button
                   className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"

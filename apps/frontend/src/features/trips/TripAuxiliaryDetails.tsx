@@ -19,6 +19,7 @@ type TripAuxiliaryDetailsProps = {
   accessToken: string
   trip: TripDetail
   onTripUpdated: (trip: TripDetail) => void
+  onMoveHousingToBackup: (stay: HousingStay) => void
   selectedDayDate?: string
   selectedDayDates?: string[]
   userId: string
@@ -36,6 +37,7 @@ export function TripAuxiliaryDetails({
   accessToken,
   trip,
   onTripUpdated,
+  onMoveHousingToBackup,
   selectedDayDate,
   selectedDayDates,
   userId,
@@ -44,10 +46,17 @@ export function TripAuxiliaryDetails({
 }: TripAuxiliaryDetailsProps) {
   const { t } = useTranslation()
   const visibleHousingStays = selectedDayDates
-    ? trip.housingStays.filter((stay) =>
-        selectedDayDates.some((dayDate) => stay.checkIn <= dayDate && dayDate < stay.checkOut),
+    ? trip.housingStays.filter((stay) => {
+        if (stay.isBackup || stay.checkIn === null || stay.checkOut === null) {
+          return false
+        }
+
+        const { checkIn, checkOut } = stay
+        return selectedDayDates.some((dayDate) => checkIn <= dayDate && dayDate < checkOut)
+      })
+    : trip.housingStays.filter(
+        (stay) => !stay.isBackup && stay.checkIn !== null && stay.checkOut !== null,
       )
-    : trip.housingStays
   const [formMode, setFormMode] = useState<FormMode>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState("")
@@ -82,8 +91,8 @@ export function TripAuxiliaryDetails({
     setFormMode("housing")
     setEditingId(stay.id)
     setName(stay.name)
-    setCheckIn(stay.checkIn)
-    setCheckOut(stay.checkOut)
+    setCheckIn(stay.checkIn ?? trip.startDate)
+    setCheckOut(stay.checkOut ?? shiftDate(trip.endDate, 1))
     setNotes(stay.notes ?? "")
     setError(null)
   }
@@ -100,12 +109,14 @@ export function TripAuxiliaryDetails({
               name,
               checkIn,
               checkOut,
+              isBackup: false,
               notes,
             })
           : await createHousingStay(accessToken, trip.id, {
               name,
               checkIn,
               checkOut,
+              isBackup: false,
               notes,
             })
         onTripUpdated({
@@ -218,7 +229,8 @@ export function TripAuxiliaryDetails({
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-brand">{stay.name}</p>
                     <p className="mt-1 text-sm text-muted">
-                      {formatDate(stay.checkIn)} – {formatDate(stay.checkOut)}
+                      {formatDate(stay.checkIn ?? trip.startDate)} –{" "}
+                      {formatDate(stay.checkOut ?? shiftDate(trip.endDate, 1))}
                     </p>
                   </div>
                   {stay.notes?.trim() && (
@@ -233,6 +245,13 @@ export function TripAuxiliaryDetails({
                     userId={userId}
                   />
                   <div className="flex justify-end gap-2">
+                    <button
+                      className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted"
+                      onClick={() => onMoveHousingToBackup(stay)}
+                      type="button"
+                    >
+                      {t("backup.moveToBackup")}
+                    </button>
                     <button
                       className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted"
                       onClick={() => editHousing(stay)}

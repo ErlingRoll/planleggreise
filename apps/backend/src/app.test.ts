@@ -38,6 +38,7 @@ const testTripDetail: TripDetail = {
     { date: "2026-08-11", dayNumber: 2, title: null, notes: null, activities: [] },
     { date: "2026-08-12", dayNumber: 3, title: null, notes: null, activities: [] },
   ],
+  backupActivities: [],
   housingStays: [],
   meals: [],
   preferences: [],
@@ -47,6 +48,7 @@ const testActivity: Activity = {
   id: "activity-1",
   tripId: "trip-1",
   tripDate: "2026-08-11",
+  isBackup: false,
   title: "Besøke museet",
   startTime: "10:00",
   endTime: "12:00",
@@ -182,6 +184,7 @@ function createTestApp(
           ...testActivity,
           id: item.itemId,
           tripDate: item.tripDate,
+          isBackup: false,
           sortOrder: item.sortOrder,
         })),
       meals: input.items
@@ -190,6 +193,7 @@ function createTestApp(
           id: item.itemId,
           tripId: "trip-1",
           tripDate: item.tripDate,
+          isBackup: false,
           title: "Test meal",
           startTime: null,
           endTime: null,
@@ -674,6 +678,59 @@ test("authenticated users can create an activity within a trip", async () => {
 
   assert.equal(response.status, 201)
   assert.equal(response.body.title, "Ny aktivitet")
+  assert.equal(response.body.tripDate, "2026-08-11")
+})
+
+test("authenticated users can create an activity in the backup area without a date", async () => {
+  const response = await request(createTestApp())
+    .post("/api/trips/trip-1/activities")
+    .set("Authorization", "Bearer valid-token")
+    .send({
+      tripDate: null,
+      isBackup: true,
+      title: "Alternativ aktivitet",
+      startTime: null,
+      endTime: null,
+      allDay: true,
+      notes: null,
+    })
+
+  assert.equal(response.status, 201)
+  assert.equal(response.body.isBackup, true)
+  assert.equal(response.body.tripDate, null)
+})
+
+test("backup activity can be moved into the plan", async () => {
+  const backupActivity: Activity = {
+    ...testActivity,
+    tripDate: null,
+    isBackup: true,
+  }
+  const response = await request(
+    createTestApp(
+      undefined,
+      {
+        ...testTripDetail,
+        backupActivities: [backupActivity],
+        days: testTripDetail.days.map((day) =>
+          day.date === "2026-08-11" ? { ...day, activities: [] } : day,
+        ),
+      },
+      {
+        updateActivity: async (_userId, _accessToken, _tripId, _activityId, input) => ({
+          ...backupActivity,
+          ...input,
+        }),
+        getActivity: async () => backupActivity,
+      },
+    ),
+  )
+    .patch("/api/trips/trip-1/activities/activity-1")
+    .set("Authorization", "Bearer valid-token")
+    .send({ isBackup: false, tripDate: "2026-08-11" })
+
+  assert.equal(response.status, 200)
+  assert.equal(response.body.isBackup, false)
   assert.equal(response.body.tripDate, "2026-08-11")
 })
 

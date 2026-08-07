@@ -656,7 +656,8 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         const activities = currentTrip.days.flatMap((day) => day.activities)
         const activityOutsideTrip = activities.some(
-          (activity) => !isDateWithinTrip(nextTrip, activity.tripDate),
+          (activity) =>
+            activity.tripDate !== null && !isDateWithinTrip(nextTrip, activity.tripDate),
         )
 
         if (activityOutsideTrip) {
@@ -1013,7 +1014,7 @@ export function createApp(dependencies: AppDependencies = {}) {
           return
         }
 
-        if (!isDateWithinTrip(trip, parsedInput.data.tripDate)) {
+        if (parsedInput.data.tripDate && !isDateWithinTrip(trip, parsedInput.data.tripDate)) {
           response.status(400).json({ message: "The meal date must be within the trip dates" })
           return
         }
@@ -1101,6 +1102,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         const nextMeal = CreateMealInputSchema.safeParse({
           tripDate: currentMeal.tripDate,
+          isBackup: currentMeal.isBackup,
           title: currentMeal.title,
           startTime: currentMeal.startTime,
           endTime: currentMeal.endTime,
@@ -1120,7 +1122,7 @@ export function createApp(dependencies: AppDependencies = {}) {
           return
         }
 
-        if (!isDateWithinTrip(trip, nextMeal.data.tripDate)) {
+        if (nextMeal.data.tripDate && !isDateWithinTrip(trip, nextMeal.data.tripDate)) {
           response.status(400).json({ message: "The meal date must be within the trip dates" })
           return
         }
@@ -1240,7 +1242,7 @@ export function createApp(dependencies: AppDependencies = {}) {
           return
         }
 
-        if (!isDateWithinTrip(trip, parsedInput.data.tripDate)) {
+        if (parsedInput.data.tripDate && !isDateWithinTrip(trip, parsedInput.data.tripDate)) {
           response.status(400).json({
             message: "The activity date must be within the trip dates",
           })
@@ -1480,6 +1482,7 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         const nextActivity = {
           tripDate: currentActivity.tripDate,
+          isBackup: currentActivity.isBackup,
           title: currentActivity.title,
           startTime: currentActivity.startTime,
           endTime: currentActivity.endTime,
@@ -1497,7 +1500,10 @@ export function createApp(dependencies: AppDependencies = {}) {
           return
         }
 
-        if (!isDateWithinTrip(trip, parsedNextActivity.data.tripDate)) {
+        if (
+          parsedNextActivity.data.tripDate &&
+          !isDateWithinTrip(trip, parsedNextActivity.data.tripDate)
+        ) {
           response.status(400).json({
             message: "The activity date must be within the trip dates",
           })

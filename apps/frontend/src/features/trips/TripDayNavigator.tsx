@@ -43,7 +43,12 @@ export function TripDayNavigator({
             const isActive = day.date === selectedDay.date
             const isChecked = selectedDayDates.includes(day.date)
             const hasHousing = housingStays.some(
-              (stay) => stay.checkIn <= day.date && day.date < stay.checkOut,
+              (stay) =>
+                !stay.isBackup &&
+                stay.checkIn !== null &&
+                stay.checkOut !== null &&
+                stay.checkIn <= day.date &&
+                day.date < stay.checkOut,
             )
 
             return (

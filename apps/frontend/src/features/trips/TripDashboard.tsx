@@ -7,6 +7,7 @@ import { getErrorMessage } from "../../lib/errors"
 import { formatDateRange } from "../../lib/date-format"
 import { getSupabaseClient } from "../../lib/supabase"
 import { TripDetails } from "./TripDetails"
+import { TripBackupPage } from "./TripBackupPage"
 import { TripForm } from "./TripForm"
 import { TravelMode } from "./TravelMode"
 import { useTripRealtime } from "./useTripRealtime"
@@ -25,6 +26,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
   const location = useLocation()
   const { tripId } = useParams<{ tripId: string }>()
   const isTravelMode = location.pathname.endsWith("/travel")
+  const isBackupMode = location.pathname.endsWith("/backup")
   const [trips, setTrips] = useState<Trip[]>([])
   const [selectedTrip, setSelectedTrip] = useState<TripDetail | null>(null)
   const [search, setSearch] = useState("")
@@ -99,7 +101,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
     isPaused: () => false,
     onError: setDetailsError,
     onTripUpdated: handleTripUpdated,
-    tripId: isTravelMode ? tripId : undefined,
+    tripId: isTravelMode || isBackupMode ? tripId : undefined,
   })
 
   const filteredTrips = useMemo(() => {
@@ -203,11 +205,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
       )}
 
       {tripId ? (
-        <section
-          className={`mx-auto ${
-            isTravelMode ? "max-w-2xl" : "max-w-7xl"
-          } px-5 pb-12 pt-6 sm:px-8 sm:pt-10`}
-        >
+        <section className="mx-auto max-w-7xl px-5 pb-12 pt-6 sm:px-8 sm:pt-10">
           <button
             className="inline-flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-muted transition hover:bg-surface-muted hover:text-on-surface"
             onClick={goBackToOverview}
@@ -217,18 +215,24 @@ export function TripDashboard({ session }: TripDashboardProps) {
             {t("dashboard.backToTrips")}
           </button>
           <h1 className="mt-5 text-3xl font-medium tracking-[-0.04em] text-brand">
-            {isTravelMode ? t("travelMode.title") : t("dashboard.plan")}
+            {isTravelMode
+              ? t("travelMode.title")
+              : isBackupMode
+                ? t("tripModes.backup")
+                : t("dashboard.plan")}
           </h1>
           {isTravelMode && detailsError && (
             <p className="mt-4 text-sm text-error">{detailsError}</p>
           )}
           <nav
             aria-label={t("tripModes.plan")}
-            className="mt-5 grid grid-cols-2 rounded-xl bg-surface-muted p-1"
+            className="mt-5 grid grid-cols-3 rounded-xl bg-surface-muted p-1"
           >
             <Link
               className={`rounded-lg px-3 py-2 text-center text-sm font-semibold ${
-                !isTravelMode ? "bg-surface text-on-surface shadow-sm" : "text-muted"
+                !isTravelMode && !isBackupMode
+                  ? "bg-surface text-on-surface shadow-sm"
+                  : "text-muted"
               }`}
               to={`/trips/${tripId}`}
             >
@@ -242,9 +246,24 @@ export function TripDashboard({ session }: TripDashboardProps) {
             >
               {t("tripModes.travel")}
             </Link>
+            <Link
+              className={`rounded-lg px-3 py-2 text-center text-sm font-semibold ${
+                isBackupMode ? "bg-surface text-on-surface shadow-sm" : "text-muted"
+              }`}
+              to={`/trips/${tripId}/backup`}
+            >
+              {t("tripModes.backup")}
+            </Link>
           </nav>
           {isTravelMode && selectedTrip ? (
             <TravelMode trip={selectedTrip} />
+          ) : isBackupMode && selectedTrip ? (
+            <TripBackupPage
+              accessToken={session.access_token}
+              onTripUpdated={handleTripUpdated}
+              trip={selectedTrip}
+              userId={session.user.id}
+            />
           ) : (
             <TripDetails
               accessToken={session.access_token}

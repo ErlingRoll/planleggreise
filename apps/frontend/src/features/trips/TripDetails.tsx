@@ -10,8 +10,10 @@ import {
   setTripItemPreference,
   updateTripDay,
   updateActivity,
+  updateHousingStay,
   updateMeal,
   type Activity,
+  type HousingStay,
   type Meal,
   type ReorderDayItemInput,
   type TripDetail,
@@ -343,7 +345,10 @@ export function TripDetails({
   }
 
   function getDayItems(day: TripDetail["days"][number], meals = currentTrip.meals) {
-    return sortDayItems([...day.activities, ...meals.filter((meal) => meal.tripDate === day.date)])
+    return sortDayItems([
+      ...day.activities,
+      ...meals.filter((meal) => !meal.isBackup && meal.tripDate === day.date),
+    ])
   }
 
   function getDayScheduleSummary(day: TripDetail["days"][number]) {
@@ -360,6 +365,61 @@ export function TripDetails({
     return meal
       ? { itemType: "meal", item: meal }
       : { itemType: "activity", item: item as Activity }
+  }
+
+  async function moveActivityToBackup(activity: Activity) {
+    setActivityError(null)
+    try {
+      const saved = await updateActivity(accessToken, currentTrip.id, activity.id, {
+        isBackup: true,
+      })
+      onTripUpdated({
+        ...currentTrip,
+        backupActivities: [...currentTrip.backupActivities, saved],
+        days: currentTrip.days.map((day) => ({
+          ...day,
+          activities: day.activities.filter(
+            (currentActivity) => currentActivity.id !== activity.id,
+          ),
+        })),
+      })
+    } catch (reason: unknown) {
+      setActivityError(getErrorMessage(reason))
+    }
+  }
+
+  async function moveMealToBackup(meal: Meal) {
+    setActivityError(null)
+    try {
+      const saved = await updateMeal(accessToken, currentTrip.id, meal.id, {
+        isBackup: true,
+      })
+      onTripUpdated({
+        ...currentTrip,
+        meals: currentTrip.meals.map((currentMeal) =>
+          currentMeal.id === meal.id ? saved : currentMeal,
+        ),
+      })
+    } catch (reason: unknown) {
+      setActivityError(getErrorMessage(reason))
+    }
+  }
+
+  async function moveHousingToBackup(stay: HousingStay) {
+    setActivityError(null)
+    try {
+      const saved = await updateHousingStay(accessToken, currentTrip.id, stay.id, {
+        isBackup: true,
+      })
+      onTripUpdated({
+        ...currentTrip,
+        housingStays: currentTrip.housingStays.map((currentStay) =>
+          currentStay.id === stay.id ? saved : currentStay,
+        ),
+      })
+    } catch (reason: unknown) {
+      setActivityError(getErrorMessage(reason))
+    }
   }
 
   function buildOptimisticTrip(trip: TripDetail, affectedDays: Map<string, DayItem[]>) {
@@ -494,7 +554,7 @@ export function TripDetails({
 
   function startMovingItem(record: DayItemRecord) {
     setMovingItem(record)
-    setMoveTargetDate(record.item.tripDate)
+    setMoveTargetDate(record.item.tripDate ?? "")
     setEditingItemId(null)
     setEditingItemType(null)
     setActivityError(null)
@@ -813,6 +873,7 @@ export function TripDetails({
     try {
       const input = {
         tripDate: date,
+        isBackup: false,
         title: title.trim() || null,
         startTime: allDay || !startTime ? null : startTime,
         endTime: allDay || !endTime ? null : endTime,
@@ -1141,6 +1202,7 @@ export function TripDetails({
             <TripAuxiliaryDetails
               accessToken={accessToken}
               onTripUpdated={onTripUpdated}
+              onMoveHousingToBackup={(stay) => void moveHousingToBackup(stay)}
               onPreferenceChange={(itemType, itemId, value) => {
                 void handlePreferenceChange(itemType, itemId, value)
               }}
@@ -1193,6 +1255,8 @@ export function TripDetails({
                   }}
                   onEditActivity={editActivity}
                   onEditMeal={editMeal}
+                  onMoveActivityToBackup={(activity) => void moveActivityToBackup(activity)}
+                  onMoveMealToBackup={(meal) => void moveMealToBackup(meal)}
                   onItemDragEnd={() => {
                     setDraggedItem(null)
                     setDropTarget(null)
@@ -1219,6 +1283,7 @@ export function TripDetails({
             <TripAuxiliaryDetails
               accessToken={accessToken}
               onTripUpdated={onTripUpdated}
+              onMoveHousingToBackup={(stay) => void moveHousingToBackup(stay)}
               onPreferenceChange={(itemType, itemId, value) => {
                 void handlePreferenceChange(itemType, itemId, value)
               }}
@@ -1234,6 +1299,7 @@ export function TripDetails({
           <TripAuxiliaryDetails
             accessToken={accessToken}
             onTripUpdated={onTripUpdated}
+            onMoveHousingToBackup={(stay) => void moveHousingToBackup(stay)}
             onPreferenceChange={(itemType, itemId, value) => {
               void handlePreferenceChange(itemType, itemId, value)
             }}

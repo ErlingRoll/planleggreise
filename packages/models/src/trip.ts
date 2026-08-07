@@ -59,7 +59,8 @@ export const UpdateTripInputSchema = z.object({
 })
 
 const ActivityFieldsSchema = z.object({
-  tripDate: DateOnlySchema,
+  tripDate: DateOnlySchema.nullable().optional().default(null),
+  isBackup: z.boolean().default(false),
   title: z.string().trim().max(200).nullable(),
   startTime: TimeOnlySchema.nullable(),
   endTime: TimeOnlySchema.nullable(),
@@ -96,13 +97,18 @@ export const CreateActivityInputSchema = ActivityFieldsSchema.extend({
     "An activity title or Google Maps link is required",
   )
   .refine(
+    (activity) => activity.isBackup || activity.tripDate !== null,
+    "A planned activity must have a date",
+  )
+  .refine(
     (activity) => hasValidTimeRange(activity.startTime, activity.endTime),
     "End time must be on or after start time",
   )
 
 export const UpdateActivityInputSchema = z
   .object({
-    tripDate: DateOnlySchema.optional(),
+    tripDate: DateOnlySchema.nullable().optional(),
+    isBackup: z.boolean().optional(),
     title: z.string().trim().max(200).nullable().optional(),
     startTime: TimeOnlySchema.nullable().optional(),
     endTime: TimeOnlySchema.nullable().optional(),
@@ -130,8 +136,9 @@ export const ReorderActivitiesInputSchema = z.object({
 
 const HousingStayFieldsSchema = z.object({
   name: z.string().trim().min(1).max(200),
-  checkIn: DateOnlySchema,
-  checkOut: DateOnlySchema,
+  checkIn: DateOnlySchema.nullable().optional().default(null),
+  checkOut: DateOnlySchema.nullable().optional().default(null),
+  isBackup: z.boolean().default(false),
   notes: NoteSchema,
 })
 
@@ -141,24 +148,33 @@ export const HousingStaySchema = HousingStayFieldsSchema.extend({
 })
 
 export const CreateHousingStayInputSchema = HousingStayFieldsSchema.refine(
-  (stay) => stay.checkOut > stay.checkIn,
-  "Check-out must be after check-in",
+  (stay) =>
+    stay.isBackup ||
+    (stay.checkIn !== null && stay.checkOut !== null && stay.checkOut > stay.checkIn),
+  "A planned housing stay must have a valid date range",
 )
 
 export const UpdateHousingStayInputSchema = z
   .object({
     name: z.string().trim().min(1).max(200).optional(),
-    checkIn: DateOnlySchema.optional(),
-    checkOut: DateOnlySchema.optional(),
+    checkIn: DateOnlySchema.nullable().optional(),
+    checkOut: DateOnlySchema.nullable().optional(),
+    isBackup: z.boolean().optional(),
     notes: NoteSchema.optional(),
   })
   .refine(
-    (stay) => !stay.checkIn || !stay.checkOut || stay.checkOut > stay.checkIn,
+    (stay) =>
+      stay.checkIn === undefined ||
+      stay.checkOut === undefined ||
+      stay.checkIn === null ||
+      stay.checkOut === null ||
+      stay.checkOut > stay.checkIn,
     "Check-out must be after check-in",
   )
 
 const MealFieldsSchema = z.object({
-  tripDate: DateOnlySchema,
+  tripDate: DateOnlySchema.nullable().optional().default(null),
+  isBackup: z.boolean().default(false),
   title: z.string().trim().max(200).nullable(),
   startTime: TimeOnlySchema.nullable(),
   endTime: TimeOnlySchema.nullable(),
@@ -181,6 +197,7 @@ export const CreateMealInputSchema = MealFieldsSchema.extend({
     (meal) => Boolean(meal.title?.trim()) || Boolean(meal.googleMapsUrl),
     "A meal title or Google Maps link is required",
   )
+  .refine((meal) => meal.isBackup || meal.tripDate !== null, "A planned meal must have a date")
   .refine(
     (meal) => hasValidTimeRange(meal.startTime, meal.endTime),
     "End time must be on or after start time",
@@ -188,7 +205,8 @@ export const CreateMealInputSchema = MealFieldsSchema.extend({
 
 export const UpdateMealInputSchema = z
   .object({
-    tripDate: DateOnlySchema.optional(),
+    tripDate: DateOnlySchema.nullable().optional(),
+    isBackup: z.boolean().optional(),
     title: z.string().trim().max(200).nullable().optional(),
     startTime: TimeOnlySchema.nullable().optional(),
     endTime: TimeOnlySchema.nullable().optional(),
@@ -219,6 +237,7 @@ export const UpdateTripDayInputSchema = z.object({
 
 export const TripDetailSchema = TripSchema.extend({
   days: TripDaySchema.array(),
+  backupActivities: ActivitySchema.array().default([]),
   housingStays: HousingStaySchema.array().default([]),
   meals: MealSchema.array().default([]),
   preferences: TripItemPreferenceSchema.array().default([]),
