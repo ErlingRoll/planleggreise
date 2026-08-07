@@ -938,6 +938,18 @@ export function TripDetails({
     }
   }
 
+  function handlePlannerViewChange(value: string) {
+    if (value === "housing") {
+      setShowMobileHousing(true)
+      return
+    }
+
+    if (value === "all" || value === "activities" || value === "meals") {
+      setShowMobileHousing(false)
+      setPlannerTab(value)
+    }
+  }
+
   return (
     <div className="mt-6">
       <TripDetailsHeader
@@ -971,44 +983,50 @@ export function TripDetails({
         />
 
         <div className="min-w-0">
-          <div className="mb-4 grid grid-cols-4 gap-1 rounded-xl bg-surface-muted p-1 lg:grid-cols-3">
-            {(["all", "activities", "meals"] as const).map((tab) => (
-              <button
-                className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-                  !showMobileHousing && plannerTab === tab
-                    ? "bg-surface text-on-surface shadow-sm"
-                    : "text-muted"
-                }`}
-                key={tab}
-                onClick={() => {
-                  setShowMobileHousing(false)
-                  setPlannerTab(tab)
-                }}
-                type="button"
-              >
-                {tab === "all"
-                  ? t("tripDetails.all")
-                  : tab === "activities"
-                    ? t("tripDetails.activities")
-                    : t("tripDetails.meals")}
-              </button>
-            ))}
-            <button
-              className={`rounded-lg px-3 py-2 text-sm font-semibold lg:hidden ${
-                showMobileHousing ? "bg-surface text-on-surface shadow-sm" : "text-muted"
-              }`}
-              onClick={() => setShowMobileHousing(true)}
-              type="button"
+          <div className="sticky top-3 z-20 mb-4 lg:static">
+            <label className="sr-only" htmlFor="mobile-planner-view">
+              {t("tripDetails.plannerView")}
+            </label>
+            <select
+              aria-label={t("tripDetails.plannerView")}
+              className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm font-semibold text-on-surface shadow-card outline-none focus:border-brand lg:hidden"
+              id="mobile-planner-view"
+              onChange={(event) => handlePlannerViewChange(event.target.value)}
+              value={showMobileHousing ? "housing" : plannerTab}
             >
-              {t("tripDetails.housing")}
-            </button>
+              <option value="all">{t("tripDetails.all")}</option>
+              <option value="activities">{t("tripDetails.activities")}</option>
+              <option value="meals">{t("tripDetails.meals")}</option>
+              <option value="housing">{t("tripDetails.housing")}</option>
+            </select>
+            <div className="hidden rounded-xl bg-surface-muted p-1 lg:grid lg:grid-cols-3">
+              {(["all", "activities", "meals"] as const).map((tab) => (
+                <button
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+                    !showMobileHousing && plannerTab === tab
+                      ? "bg-surface text-on-surface shadow-sm"
+                      : "text-muted"
+                  }`}
+                  key={tab}
+                  onClick={() => {
+                    setShowMobileHousing(false)
+                    setPlannerTab(tab)
+                  }}
+                  type="button"
+                >
+                  {tab === "all"
+                    ? t("tripDetails.all")
+                    : tab === "activities"
+                      ? t("tripDetails.activities")
+                      : t("tripDetails.meals")}
+                </button>
+              ))}
+            </div>
           </div>
           <div className={`${showMobileHousing ? "block" : "hidden"} lg:hidden`}>
             <TripAuxiliaryDetails
               accessToken={accessToken}
               onTripUpdated={onTripUpdated}
-              selectedDayDate={selectedDay.date}
-              selectedDayDates={selectedDayDates}
               trip={currentTrip}
             />
           </div>
