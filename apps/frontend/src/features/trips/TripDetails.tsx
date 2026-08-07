@@ -7,6 +7,7 @@ import {
   deleteMeal,
   getTrip,
   reorderDayItems,
+  setTripItemPreference,
   updateTripDay,
   updateActivity,
   updateMeal,
@@ -35,6 +36,7 @@ import { TripDetailsHeader } from "./TripDetailsHeader"
 import { useTripRealtime } from "./useTripRealtime"
 import type { DayItemRecord, DropTarget, MovingItem, PlannerTab } from "./planner-types"
 import { isAllowedGoogleMapsUrl } from "@turprep/models"
+import type { TripItemPreferenceValue, TripItemType } from "@turprep/models"
 import { storageKeys } from "../../lib/brand"
 
 const daySelectionCookiePrefix = storageKeys.selectedDaysPrefix
@@ -102,6 +104,7 @@ type TripDetailsProps = {
   error: string | null
   onTripUpdated: (trip: TripDetail) => void
   onTripDeleted: (trip: TripDetail) => Promise<void>
+  userId: string
 }
 
 type PendingDeletion = { item: Activity; type: "activity" } | { item: Meal; type: "meal" }
@@ -127,6 +130,7 @@ export function TripDetails({
   error,
   onTripUpdated,
   onTripDeleted,
+  userId,
 }: TripDetailsProps) {
   const { t } = useTranslation()
   const [openDay, setOpenDay] = useState<string | null>(null)
@@ -153,6 +157,7 @@ export function TripDetails({
   const [lastClickedDayDate, setLastClickedDayDate] = useState("")
   const [plannerTab, setPlannerTab] = useState<PlannerTab>("all")
   const [showMobileHousing, setShowMobileHousing] = useState(false)
+  const [savingPreferenceKey, setSavingPreferenceKey] = useState<string | null>(null)
   const [draggedItem, setDraggedItem] = useState<DayItemRecord | null>(null)
   const [movingItem, setMovingItem] = useState<MovingItem | null>(null)
   const [moveTargetDate, setMoveTargetDate] = useState("")
@@ -995,6 +1000,69 @@ export function TripDetails({
     }
   }
 
+  async function handlePreferenceChange(
+    itemType: TripItemType,
+    itemId: string,
+    value: TripItemPreferenceValue | null,
+  ) {
+    if (!trip) {
+      return
+    }
+
+    const preferenceKey = `${itemType}:${itemId}`
+    const previousPreferences = trip.preferences
+    const optimisticPreferences = previousPreferences.filter(
+      (preference) =>
+        !(
+          preference.userId === userId &&
+          preference.itemType === itemType &&
+          preference.itemId === itemId
+        ),
+    )
+
+    if (value !== null) {
+      optimisticPreferences.push({
+        id: `optimistic:${preferenceKey}`,
+        tripId: trip.id,
+        userId,
+        itemType,
+        itemId,
+        value,
+        updatedAt: new Date().toISOString(),
+      })
+    }
+
+    setSavingPreferenceKey(preferenceKey)
+    onTripUpdated({ ...trip, preferences: optimisticPreferences })
+
+    try {
+      const savedPreference = await setTripItemPreference(accessToken, trip.id, {
+        itemType,
+        itemId,
+        value,
+      })
+      const remainingPreferences = optimisticPreferences.filter(
+        (preference) =>
+          !(
+            preference.userId === userId &&
+            preference.itemType === itemType &&
+            preference.itemId === itemId
+          ),
+      )
+
+      if (savedPreference) {
+        remainingPreferences.push(savedPreference)
+      }
+
+      onTripUpdated({ ...trip, preferences: remainingPreferences })
+    } catch (reason: unknown) {
+      onTripUpdated({ ...trip, preferences: previousPreferences })
+      setActivityError(getErrorMessage(reason))
+    } finally {
+      setSavingPreferenceKey(null)
+    }
+  }
+
   return (
     <div className="mt-6">
       <TripDetailsHeader
@@ -1073,7 +1141,12 @@ export function TripDetails({
             <TripAuxiliaryDetails
               accessToken={accessToken}
               onTripUpdated={onTripUpdated}
+              onPreferenceChange={(itemType, itemId, value) => {
+                void handlePreferenceChange(itemType, itemId, value)
+              }}
+              savingPreferenceKey={savingPreferenceKey}
               trip={currentTrip}
+              userId={userId}
             />
           </div>
           <div className={`grid gap-3 ${showMobileHousing ? "hidden lg:grid" : ""}`}>
@@ -1130,8 +1203,14 @@ export function TripDetails({
                     void handleDayItemDrop(event, date, itemIndex)
                   }}
                   onStartMoving={startMovingItem}
+                  onPreferenceChange={(itemType, itemId, value) => {
+                    void handlePreferenceChange(itemType, itemId, value)
+                  }}
                   renderEditForm={renderDayItemForm}
                   renderMoveForm={renderMoveItemForm}
+                  preferences={currentTrip.preferences}
+                  savingPreferenceKey={savingPreferenceKey}
+                  userId={userId}
                 />
               </TripDayCard>
             ))}
@@ -1140,9 +1219,14 @@ export function TripDetails({
             <TripAuxiliaryDetails
               accessToken={accessToken}
               onTripUpdated={onTripUpdated}
+              onPreferenceChange={(itemType, itemId, value) => {
+                void handlePreferenceChange(itemType, itemId, value)
+              }}
               selectedDayDate={selectedDay.date}
               selectedDayDates={selectedDayDates}
+              savingPreferenceKey={savingPreferenceKey}
               trip={currentTrip}
+              userId={userId}
             />
           </div>
         </div>
@@ -1150,9 +1234,14 @@ export function TripDetails({
           <TripAuxiliaryDetails
             accessToken={accessToken}
             onTripUpdated={onTripUpdated}
+            onPreferenceChange={(itemType, itemId, value) => {
+              void handlePreferenceChange(itemType, itemId, value)
+            }}
             selectedDayDate={selectedDay.date}
             selectedDayDates={selectedDayDates}
+            savingPreferenceKey={savingPreferenceKey}
             trip={currentTrip}
+            userId={userId}
           />
         </aside>
       </div>

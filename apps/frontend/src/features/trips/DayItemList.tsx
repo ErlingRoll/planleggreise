@@ -2,6 +2,8 @@ import type { DragEvent, ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 import { formatActivityTime, getDayItemTitle, type DayItem } from "../../lib/activity-format"
 import type { Activity, Meal, TripDetail } from "../../api"
+import { TripItemPreference } from "../../components/TripItemPreference"
+import type { TripItemPreferenceValue, TripItemType } from "@turprep/models"
 import type { DayItemRecord, DropTarget, MovingItem, PlannerTab } from "./planner-types"
 
 type DayItemListProps = {
@@ -28,6 +30,14 @@ type DayItemListProps = {
   onDeleteMeal: (meal: Meal) => void
   renderEditForm: (date: string) => ReactNode
   renderMoveForm: () => ReactNode
+  preferences: TripDetail["preferences"]
+  userId: string
+  savingPreferenceKey: string | null
+  onPreferenceChange: (
+    itemType: TripItemType,
+    itemId: string,
+    value: TripItemPreferenceValue | null,
+  ) => void
 }
 
 export function DayItemList({
@@ -54,6 +64,10 @@ export function DayItemList({
   onDeleteMeal,
   renderEditForm,
   renderMoveForm,
+  preferences,
+  userId,
+  savingPreferenceKey,
+  onPreferenceChange,
 }: DayItemListProps) {
   const { t } = useTranslation()
   const orderedItems =
@@ -167,6 +181,14 @@ export function DayItemList({
               </div>
             </div>
             {editingItemId === item.id && renderEditForm(day.date)}
+            <TripItemPreference
+              disabled={savingPreferenceKey === `${record.itemType}:${item.id}`}
+              itemId={item.id}
+              itemType={record.itemType}
+              onChange={(value) => onPreferenceChange(record.itemType, item.id, value)}
+              preferences={preferences}
+              userId={userId}
+            />
             {movingItem?.item.id === item.id && renderMoveForm()}
             {dropTarget?.dayDate === day.date &&
               dropTarget.index === fullItemIndex + 1 &&

@@ -13,6 +13,7 @@ import type {
   Trip,
   TripDetail,
   TripAccessLink,
+  TripItemPreference,
   TripSharing,
   UpdateTripInput,
   UpdateActivityInput,
@@ -39,6 +40,7 @@ const testTripDetail: TripDetail = {
   ],
   housingStays: [],
   meals: [],
+  preferences: [],
 }
 
 const testActivity: Activity = {
@@ -211,6 +213,7 @@ function createTestApp(
     revokeTripAccessLink: async () => null,
     removeTripMember: async () => null,
     deleteActivity: async () => true,
+    setTripItemPreference: async () => null,
   }
 
   return createApp({
@@ -232,6 +235,82 @@ test("trip list requires authentication", async () => {
 
   assert.equal(response.status, 401)
   assert.equal(response.body.message, "Authentication required")
+})
+
+test("preference updates require authentication", async () => {
+  const response = await request(createTestApp())
+    .put("/api/trips/trip-1/preferences")
+    .send({ itemType: "activity", itemId: "activity-1", value: "green" })
+
+  assert.equal(response.status, 401)
+})
+
+test("authenticated users can create, update, and remove item preferences", async () => {
+  let preference: TripItemPreference | null = null
+  const app = createTestApp(undefined, testTripDetail, {
+    setTripItemPreference: async (userId, _accessToken, tripId, input) => {
+      if (input.value === null) {
+        preference = null
+        return null
+      }
+
+      preference = {
+        id: preference?.id ?? "preference-1",
+        tripId,
+        userId,
+        itemType: input.itemType,
+        itemId: input.itemId,
+        value: input.value,
+        updatedAt: "2026-08-10T12:00:00.000Z",
+      }
+      return preference
+    },
+  })
+
+  const createResponse = await request(app)
+    .put("/api/trips/trip-1/preferences")
+    .set("Authorization", "Bearer valid-token")
+    .send({ itemType: "activity", itemId: "activity-1", value: "green" })
+
+  assert.equal(createResponse.status, 200)
+  assert.equal(createResponse.body.value, "green")
+
+  const updateResponse = await request(app)
+    .put("/api/trips/trip-1/preferences")
+    .set("Authorization", "Bearer valid-token")
+    .send({ itemType: "activity", itemId: "activity-1", value: "red" })
+
+  assert.equal(updateResponse.status, 200)
+  assert.equal(updateResponse.body.value, "red")
+
+  const removeResponse = await request(app)
+    .put("/api/trips/trip-1/preferences")
+    .set("Authorization", "Bearer valid-token")
+    .send({ itemType: "activity", itemId: "activity-1", value: null })
+
+  assert.equal(removeResponse.status, 200)
+  assert.equal(removeResponse.body, null)
+})
+
+test("preference updates reject invalid item types", async () => {
+  const response = await request(createTestApp())
+    .put("/api/trips/trip-1/preferences")
+    .set("Authorization", "Bearer valid-token")
+    .send({ itemType: "invalid", itemId: "activity-1", value: "green" })
+
+  assert.equal(response.status, 400)
+})
+
+test("preference updates return not found for items outside the trip", async () => {
+  const app = createTestApp(undefined, testTripDetail, {
+    setTripItemPreference: async () => null,
+  })
+  const response = await request(app)
+    .put("/api/trips/trip-1/preferences")
+    .set("Authorization", "Bearer valid-token")
+    .send({ itemType: "meal", itemId: "meal-from-another-trip", value: "yellow" })
+
+  assert.equal(response.status, 404)
 })
 
 test("sharing endpoints require authentication", async () => {

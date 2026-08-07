@@ -14,12 +14,14 @@ import {
   ReorderDayItemsInputSchema,
   InviteTripMemberInputSchema,
   RequestTripAccessInputSchema,
+  SetTripItemPreferenceInputSchema,
   TripAccessLinkSchema,
   TripAccessRequestSchema,
   TripAccessStatusSchema,
   TripInvitationSchema,
   TripMemberSchema,
   TripSharingSchema,
+  TripItemPreferenceSchema,
   UpdateHousingStayInputSchema,
   UpdateMealInputSchema,
   UpdateTripDayInputSchema,
@@ -50,6 +52,8 @@ import {
   type TripSharing,
   type InviteTripMemberInput,
   type RequestTripAccessInput,
+  type SetTripItemPreferenceInput,
+  type TripItemPreference,
 } from "@turprep/models"
 import { z } from "zod"
 import type { SupabaseClient } from "@supabase/supabase-js"
@@ -151,6 +155,17 @@ const tripAccessRequestRowSchema = z.object({
   created_at: databaseDateTimeSchema,
 })
 
+const tripItemPreferenceRowSchema = z.object({
+  id: z.string(),
+  trip_id: z.string(),
+  user_id: z.string(),
+  activity_id: z.string().nullable(),
+  meal_id: z.string().nullable(),
+  housing_stay_id: z.string().nullable(),
+  value: z.enum(["green", "yellow", "red"]),
+  updated_at: databaseDateTimeSchema,
+})
+
 const activityColumns =
   "id, trip_id, trip_date, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order"
 const housingStayColumns = "id, trip_id, name, check_in, check_out, notes"
@@ -210,6 +225,12 @@ export interface TripRepository {
     tripId: string,
     input: UpdateTripInput,
   ): Promise<TripDetail | null>
+  setTripItemPreference(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+    input: SetTripItemPreferenceInput,
+  ): Promise<TripItemPreference | null>
   deleteTrip(userId: string, accessToken: string, tripId: string): Promise<boolean>
   updateDay(
     userId: string,
@@ -523,6 +544,39 @@ function mapTripAccessStatus(status: TripAccessStatus["status"], isNew = false):
   return TripAccessStatusSchema.parse({ status, isNew })
 }
 
+function mapTripItemPreferenceRow(row: unknown): TripItemPreference {
+  const parsedRow = tripItemPreferenceRowSchema.parse(row)
+  const itemTypeAndId =
+    parsedRow.activity_id !== null
+      ? { itemType: "activity" as const, itemId: parsedRow.activity_id }
+      : parsedRow.meal_id !== null
+        ? { itemType: "meal" as const, itemId: parsedRow.meal_id }
+        : parsedRow.housing_stay_id !== null
+          ? { itemType: "housing" as const, itemId: parsedRow.housing_stay_id }
+          : null
+
+  if (!itemTypeAndId) {
+    throw new Error("Trip item preference has no associated item")
+  }
+
+  return TripItemPreferenceSchema.parse({
+    id: parsedRow.id,
+    tripId: parsedRow.trip_id,
+    userId: parsedRow.user_id,
+    ...itemTypeAndId,
+    value: parsedRow.value,
+    updatedAt: parsedRow.updated_at,
+  })
+}
+
+function getPreferenceItemColumn(itemType: SetTripItemPreferenceInput["itemType"]) {
+  return itemType === "activity"
+    ? "activity_id"
+    : itemType === "meal"
+      ? "meal_id"
+      : "housing_stay_id"
+}
+
 async function getLatestTripAccessRequest(client: SupabaseClient, userId: string, tripId: string) {
   const { data, error } = await client
     .from("trip_access_requests")
@@ -644,6 +698,22 @@ async function listMeals(
   return z.array(mealRowSchema).parse(data).map(mapMealRow)
 }
 
+async function listTripItemPreferences(
+  client: ReturnType<typeof createUserSupabaseClient>,
+  tripId: string,
+): Promise<TripItemPreference[]> {
+  const { data, error } = await client
+    .from("trip_item_preferences")
+    .select("id, trip_id, user_id, activity_id, meal_id, housing_stay_id, value, updated_at")
+    .eq("trip_id", tripId)
+
+  if (error) {
+    throw error
+  }
+
+  return z.array(tripItemPreferenceRowSchema).parse(data).map(mapTripItemPreferenceRow)
+}
+
 function addActivitiesToDays(
   days: TripDetail["days"],
   activities: Activity[],
@@ -701,18 +771,110 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       const trip = mapTripRow(data)
-      const [activities, tripDays, housingStays, meals] = await Promise.all([
+      const [activities, tripDays, housingStays, meals, preferences] = await Promise.all([
         listActivities(client, tripId),
         listTripDays(client, tripId),
         listHousingStays(client, tripId),
         listMeals(client, tripId),
+        listTripItemPreferences(client, tripId),
       ])
       return TripDetailSchema.parse({
         ...trip,
         days: addActivitiesToDays(buildTripDays(trip), activities, tripDays),
         housingStays,
         meals,
+        preferences,
       })
+    },
+
+    async setTripItemPreference(userId, accessToken, tripId, input) {
+      const parsedInput = SetTripItemPreferenceInputSchema.parse(input)
+      const client = createUserSupabaseClient(accessToken)
+      const itemTable =
+        parsedInput.itemType === "activity"
+          ? "activities"
+          : parsedInput.itemType === "meal"
+            ? "meals"
+            : "housing_stays"
+      const itemColumn = getPreferenceItemColumn(parsedInput.itemType)
+
+      const { data: item, error: itemError } = await client
+        .from(itemTable)
+        .select("id")
+        .eq("id", parsedInput.itemId)
+        .eq("trip_id", tripId)
+        .maybeSingle()
+
+      if (itemError) {
+        throw itemError
+      }
+      if (!item) {
+        return null
+      }
+
+      const { data: existingRow, error: existingError } = await client
+        .from("trip_item_preferences")
+        .select("id, trip_id, user_id, activity_id, meal_id, housing_stay_id, value, updated_at")
+        .eq("trip_id", tripId)
+        .eq("user_id", userId)
+        .eq(itemColumn, parsedInput.itemId)
+        .maybeSingle()
+
+      if (existingError) {
+        throw existingError
+      }
+
+      if (parsedInput.value === null) {
+        if (!existingRow) {
+          return null
+        }
+
+        const { error: deleteError } = await client
+          .from("trip_item_preferences")
+          .delete()
+          .eq("id", existingRow.id)
+
+        if (deleteError) {
+          throw deleteError
+        }
+
+        return null
+      }
+
+      const itemValues =
+        parsedInput.itemType === "activity"
+          ? { activity_id: parsedInput.itemId, meal_id: null, housing_stay_id: null }
+          : parsedInput.itemType === "meal"
+            ? { activity_id: null, meal_id: parsedInput.itemId, housing_stay_id: null }
+            : { activity_id: null, meal_id: null, housing_stay_id: parsedInput.itemId }
+
+      const result = existingRow
+        ? await client
+            .from("trip_item_preferences")
+            .update({ value: parsedInput.value, updated_at: new Date().toISOString() })
+            .eq("id", existingRow.id)
+            .select(
+              "id, trip_id, user_id, activity_id, meal_id, housing_stay_id, value, updated_at",
+            )
+            .single()
+        : await client
+            .from("trip_item_preferences")
+            .insert({
+              trip_id: tripId,
+              user_id: userId,
+              ...itemValues,
+              value: parsedInput.value,
+            })
+            .select(
+              "id, trip_id, user_id, activity_id, meal_id, housing_stay_id, value, updated_at",
+            )
+            .single()
+
+      if (result.error) {
+        throw result.error
+      }
+
+      return mapTripItemPreferenceRow(result.data)
     },
 
     async createTrip(userId, accessToken, input, userEmail, userName) {

@@ -253,6 +253,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
               onTripDeleted={handleDeleteTrip}
               onTripUpdated={handleTripUpdated}
               trip={selectedTrip}
+              userId={session.user.id}
             />
           )}
         </section>

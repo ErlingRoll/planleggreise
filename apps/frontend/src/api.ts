@@ -9,6 +9,7 @@ import {
   ReorderActivitiesInputSchema,
   ReorderDayItemsInputSchema,
   ReorderedDayItemsSchema,
+  SetTripItemPreferenceInputSchema,
   InviteTripMemberInputSchema,
   RequestTripAccessInputSchema,
   TripAccessLinkSchema,
@@ -17,6 +18,7 @@ import {
   TripInvitationSchema,
   TripMemberSchema,
   TripSharingSchema,
+  TripItemPreferenceSchema,
   TripDaySchema,
   TripSchema,
   UpdateHousingStayInputSchema,
@@ -47,6 +49,8 @@ import {
   type TripInvitation,
   type TripMember,
   type TripSharing,
+  type SetTripItemPreferenceInput,
+  type TripItemPreference,
 } from "@turprep/models"
 import { HttpError, notifyUnhandledHttpError } from "./lib/http-errors"
 
@@ -75,6 +79,8 @@ export type {
   TripInvitation,
   TripMember,
   TripSharing,
+  SetTripItemPreferenceInput,
+  TripItemPreference,
 } from "@turprep/models"
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ""
@@ -113,6 +119,19 @@ export async function getTrips(accessToken: string): Promise<Trip[]> {
 
 export async function getTrip(accessToken: string, tripId: string): Promise<TripDetail> {
   return TripDetailSchema.parse(await request(`/api/trips/${tripId}`, accessToken))
+}
+
+export async function setTripItemPreference(
+  accessToken: string,
+  tripId: string,
+  input: SetTripItemPreferenceInput,
+): Promise<TripItemPreference | null> {
+  return TripItemPreferenceSchema.nullable().parse(
+    await request(`/api/trips/${tripId}/preferences`, accessToken, {
+      method: "PUT",
+      body: JSON.stringify(SetTripItemPreferenceInputSchema.parse(input)),
+    }),
+  )
 }
 
 export async function getTripSharing(accessToken: string, tripId: string): Promise<TripSharing> {

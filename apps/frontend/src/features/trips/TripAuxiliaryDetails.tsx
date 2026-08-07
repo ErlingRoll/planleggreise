@@ -9,9 +9,11 @@ import {
 } from "../../api"
 import { DatePicker } from "../../components/DatePicker"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
+import { TripItemPreference } from "../../components/TripItemPreference"
 import { getErrorMessage } from "../../lib/errors"
 import { shiftDate } from "../../lib/trip-dates"
 import { formatDate } from "../../lib/date-format"
+import type { TripItemPreferenceValue } from "@turprep/models"
 
 type TripAuxiliaryDetailsProps = {
   accessToken: string
@@ -19,6 +21,13 @@ type TripAuxiliaryDetailsProps = {
   onTripUpdated: (trip: TripDetail) => void
   selectedDayDate?: string
   selectedDayDates?: string[]
+  userId: string
+  savingPreferenceKey: string | null
+  onPreferenceChange: (
+    itemType: "housing",
+    itemId: string,
+    value: TripItemPreferenceValue | null,
+  ) => void
 }
 
 type FormMode = "housing" | null
@@ -29,6 +38,9 @@ export function TripAuxiliaryDetails({
   onTripUpdated,
   selectedDayDate,
   selectedDayDates,
+  userId,
+  savingPreferenceKey,
+  onPreferenceChange,
 }: TripAuxiliaryDetailsProps) {
   const { t } = useTranslation()
   const visibleHousingStays = selectedDayDates
@@ -212,6 +224,14 @@ export function TripAuxiliaryDetails({
                   {stay.notes?.trim() && (
                     <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{stay.notes}</p>
                   )}
+                  <TripItemPreference
+                    disabled={savingPreferenceKey === `housing:${stay.id}`}
+                    itemId={stay.id}
+                    itemType="housing"
+                    onChange={(value) => onPreferenceChange("housing", stay.id, value)}
+                    preferences={trip.preferences}
+                    userId={userId}
+                  />
                   <div className="flex justify-end gap-2">
                     <button
                       className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted"

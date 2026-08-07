@@ -70,6 +70,13 @@ const resources = {
         plan: "Plan",
         travel: "Reise",
       },
+      tripPreferences: {
+        green: "Ja",
+        yellow: "Kanskje",
+        red: "Nei",
+        summary: "Nei: {{red}}, kanskje: {{yellow}}, ja: {{green}}",
+        voteCount: "{{count}} stemmer",
+      },
       theme: {
         darkMode: "Mørk modus",
         lightMode: "Lys modus",
@@ -307,6 +314,13 @@ const resources = {
       tripModes: {
         plan: "Plan",
         travel: "Travel",
+      },
+      tripPreferences: {
+        green: "Yes",
+        yellow: "Maybe",
+        red: "No",
+        summary: "No: {{red}}, maybe: {{yellow}}, yes: {{green}}",
+        voteCount: "{{count}} votes",
       },
       theme: {
         darkMode: "Dark mode",

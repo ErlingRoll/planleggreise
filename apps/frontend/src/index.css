@@ -44,6 +44,9 @@
   --color-warning-surface: #fff7e6;
   --color-success: #52705b;
   --color-success-body: #526057;
+  --color-preference-green: #4f8a63;
+  --color-preference-yellow: #d09a3d;
+  --color-preference-red: #c45b4b;
   --color-soft: #b9d1be;
   --color-border: #d9d4ca;
   --color-border-card: #e1dbd0;
@@ -125,6 +128,9 @@ button:disabled {
   --color-warning-surface: #3a3020;
   --color-success: #a5c6ad;
   --color-success-body: #c1cec3;
+  --color-preference-green: #83c694;
+  --color-preference-yellow: #dfb65c;
+  --color-preference-red: #e27b6b;
   --color-soft: #a5c6ad;
   --color-border: #44504a;
   --color-border-card: #38443f;

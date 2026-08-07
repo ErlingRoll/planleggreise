@@ -16,6 +16,7 @@ const realtimeTables = [
   { table: "activities", column: "trip_id" },
   { table: "meals", column: "trip_id" },
   { table: "housing_stays", column: "trip_id" },
+  { table: "trip_item_preferences", column: "trip_id" },
   { table: "trip_members", column: "trip_id" },
   { table: "trip_invitations", column: "trip_id" },
   { table: "trip_access_links", column: "trip_id" },

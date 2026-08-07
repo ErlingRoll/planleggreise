@@ -30,6 +30,12 @@ export {
 } from "./trip.js"
 export { isAllowedGoogleMapsUrl } from "./google-maps.js"
 export {
+  SetTripItemPreferenceInputSchema,
+  TripItemPreferenceSchema,
+  TripItemPreferenceValueSchema,
+  TripItemTypeSchema,
+} from "./preferences.js"
+export {
   InviteTripMemberInputSchema,
   RequestTripAccessInputSchema,
   SharingInvitationStatusSchema,
@@ -79,3 +85,9 @@ export type {
   TripMemberRole,
   TripSharing,
 } from "./sharing.js"
+export type {
+  SetTripItemPreferenceInput,
+  TripItemPreference,
+  TripItemPreferenceValue,
+  TripItemType,
+} from "./preferences.js"

@@ -17,6 +17,8 @@ import {
   ReorderActivitiesInputSchema,
   ReorderDayItemsInputSchema,
   RequestTripAccessInputSchema,
+  SetTripItemPreferenceInputSchema,
+  TripItemPreferenceSchema,
   TripAccessLinkSchema,
   TripAccessRequestSchema,
   TripAccessStatusSchema,
@@ -226,12 +228,46 @@ export function createApp(dependencies: AppDependencies = {}) {
           authenticatedRequest.accessToken,
           tripId,
         )
+
         if (!sharing) {
           response.status(404).json({ message: "Trip not found" })
           return
         }
 
         response.json(TripSharingSchema.parse(sharing))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.put(
+    "/api/trips/:tripId/preferences",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+        const parsedInput = SetTripItemPreferenceInputSchema.safeParse(request.body)
+
+        if (typeof tripId !== "string" || !parsedInput.success) {
+          response.status(400).json({ message: "Invalid preference data" })
+          return
+        }
+
+        const preference = await tripRepository.setTripItemPreference(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          parsedInput.data,
+        )
+
+        if (parsedInput.data.value !== null && !preference) {
+          response.status(404).json({ message: "Trip item not found" })
+          return
+        }
+
+        response.json(preference ? TripItemPreferenceSchema.parse(preference) : null)
       } catch (error) {
         next(error)
       }

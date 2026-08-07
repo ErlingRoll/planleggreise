@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { TripItemPreferenceSchema } from "./preferences.js"
 
 export const DateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 export const MAX_TRIP_DAYS = 60
@@ -220,6 +221,7 @@ export const TripDetailSchema = TripSchema.extend({
   days: TripDaySchema.array(),
   housingStays: HousingStaySchema.array().default([]),
   meals: MealSchema.array().default([]),
+  preferences: TripItemPreferenceSchema.array().default([]),
 })
 
 export const DayItemTypeSchema = z.enum(["activity", "meal"])
