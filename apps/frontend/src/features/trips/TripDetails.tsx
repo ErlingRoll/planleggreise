@@ -1020,6 +1020,7 @@ export function TripDetails({
         <TripDayNavigator
           days={trip.days}
           getDayScheduleSummary={getDayScheduleSummary}
+          housingStays={trip.housingStays}
           onSelectAll={selectAllDays}
           onSelectDay={selectOnlyDay}
           onToggleDay={toggleDaySelection}

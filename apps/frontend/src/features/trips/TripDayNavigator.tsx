@@ -4,6 +4,7 @@ import type { TripDetail } from "../../api"
 
 type TripDayNavigatorProps = {
   days: TripDetail["days"]
+  housingStays: TripDetail["housingStays"]
   selectedDay: TripDetail["days"][number]
   selectedDayDates: string[]
   onSelectAll: () => void
@@ -14,6 +15,7 @@ type TripDayNavigatorProps = {
 
 export function TripDayNavigator({
   days,
+  housingStays,
   selectedDay,
   selectedDayDates,
   onSelectAll,
@@ -40,6 +42,9 @@ export function TripDayNavigator({
           {days.map((day) => {
             const isActive = day.date === selectedDay.date
             const isChecked = selectedDayDates.includes(day.date)
+            const hasHousing = housingStays.some(
+              (stay) => stay.checkIn <= day.date && day.date < stay.checkOut,
+            )
 
             return (
               <div
@@ -67,16 +72,40 @@ export function TripDayNavigator({
                   type="checkbox"
                 />
                 <button
-                  aria-label={t("tripDetails.selectDay", {
-                    date: formatDate(day.date),
-                  })}
+                  aria-label={
+                    hasHousing
+                      ? t("tripDetails.selectDayWithHousing", {
+                          date: formatDate(day.date),
+                        })
+                      : t("tripDetails.selectDay", {
+                          date: formatDate(day.date),
+                        })
+                  }
                   className="flex min-w-0 flex-1 overflow-hidden text-left"
                   onClick={(event) => onSelectDay(day.date, event.shiftKey)}
                   type="button"
                 >
                   <span className="w-0 min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold">
-                      {formatDate(day.date)}
+                      <span>{formatDate(day.date)}</span>
+                      {hasHousing && (
+                        <svg
+                          aria-hidden="true"
+                          className={`ml-1 inline-block size-3.5 align-[-0.1em] ${
+                            isActive ? "text-soft" : "text-accent-text"
+                          }`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="1.8"
+                          />
+                        </svg>
+                      )}
                     </span>
                     {day.title?.trim() && (
                       <span
