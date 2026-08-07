@@ -23,6 +23,7 @@ import {
   type DayItem,
 } from "../../lib/activity-format"
 import { LoadingCover } from "../../components/LoadingCover"
+import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { TripAuxiliaryDetails } from "./TripAuxiliaryDetails"
 import { TripSettings } from "./TripSettings"
 import { DayItemForm } from "./DayItemForm"
@@ -85,6 +86,8 @@ type TripDetailsProps = {
   onTripDeleted: (trip: TripDetail) => Promise<void>
 }
 
+type PendingDeletion = { item: Activity; type: "activity" } | { item: Meal; type: "meal" }
+
 function shiftTime(value: string, hours: number) {
   const match = /^(\d{2}):(\d{2})$/.exec(value)
 
@@ -122,6 +125,7 @@ export function TripDetails({
   const [googleMapsError, setGoogleMapsError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null)
+  const [pendingDeletion, setPendingDeletion] = useState<PendingDeletion | null>(null)
   const [editingDayDate, setEditingDayDate] = useState<string | null>(null)
   const [dayTitle, setDayTitle] = useState("")
   const [dayNotes, setDayNotes] = useState("")
@@ -909,6 +913,29 @@ export function TripDetails({
     }
   }
 
+  function requestDeleteActivity(activity: Activity) {
+    setPendingDeletion({ item: activity, type: "activity" })
+  }
+
+  function requestDeleteMeal(meal: Meal) {
+    setPendingDeletion({ item: meal, type: "meal" })
+  }
+
+  function confirmPendingDeletion() {
+    const deletion = pendingDeletion
+    setPendingDeletion(null)
+
+    if (!deletion) {
+      return
+    }
+
+    if (deletion.type === "activity") {
+      void handleDeleteActivity(deletion.item)
+    } else {
+      void handleDeleteMeal(deletion.item)
+    }
+  }
+
   function editDayDetails(date: string, title: string | null, note: string | null) {
     setEditingDayDate(date)
     setDayTitle(title ?? "")
@@ -1067,10 +1094,10 @@ export function TripDetails({
                     void handleDayItemDrop(event, date, itemCount)
                   }}
                   onDeleteActivity={(activity) => {
-                    void handleDeleteActivity(activity)
+                    requestDeleteActivity(activity)
                   }}
                   onDeleteMeal={(meal) => {
-                    void handleDeleteMeal(meal)
+                    requestDeleteMeal(meal)
                   }}
                   onEditActivity={editActivity}
                   onEditMeal={editMeal}
@@ -1110,6 +1137,31 @@ export function TripDetails({
           />
         </aside>
       </div>
+      <ConfirmDialog
+        cancelLabel={t("common.cancel")}
+        confirmLabel={t("common.delete")}
+        isOpen={pendingDeletion !== null}
+        message={
+          pendingDeletion
+            ? pendingDeletion.type === "activity"
+              ? t("tripDetails.deleteActivityConfirmation", {
+                  name:
+                    pendingDeletion.item.title ??
+                    pendingDeletion.item.placeName ??
+                    t("tripDetails.untitledItem"),
+                })
+              : t("tripDetails.deleteMealConfirmation", {
+                  name:
+                    pendingDeletion.item.title ??
+                    pendingDeletion.item.placeName ??
+                    t("tripDetails.untitledItem"),
+                })
+            : ""
+        }
+        onCancel={() => setPendingDeletion(null)}
+        onConfirm={confirmPendingDeletion}
+        title={t("common.confirmDeletionTitle")}
+      />
     </div>
   )
 }

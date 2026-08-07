@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react"
 import { useTranslation } from "react-i18next"
 import { updateTrip, type TripDetail } from "../../api"
 import { DatePicker } from "../../components/DatePicker"
+import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { getErrorMessage } from "../../lib/errors"
 import { getTripDurationMessage, shiftDate } from "../../lib/trip-dates"
 import { TripSharingSettings } from "./TripSharingSettings"
@@ -23,6 +24,7 @@ export function TripSettings({ accessToken, trip, onSaved, onClose, onDelete }: 
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] = useState(false)
   const [canManageSharing, setCanManageSharing] = useState(false)
 
   useEffect(() => {
@@ -74,15 +76,13 @@ export function TripSettings({ accessToken, trip, onSaved, onClose, onDelete }: 
   }
 
   async function handleDelete() {
-    const confirmed = window.confirm(t("tripSettings.deleteConfirmation", { name: trip.name }))
-
-    if (!confirmed) {
-      return
-    }
-
     setIsDeleting(true)
-    await onDelete(trip)
-    setIsDeleting(false)
+    try {
+      await onDelete(trip)
+    } finally {
+      setIsDeleting(false)
+      setIsDeleteConfirmationOpen(false)
+    }
   }
 
   return (
@@ -152,7 +152,7 @@ export function TripSettings({ accessToken, trip, onSaved, onClose, onDelete }: 
             <button
               className="rounded-xl border border-danger-border px-4 py-2.5 text-sm font-semibold text-error hover:bg-danger-surface disabled:cursor-not-allowed disabled:opacity-50"
               disabled={isDeleting || isSaving}
-              onClick={() => void handleDelete()}
+              onClick={() => setIsDeleteConfirmationOpen(true)}
               type="button"
             >
               {isDeleting ? t("tripSettings.deleting") : t("tripSettings.delete")}
@@ -180,6 +180,16 @@ export function TripSettings({ accessToken, trip, onSaved, onClose, onDelete }: 
         accessToken={accessToken}
         onCanManageChange={setCanManageSharing}
         trip={trip}
+      />
+      <ConfirmDialog
+        cancelLabel={t("common.cancel")}
+        confirmLabel={t("common.delete")}
+        isConfirming={isDeleting}
+        isOpen={isDeleteConfirmationOpen}
+        message={t("tripSettings.deleteConfirmation", { name: trip.name })}
+        onCancel={() => setIsDeleteConfirmationOpen(false)}
+        onConfirm={() => void handleDelete()}
+        title={t("common.confirmDeletionTitle")}
       />
     </section>
   )

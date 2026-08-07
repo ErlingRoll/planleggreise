@@ -8,6 +8,7 @@ import {
   type TripDetail,
 } from "../../api"
 import { DatePicker } from "../../components/DatePicker"
+import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { getErrorMessage } from "../../lib/errors"
 import { shiftDate } from "../../lib/trip-dates"
 import { formatDate } from "../../lib/date-format"
@@ -43,6 +44,8 @@ export function TripAuxiliaryDetails({
   const [notes, setNotes] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [deletingHousingId, setDeletingHousingId] = useState<string | null>(null)
+  const [pendingHousingDeletion, setPendingHousingDeletion] = useState<HousingStay | null>(null)
 
   function resetForm() {
     setFormMode(null)
@@ -109,10 +112,7 @@ export function TripAuxiliaryDetails({
   }
 
   async function handleDeleteHousing(stay: HousingStay) {
-    if (!window.confirm(t("tripDetails.deleteHousingConfirmation", { name: stay.name }))) {
-      return
-    }
-
+    setDeletingHousingId(stay.id)
     try {
       await deleteHousingStay(accessToken, trip.id, stay.id)
       onTripUpdated({
@@ -121,6 +121,9 @@ export function TripAuxiliaryDetails({
       })
     } catch (reason: unknown) {
       setError(getErrorMessage(reason))
+    } finally {
+      setDeletingHousingId(null)
+      setPendingHousingDeletion(null)
     }
   }
 
@@ -219,7 +222,7 @@ export function TripAuxiliaryDetails({
                     </button>
                     <button
                       className="rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface"
-                      onClick={() => void handleDeleteHousing(stay)}
+                      onClick={() => setPendingHousingDeletion(stay)}
                       type="button"
                     >
                       {t("common.delete")}
@@ -234,6 +237,24 @@ export function TripAuxiliaryDetails({
       </div>
 
       {formMode && editingId === null && renderHousingForm()}
+      <ConfirmDialog
+        cancelLabel={t("common.cancel")}
+        confirmLabel={t("common.delete")}
+        isConfirming={deletingHousingId !== null}
+        isOpen={pendingHousingDeletion !== null}
+        message={
+          pendingHousingDeletion
+            ? t("tripDetails.deleteHousingConfirmation", { name: pendingHousingDeletion.name })
+            : ""
+        }
+        onCancel={() => setPendingHousingDeletion(null)}
+        onConfirm={() => {
+          if (pendingHousingDeletion) {
+            void handleDeleteHousing(pendingHousingDeletion)
+          }
+        }}
+        title={t("common.confirmDeletionTitle")}
+      />
     </section>
   )
 }

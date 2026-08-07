@@ -12,6 +12,7 @@ import {
   type TripDetail,
   type TripSharing,
 } from "../../api"
+import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { getErrorMessage } from "../../lib/errors"
 
 type TripSharingSettingsProps = {
@@ -19,6 +20,11 @@ type TripSharingSettingsProps = {
   onCanManageChange?: (canManage: boolean) => void
   trip: TripDetail
 }
+
+type PendingSharingDeletion =
+  | { id: string; label: string; type: "member" }
+  | { id: string; label: string; type: "invitation" }
+  | { id: string; label: string; type: "link" }
 
 export function TripSharingSettings({
   accessToken,
@@ -32,6 +38,7 @@ export function TripSharingSettings({
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null)
+  const [pendingDeletion, setPendingDeletion] = useState<PendingSharingDeletion | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -210,6 +217,26 @@ export function TripSharingSettings({
     }
   }
 
+  async function confirmPendingDeletion() {
+    const deletion = pendingDeletion
+
+    if (!deletion) {
+      return
+    }
+
+    try {
+      if (deletion.type === "member") {
+        await handleRemoveMember(deletion.id)
+      } else if (deletion.type === "invitation") {
+        await handleRevokeInvitation(deletion.id)
+      } else {
+        await handleRevokeLink(deletion.id)
+      }
+    } finally {
+      setPendingDeletion(null)
+    }
+  }
+
   async function handleCopyLink(linkId: string, token: string) {
     const url = `${window.location.origin}/trips/${trip.id}/request-access?token=${token}`
     try {
@@ -307,7 +334,13 @@ export function TripSharingSettings({
               <button
                 className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface disabled:opacity-60"
                 disabled={isSaving}
-                onClick={() => void handleRemoveMember(member.userId)}
+                onClick={() =>
+                  setPendingDeletion({
+                    id: member.userId,
+                    label: member.email ?? member.userId,
+                    type: "member",
+                  })
+                }
                 type="button"
               >
                 {t("tripSettings.remove")}
@@ -331,7 +364,13 @@ export function TripSharingSettings({
               <button
                 className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface disabled:opacity-60"
                 disabled={isSaving}
-                onClick={() => void handleRevokeInvitation(invitation.id)}
+                onClick={() =>
+                  setPendingDeletion({
+                    id: invitation.id,
+                    label: invitation.email,
+                    type: "invitation",
+                  })
+                }
                 type="button"
               >
                 {t("tripSettings.revoke")}
@@ -363,7 +402,13 @@ export function TripSharingSettings({
                 <button
                   className="rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface disabled:opacity-60"
                   disabled={isSaving}
-                  onClick={() => void handleRevokeLink(link.id)}
+                  onClick={() =>
+                    setPendingDeletion({
+                      id: link.id,
+                      label: link.token,
+                      type: "link",
+                    })
+                  }
                   type="button"
                 >
                   {t("tripSettings.revoke")}
@@ -373,6 +418,28 @@ export function TripSharingSettings({
           ))}
         </div>
       )}
+      <ConfirmDialog
+        cancelLabel={t("common.cancel")}
+        confirmLabel={t(
+          pendingDeletion?.type === "member" ? "tripSettings.remove" : "tripSettings.revoke",
+        )}
+        isConfirming={isSaving}
+        isOpen={pendingDeletion !== null}
+        message={
+          pendingDeletion
+            ? pendingDeletion.type === "member"
+              ? t("tripSettings.removeMemberConfirmation", { name: pendingDeletion.label })
+              : pendingDeletion.type === "invitation"
+                ? t("tripSettings.revokeInvitationConfirmation", {
+                    email: pendingDeletion.label,
+                  })
+                : t("tripSettings.revokeAccessLinkConfirmation")
+            : ""
+        }
+        onCancel={() => setPendingDeletion(null)}
+        onConfirm={() => void confirmPendingDeletion()}
+        title={t("common.confirmDeletionTitle")}
+      />
     </section>
   )
 }
