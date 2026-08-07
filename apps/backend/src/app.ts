@@ -24,6 +24,7 @@ import {
   isTripDurationWithinLimit,
   type Trip,
   type TripDetail,
+  type ReorderDayItemInput,
   type UpdateActivityInput,
 } from '@planleggreise/models'
 import {
@@ -63,6 +64,44 @@ function getAccessToken(request: Request): string | null {
 
   const token = authorization.slice('Bearer '.length).trim()
   return token || null
+}
+
+function getReorderedItemStartTime(
+  trip: TripDetail,
+  item: ReorderDayItemInput,
+) {
+  const dayItem =
+    item.itemType === 'meal'
+      ? trip.meals.find((meal) => meal.id === item.itemId)
+      : trip.days
+          .flatMap((day) => day.activities)
+          .find((activity) => activity.id === item.itemId)
+
+  if (!dayItem || dayItem.allDay) {
+    return null
+  }
+
+  const time = dayItem.startTime ?? dayItem.endTime
+  return time?.trim() || null
+}
+
+function hasValidTimedDayItemOrder(
+  trip: TripDetail,
+  items: ReorderDayItemInput[],
+) {
+  const dates = new Set(items.map((item) => item.tripDate))
+
+  return Array.from(dates).every((date) => {
+    const timedItems = items
+      .filter((item) => item.tripDate === date)
+      .sort((left, right) => left.sortOrder - right.sortOrder)
+      .map((item) => getReorderedItemStartTime(trip, item))
+      .filter((time): time is string => time !== null)
+
+    return timedItems.every(
+      (time, index) => index === 0 || timedItems[index - 1] <= time,
+    )
+  })
 }
 
 function requireAuthenticatedUser(
@@ -1019,6 +1058,13 @@ export function createApp(dependencies: AppDependencies = {}) {
         ) {
           response.status(400).json({
             message: 'The day item date must be within the trip dates',
+          })
+          return
+        }
+
+        if (!hasValidTimedDayItemOrder(trip, parsedInput.data.items)) {
+          response.status(400).json({
+            message: 'Timed day items must be ordered by start time',
           })
           return
         }

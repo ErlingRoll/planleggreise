@@ -57,7 +57,50 @@ const testActivity: Activity = {
   sortOrder: 0,
 }
 
-function createTestApp(googlePlacesResolver?: GooglePlacesResolver) {
+const laterTestActivity: Activity = {
+  ...testActivity,
+  id: 'activity-2',
+  title: 'Middag',
+  startTime: '18:00',
+  endTime: '20:00',
+  sortOrder: 1,
+}
+
+const allDayTestActivity: Activity = {
+  ...testActivity,
+  id: 'activity-all-day',
+  title: 'Byvandring',
+  startTime: '23:00',
+  endTime: '23:30',
+  allDay: true,
+  sortOrder: 1,
+}
+
+const timedTripDetail: TripDetail = {
+  ...testTripDetail,
+  days: testTripDetail.days.map((day) =>
+    day.date === '2026-08-11'
+      ? { ...day, activities: [testActivity, laterTestActivity] }
+      : day,
+  ),
+}
+
+const allDayTripDetail: TripDetail = {
+  ...testTripDetail,
+  days: testTripDetail.days.map((day) =>
+    day.date === '2026-08-11'
+      ? {
+          ...day,
+          activities: [testActivity, allDayTestActivity, laterTestActivity],
+        }
+      : day,
+  ),
+}
+
+function createTestApp(
+  googlePlacesResolver?: GooglePlacesResolver,
+  tripDetail = testTripDetail,
+) {
   const authService: AuthService = {
     authenticate: async (accessToken) =>
       accessToken === 'valid-token'
@@ -66,7 +109,7 @@ function createTestApp(googlePlacesResolver?: GooglePlacesResolver) {
   }
   const tripRepository: TripRepository = {
     listTrips: async () => [testTrip],
-    getTrip: async () => testTripDetail,
+    getTrip: async () => tripDetail,
     createTrip: async (_userId, _accessToken, input: CreateTripInput) => ({
       id: 'trip-2',
       ...input,
@@ -663,6 +706,61 @@ test('authenticated users can reorder activities and meals together', async () =
   assert.equal(response.body.activities[0].tripDate, '2026-08-12')
   assert.equal(response.body.meals[0].id, 'meal-1')
   assert.equal(response.body.meals[0].sortOrder, 0)
+})
+
+test('day item reorder rejects timed items in reverse order', async () => {
+  const response = await request(createTestApp(undefined, timedTripDetail))
+    .patch('/api/trips/trip-1/day-items/reorder')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      items: [
+        {
+          itemType: 'activity',
+          itemId: 'activity-2',
+          tripDate: '2026-08-11',
+          sortOrder: 0,
+        },
+        {
+          itemType: 'activity',
+          itemId: 'activity-1',
+          tripDate: '2026-08-11',
+          sortOrder: 1,
+        },
+      ],
+    })
+
+  assert.equal(response.status, 400)
+  assert.match(response.body.message, /ordered by start time/i)
+})
+
+test('day item reorder ignores all-day items when validating timed order', async () => {
+  const response = await request(createTestApp(undefined, allDayTripDetail))
+    .patch('/api/trips/trip-1/day-items/reorder')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      items: [
+        {
+          itemType: 'activity',
+          itemId: 'activity-all-day',
+          tripDate: '2026-08-11',
+          sortOrder: 0,
+        },
+        {
+          itemType: 'activity',
+          itemId: 'activity-1',
+          tripDate: '2026-08-11',
+          sortOrder: 1,
+        },
+        {
+          itemType: 'activity',
+          itemId: 'activity-2',
+          tripDate: '2026-08-11',
+          sortOrder: 2,
+        },
+      ],
+    })
+
+  assert.equal(response.status, 200)
 })
 
 test('day item reorder rejects duplicate item keys', async () => {

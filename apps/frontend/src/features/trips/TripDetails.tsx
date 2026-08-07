@@ -154,6 +154,7 @@ export function TripDetails({
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
   const reorderQueueRef = useRef(Promise.resolve())
   const pendingReorderCountRef = useRef(0)
+  const reorderGenerationRef = useRef(0)
 
   useEffect(() => {
     if (trip) {
@@ -378,18 +379,23 @@ export function TripDetails({
     trip: TripDetail,
     affectedDays: Map<string, DayItem[]>,
   ) {
+    const normalizedItemsByDate = new Map(
+      trip.days.map((day) => [
+        day.date,
+        normalizeTimedDayItems(
+          affectedDays.get(day.date) ?? getDayItems(day, trip.meals),
+        ),
+      ]),
+    )
+
     return {
       ...trip,
       days: trip.days.map((day) => {
-        const items = affectedDays.get(day.date)
-
-        if (!items) {
-          return day
-        }
+        const normalizedItems = normalizedItemsByDate.get(day.date) ?? []
 
         return {
           ...day,
-          activities: items
+          activities: normalizedItems
             .filter(
               (item): item is Activity =>
                 getDayItemRecord(item, trip.meals).itemType === 'activity',
@@ -397,29 +403,50 @@ export function TripDetails({
             .map((activity) => ({
               ...activity,
               tripDate: day.date,
-              sortOrder: items.findIndex(
+              sortOrder: normalizedItems.findIndex(
                 (currentItem) => currentItem.id === activity.id,
               ),
             })),
         }
       }),
       meals: trip.meals.map((meal) => {
-        const affectedEntry = Array.from(affectedDays.entries()).find(
+        const normalizedEntry = Array.from(normalizedItemsByDate.entries()).find(
           ([, items]) => items.some((item) => item.id === meal.id),
         )
 
-        if (!affectedEntry) {
+        if (!normalizedEntry) {
           return meal
         }
 
-        const [dayDate, items] = affectedEntry
+        const [dayDate, normalizedItems] = normalizedEntry
         return {
           ...meal,
           tripDate: dayDate,
-          sortOrder: items.findIndex((item) => item.id === meal.id),
+          sortOrder: normalizedItems.findIndex(
+            (item) => item.id === meal.id,
+          ),
         }
       }),
     }
+  }
+
+  function normalizeTimedDayItems(items: DayItem[]) {
+    const timedItems = items
+      .filter((item) => getDayItemTime(item) !== null)
+      .sort((left, right) =>
+        (getDayItemTime(left) ?? '').localeCompare(getDayItemTime(right) ?? ''),
+      )
+    let timedItemIndex = 0
+
+    return items.map((item) => {
+      if (getDayItemTime(item) === null) {
+        return item
+      }
+
+      const normalizedItem = timedItems[timedItemIndex]
+      timedItemIndex += 1
+      return normalizedItem
+    })
   }
 
   function getReorderInput(trip: TripDetail): ReorderDayItemInput[] {
@@ -586,10 +613,16 @@ export function TripDetails({
 
     event.preventDefault()
     event.dataTransfer.dropEffect = 'move'
-    setDropTarget({
+    const nextDropTarget = {
       dayDate,
       index: getDropIndex(event, itemIndex),
-    })
+    }
+    setDropTarget((currentTarget) =>
+      currentTarget?.dayDate === nextDropTarget.dayDate &&
+      currentTarget.index === nextDropTarget.index
+        ? currentTarget
+        : nextDropTarget,
+    )
   }
 
   function handleDayDragOver(event: DragEvent<HTMLDivElement>, dayDate: string) {
@@ -603,16 +636,23 @@ export function TripDetails({
     event.preventDefault()
     event.dataTransfer.dropEffect = 'move'
     const day = currentTrip.days.find((currentDay) => currentDay.date === dayDate)
-    setDropTarget({
+    const nextDropTarget = {
       dayDate,
       index: day ? getDayItems(day).length : 0,
-    })
+    }
+    setDropTarget((currentTarget) =>
+      currentTarget?.dayDate === nextDropTarget.dayDate &&
+      currentTarget.index === nextDropTarget.index
+        ? currentTarget
+        : nextDropTarget,
+    )
   }
 
   function queueDayItemReorder(
     trip: TripDetail,
     items: ReorderDayItemInput[],
   ) {
+    const reorderGeneration = ++reorderGenerationRef.current
     pendingReorderCountRef.current += 1
     const queuedRequest = reorderQueueRef.current.then(() =>
       reorderDayItems(accessToken, trip.id, items).then(() => undefined),
@@ -626,13 +666,21 @@ export function TripDetails({
       .catch(async (reason: unknown) => {
         setActivityError(getErrorMessage(reason))
 
-        if (pendingReorderCountRef.current > 1) {
+        if (
+          pendingReorderCountRef.current > 1 ||
+          reorderGeneration !== reorderGenerationRef.current
+        ) {
           return
         }
 
         try {
           const refreshedTrip = await getTrip(accessToken, trip.id)
-          onTripUpdated(refreshedTrip)
+          if (
+            pendingReorderCountRef.current === 1 &&
+            reorderGeneration === reorderGenerationRef.current
+          ) {
+            onTripUpdated(refreshedTrip)
+          }
         } catch (refreshReason: unknown) {
           setActivityError(
             `${getErrorMessage(reason)} ${getErrorMessage(refreshReason)}`,
@@ -715,10 +763,31 @@ export function TripDetails({
             const candidateTime = getDayItemTime(item)
             return candidateTime !== null && candidateTime > itemTime
           })
-    const insertionIndex =
+    const lastEarlierActivityIndex =
+      itemTime === null
+        ? -1
+        : targetItems.reduce(
+            (lastIndex, item, index) => {
+              const candidateTime = getDayItemTime(item)
+              return candidateTime !== null && candidateTime < itemTime
+                ? index
+                : lastIndex
+            },
+            -1,
+          )
+    const earliestLegalIndex =
+      itemTime === null ? 0 : lastEarlierActivityIndex + 1
+    const latestLegalIndex =
       firstLaterActivityIndex >= 0
-        ? Math.min(desiredIndex, firstLaterActivityIndex)
-        : desiredIndex
+        ? firstLaterActivityIndex
+        : targetItems.length
+    const insertionIndex =
+      itemTime === null
+        ? desiredIndex
+        : Math.max(
+            earliestLegalIndex,
+            Math.min(desiredIndex, latestLegalIndex),
+          )
     const nextTargetItems = [
       ...targetItems.slice(0, insertionIndex),
       draggedRecord.item,
