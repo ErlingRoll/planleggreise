@@ -46,7 +46,9 @@ export function TripDayNavigator({
                 className={`flex items-center gap-2 rounded-xl px-2 py-2 transition ${
                   isActive
                     ? "bg-brand-surface text-on-brand"
-                    : "text-muted hover:bg-surface-muted hover:text-on-surface"
+                    : isChecked
+                      ? "bg-surface-muted text-on-surface hover:bg-surface-muted-hover"
+                      : "text-muted hover:bg-surface-muted hover:text-on-surface"
                 }`}
                 key={day.date}
               >
