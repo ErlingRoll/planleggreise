@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TripDetail } from '../../api'
-import { formatActivityTime, sortActivities } from '../../lib/activity-format'
+import {
+  formatActivityTime,
+  getDayItemTitle,
+  sortActivities,
+} from '../../lib/activity-format'
 import { formatDate } from '../../lib/date-format'
 
 type TravelModeProps = {
@@ -166,7 +170,9 @@ export function TravelMode({ trip }: TravelModeProps) {
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#69726c]">
                     {t('travelMode.meal')}
                   </p>
-                  <h3 className="mt-1 font-semibold text-[#274b48]">{meal.title}</h3>
+                  <h3 className="mt-1 font-semibold text-[#274b48]">
+                    {getDayItemTitle(meal, t('tripDetails.untitledItem'))}
+                  </h3>
                   {meal.notes?.trim() && (
                     <p className="mt-2 whitespace-pre-wrap text-sm text-[#69726c]">
                       {meal.notes}
@@ -198,7 +204,9 @@ export function TravelMode({ trip }: TravelModeProps) {
                   })}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-[#274b48]">{activity.title}</h3>
+                  <h3 className="font-semibold text-[#274b48]">
+                    {getDayItemTitle(activity, t('tripDetails.untitledItem'))}
+                  </h3>
                   {activity.placeAddress && (
                     <p className="mt-1 text-sm text-[#69726c]">
                       {activity.placeAddress}

@@ -1,13 +1,5 @@
 import { z } from 'zod'
-
-const allowedGoogleHosts = new Set([
-  'goo.gl',
-  'google.com',
-  'consent.google.com',
-  'maps.app.goo.gl',
-  'maps.google.com',
-  'www.google.com',
-])
+import { isAllowedGoogleMapsUrl } from '@planleggreise/models'
 
 const placeDetailsSchema = z.object({
   displayName: z.object({ text: z.string().min(1) }),
@@ -40,15 +32,11 @@ export class GooglePlacesError extends Error {
 function parseAllowedGoogleUrl(value: string) {
   let url: URL
 
-  try {
-    url = new URL(value)
-  } catch {
+  if (!isAllowedGoogleMapsUrl(value)) {
     throw new GooglePlacesError('Google Maps link is invalid')
   }
 
-  if (url.protocol !== 'https:' || !allowedGoogleHosts.has(url.hostname)) {
-    throw new GooglePlacesError('Google Maps link is invalid')
-  }
+  url = new URL(value)
 
   return url
 }
@@ -143,8 +131,9 @@ export function createGooglePlacesResolver(
     }
 
     const inputUrl = parseAllowedGoogleUrl(googleMapsUrl)
-    const resolvedUrl = await resolveRedirectUrl(inputUrl)
-    const placeQuery = getPlaceQuery(resolvedUrl)
+    const placeQuery =
+      getPlaceQuery(inputUrl) ??
+      getPlaceQuery(await resolveRedirectUrl(inputUrl))
 
     if (!placeQuery) {
       throw new GooglePlacesError('Could not resolve Google Maps link')

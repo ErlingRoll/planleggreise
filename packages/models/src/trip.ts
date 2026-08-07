@@ -69,7 +69,7 @@ export const UpdateTripInputSchema = z.object({
 
 const ActivityFieldsSchema = z.object({
   tripDate: DateOnlySchema,
-  title: z.string().trim().min(1).max(200),
+  title: z.string().trim().max(200).nullable(),
   startTime: TimeOnlySchema.nullable(),
   endTime: TimeOnlySchema.nullable(),
   allDay: z.boolean(),
@@ -100,6 +100,10 @@ export const CreateActivityInputSchema = ActivityFieldsSchema.extend({
   placeName: z.string().trim().max(200).nullable().optional().default(null),
   placeAddress: z.string().trim().max(500).nullable().optional().default(null),
 }).refine(
+  (activity) =>
+    Boolean(activity.title?.trim()) || Boolean(activity.googleMapsUrl),
+  'An activity title or Google Maps link is required',
+).refine(
   (activity) => hasValidTimeRange(activity.startTime, activity.endTime),
   'End time must be on or after start time',
 )
@@ -107,7 +111,7 @@ export const CreateActivityInputSchema = ActivityFieldsSchema.extend({
 export const UpdateActivityInputSchema = z
   .object({
     tripDate: DateOnlySchema.optional(),
-    title: z.string().trim().min(1).max(200).optional(),
+    title: z.string().trim().max(200).nullable().optional(),
     startTime: TimeOnlySchema.nullable().optional(),
     endTime: TimeOnlySchema.nullable().optional(),
     allDay: z.boolean().optional(),
@@ -115,11 +119,22 @@ export const UpdateActivityInputSchema = z
     googleMapsUrl: z.string().url().nullable().optional(),
     placeName: z.string().trim().max(200).nullable().optional(),
     placeAddress: z.string().trim().max(500).nullable().optional(),
+    sortOrder: z.number().int().nonnegative().optional(),
   })
   .refine(
     (activity) => hasValidTimeRange(activity.startTime, activity.endTime),
     'End time must be on or after start time',
   )
+
+export const ReorderActivityInputSchema = z.object({
+  activityId: z.string().min(1),
+  tripDate: DateOnlySchema,
+  sortOrder: z.number().int().nonnegative(),
+})
+
+export const ReorderActivitiesInputSchema = z.object({
+  activities: ReorderActivityInputSchema.array().min(1),
+})
 
 const HousingStayFieldsSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -155,7 +170,7 @@ export const UpdateHousingStayInputSchema = z
 
 const MealFieldsSchema = z.object({
   tripDate: DateOnlySchema,
-  title: z.string().trim().min(1).max(200),
+  title: z.string().trim().max(200).nullable(),
   startTime: TimeOnlySchema.nullable(),
   endTime: TimeOnlySchema.nullable(),
   allDay: z.boolean(),
@@ -166,9 +181,17 @@ export const MealSchema = MealFieldsSchema.extend({
   id: z.string(),
   tripId: z.string(),
   sortOrder: z.number().int(),
-})
+}).merge(ActivityPlaceSchema)
 
-export const CreateMealInputSchema = MealFieldsSchema.refine(
+export const CreateMealInputSchema = MealFieldsSchema.extend({
+  googleMapsUrl: z.string().url().nullable().optional().default(null),
+  placeName: z.string().trim().max(200).nullable().optional().default(null),
+  placeAddress: z.string().trim().max(500).nullable().optional().default(null),
+}).refine(
+  (meal) =>
+    Boolean(meal.title?.trim()) || Boolean(meal.googleMapsUrl),
+  'A meal title or Google Maps link is required',
+).refine(
   (meal) => hasValidTimeRange(meal.startTime, meal.endTime),
   'End time must be on or after start time',
 )
@@ -176,11 +199,15 @@ export const CreateMealInputSchema = MealFieldsSchema.refine(
 export const UpdateMealInputSchema = z
   .object({
     tripDate: DateOnlySchema.optional(),
-    title: z.string().trim().min(1).max(200).optional(),
+    title: z.string().trim().max(200).nullable().optional(),
     startTime: TimeOnlySchema.nullable().optional(),
     endTime: TimeOnlySchema.nullable().optional(),
     allDay: z.boolean().optional(),
     notes: NoteSchema.optional(),
+    googleMapsUrl: z.string().url().nullable().optional(),
+    placeName: z.string().trim().max(200).nullable().optional(),
+    placeAddress: z.string().trim().max(500).nullable().optional(),
+    sortOrder: z.number().int().nonnegative().optional(),
   })
   .refine(
     (meal) => hasValidTimeRange(meal.startTime, meal.endTime),
@@ -204,12 +231,34 @@ export const TripDetailSchema = TripSchema.extend({
   meals: MealSchema.array().default([]),
 })
 
+export const DayItemTypeSchema = z.enum(['activity', 'meal'])
+
+export const ReorderDayItemInputSchema = z.object({
+  itemType: DayItemTypeSchema,
+  itemId: z.string().min(1),
+  tripDate: DateOnlySchema,
+  sortOrder: z.number().int().nonnegative(),
+})
+
+export const ReorderDayItemsInputSchema = z.object({
+  items: ReorderDayItemInputSchema.array().min(1),
+})
+
+export const ReorderedDayItemsSchema = z.object({
+  activities: ActivitySchema.array(),
+  meals: MealSchema.array(),
+})
+
 export type Trip = z.infer<typeof TripSchema>
 export type CreateTripInput = z.infer<typeof CreateTripInputSchema>
 export type UpdateTripInput = z.infer<typeof UpdateTripInputSchema>
 export type Activity = z.infer<typeof ActivitySchema>
 export type CreateActivityInput = z.infer<typeof CreateActivityInputSchema>
 export type UpdateActivityInput = z.infer<typeof UpdateActivityInputSchema>
+export type ReorderActivityInput = z.infer<typeof ReorderActivityInputSchema>
+export type ReorderActivitiesInput = z.infer<
+  typeof ReorderActivitiesInputSchema
+>
 export type HousingStay = z.infer<typeof HousingStaySchema>
 export type CreateHousingStayInput = z.infer<
   typeof CreateHousingStayInputSchema
@@ -220,6 +269,9 @@ export type UpdateHousingStayInput = z.infer<
 export type Meal = z.infer<typeof MealSchema>
 export type CreateMealInput = z.infer<typeof CreateMealInputSchema>
 export type UpdateMealInput = z.infer<typeof UpdateMealInputSchema>
+export type DayItemType = z.infer<typeof DayItemTypeSchema>
+export type ReorderDayItemInput = z.infer<typeof ReorderDayItemInputSchema>
+export type ReorderDayItemsInput = z.infer<typeof ReorderDayItemsInputSchema>
 export type TripDay = z.infer<typeof TripDaySchema>
 export type UpdateTripDayInput = z.infer<typeof UpdateTripDayInputSchema>
 export type TripDetail = z.infer<typeof TripDetailSchema>

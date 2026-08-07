@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import request from 'supertest'
+import { isAllowedGoogleMapsUrl } from '@planleggreise/models'
 import type {
   Activity,
   CreateActivityInput,
@@ -16,7 +17,10 @@ import type {
 } from '@planleggreise/models'
 import type { AuthService } from './auth.js'
 import { createApp } from './app.js'
-import type { GooglePlacesResolver } from './google-places.js'
+import {
+  createGooglePlacesResolver,
+  type GooglePlacesResolver,
+} from './google-places.js'
 import type { TripRepository } from './trip-repository.js'
 
 const testTrip: Trip = {
@@ -106,6 +110,9 @@ function createTestApp(googlePlacesResolver?: GooglePlacesResolver) {
       id: 'meal-1',
       tripId,
       ...input,
+      googleMapsUrl: input.googleMapsUrl ?? null,
+      placeName: input.placeName ?? null,
+      placeAddress: input.placeAddress ?? null,
       sortOrder: 0,
     }),
     updateMeal: async () => null,
@@ -131,6 +138,49 @@ function createTestApp(googlePlacesResolver?: GooglePlacesResolver) {
     ) => ({
       ...testActivity,
       ...input,
+    }),
+    reorderActivities: async (
+      _userId,
+      _accessToken,
+      _tripId,
+      input,
+    ) =>
+      input.activities.map((activity) => ({
+        ...testActivity,
+        id: activity.activityId,
+        tripDate: activity.tripDate,
+        sortOrder: activity.sortOrder,
+      })),
+    reorderDayItems: async (
+      _userId,
+      _accessToken,
+      _tripId,
+      input,
+    ) => ({
+      activities: input.items
+        .filter((item) => item.itemType === 'activity')
+        .map((item) => ({
+          ...testActivity,
+          id: item.itemId,
+          tripDate: item.tripDate,
+          sortOrder: item.sortOrder,
+        })),
+      meals: input.items
+        .filter((item) => item.itemType === 'meal')
+        .map((item) => ({
+          id: item.itemId,
+          tripId: 'trip-1',
+          tripDate: item.tripDate,
+          title: 'Test meal',
+          startTime: null,
+          endTime: null,
+          allDay: true,
+          notes: null,
+          googleMapsUrl: null,
+          placeName: null,
+          placeAddress: null,
+          sortOrder: item.sortOrder,
+        })),
     }),
     deleteActivity: async () => true,
   }
@@ -298,6 +348,99 @@ test('authenticated users can create a meal with a note', async () => {
   assert.equal(response.body.notes, 'Bestill bord')
 })
 
+test('meal creation resolves a Google Maps link', async () => {
+  const response = await request(
+    createTestApp(async () => ({
+      name: 'Mathallen',
+      address: 'Vulkan 5, Oslo',
+    })),
+  )
+    .post('/api/trips/trip-1/meals')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      tripDate: '2026-08-11',
+      title: null,
+      googleMapsUrl: 'https://maps.app.goo.gl/UqkAP8Bc5mx1tcVq6',
+      startTime: null,
+      endTime: null,
+      allDay: true,
+      notes: null,
+    })
+
+  assert.equal(response.status, 201)
+  assert.equal(response.body.title, null)
+  assert.equal(response.body.placeName, 'Mathallen')
+  assert.equal(response.body.placeAddress, 'Vulkan 5, Oslo')
+})
+
+test('meal creation keeps a custom title when resolving a Google Maps link', async () => {
+  const response = await request(
+    createTestApp(async () => ({
+      name: 'Mathallen',
+      address: 'Vulkan 5, Oslo',
+    })),
+  )
+    .post('/api/trips/trip-1/meals')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      tripDate: '2026-08-11',
+      title: 'Dinner at Mathallen',
+      googleMapsUrl: 'https://maps.app.goo.gl/UqkAP8Bc5mx1tcVq6',
+      startTime: null,
+      endTime: null,
+      allDay: true,
+      notes: null,
+    })
+
+  assert.equal(response.status, 201)
+  assert.equal(response.body.title, 'Dinner at Mathallen')
+  assert.equal(response.body.placeName, 'Mathallen')
+})
+
+test('full Google Maps place links are accepted', () => {
+  const url =
+    'https://www.google.com/maps/place/Oslo+Camping/@59.9144959,10.7426482,782m/data=!3m2!1e3!4b1!4m6!3m5!1s0x46416e625634a04b:0xdbce3291121aff6e!8m2!3d59.9144933!4d10.7475191!16s%2Fg%2F11c1q7nvxj?entry=ttu&g_ep=EgoyMDI2MDgwMy4wIKXMDSoASAFQAw%3D%3D'
+
+  assert.equal(isAllowedGoogleMapsUrl(url), true)
+  assert.equal(isAllowedGoogleMapsUrl(`  ${url}\n`), true)
+})
+
+test('Google Places resolves a full place URL without redirect resolution', async () => {
+  const url =
+    'https://www.google.com/maps/place/Oslo+Camping/@59.9144959,10.7426482,782m/data=!3m2!1e3!4b1!4m6!3m5!1s0x46416e625634a04b:0xdbce3291121aff6e!8m2!3d59.9144933!4d10.7475191!16s%2Fg%2F11c1q7nvxj?entry=ttu&g_ep=EgoyMDI2MDgwMy4wIKXMDSoASAFQAw%3D%3D'
+  const originalFetch = globalThis.fetch
+  const requests: string[] = []
+
+  globalThis.fetch = async (input) => {
+    requests.push(String(input))
+    return new Response(
+      JSON.stringify({
+        places: [
+          {
+            displayName: { text: 'Oslo Camping' },
+            formattedAddress: 'Ekebergveien 65, Oslo',
+          },
+        ],
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  try {
+    const place = await createGooglePlacesResolver('test-key')(url)
+
+    assert.deepEqual(place, {
+      name: 'Oslo Camping',
+      address: 'Ekebergveien 65, Oslo',
+    })
+    assert.deepEqual(requests, [
+      'https://places.googleapis.com/v1/places:searchText',
+    ])
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
 test('trip updates reject trips longer than 60 days', async () => {
   const response = await request(createTestApp())
     .patch('/api/trips/trip-1')
@@ -351,7 +494,7 @@ test('activity creation resolves a Google Maps link', async () => {
     .set('Authorization', 'Bearer valid-token')
     .send({
       tripDate: '2026-08-11',
-      title: 'Google Maps place',
+      title: 'Colosseum entrance',
       googleMapsUrl: 'https://maps.app.goo.gl/UqkAP8Bc5mx1tcVq6',
       startTime: null,
       endTime: null,
@@ -360,7 +503,7 @@ test('activity creation resolves a Google Maps link', async () => {
     })
 
   assert.equal(response.status, 201)
-  assert.equal(response.body.title, 'Colosseum')
+  assert.equal(response.body.title, 'Colosseum entrance')
   assert.equal(response.body.placeName, 'Colosseum')
   assert.equal(response.body.placeAddress, 'Piazza del Colosseo, 1, Rome')
 })
@@ -379,8 +522,56 @@ test('activity updates resolve a Google Maps link', async () => {
     })
 
   assert.equal(response.status, 200)
-  assert.equal(response.body.title, 'Colosseum')
+  assert.equal(response.body.title, 'Besøke museet')
   assert.equal(response.body.placeName, 'Colosseum')
+})
+
+test('activity updates preserve a custom title when a Google Maps link is added', async () => {
+  const response = await request(
+    createTestApp(async () => ({
+      name: 'Colosseum',
+      address: 'Piazza del Colosseo, 1, Rome',
+    })),
+  )
+    .patch('/api/trips/trip-1/activities/activity-1')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      title: 'Visit the Colosseum',
+      googleMapsUrl: 'https://maps.app.goo.gl/UqkAP8Bc5mx1tcVq6',
+    })
+
+  assert.equal(response.status, 200)
+  assert.equal(response.body.title, 'Visit the Colosseum')
+  assert.equal(response.body.placeName, 'Colosseum')
+})
+
+test('activity creation requires a title or Google Maps link', async () => {
+  const response = await request(createTestApp())
+    .post('/api/trips/trip-1/activities')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      tripDate: '2026-08-11',
+      title: null,
+      googleMapsUrl: null,
+      startTime: null,
+      endTime: null,
+      allDay: true,
+      notes: null,
+    })
+
+  assert.equal(response.status, 400)
+})
+
+test('activity updates cannot clear the only title without a Google Maps link', async () => {
+  const response = await request(createTestApp())
+    .patch('/api/trips/trip-1/activities/activity-1')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      title: null,
+      googleMapsUrl: null,
+    })
+
+  assert.equal(response.status, 400)
 })
 
 test('activity creation rejects dates outside the trip', async () => {
@@ -412,6 +603,98 @@ test('authenticated users can update an activity', async () => {
   assert.equal(response.status, 200)
   assert.equal(response.body.title, 'Oppdatert aktivitet')
   assert.equal(response.body.notes, 'Husk billetter')
+})
+
+test('authenticated users can reorder activities in one request', async () => {
+  const response = await request(createTestApp())
+    .patch('/api/trips/trip-1/activities/reorder')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      activities: [
+        {
+          activityId: 'activity-1',
+          tripDate: '2026-08-12',
+          sortOrder: 0,
+        },
+      ],
+    })
+
+  assert.equal(response.status, 200)
+  assert.equal(response.body[0].id, 'activity-1')
+  assert.equal(response.body[0].tripDate, '2026-08-12')
+  assert.equal(response.body[0].sortOrder, 0)
+})
+
+test('authenticated users can reorder activities and meals together', async () => {
+  const response = await request(createTestApp())
+    .patch('/api/trips/trip-1/day-items/reorder')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      items: [
+        {
+          itemType: 'activity',
+          itemId: 'activity-1',
+          tripDate: '2026-08-12',
+          sortOrder: 1,
+        },
+        {
+          itemType: 'meal',
+          itemId: 'meal-1',
+          tripDate: '2026-08-12',
+          sortOrder: 0,
+        },
+      ],
+    })
+
+  assert.equal(response.status, 200)
+  assert.equal(response.body.activities[0].id, 'activity-1')
+  assert.equal(response.body.activities[0].tripDate, '2026-08-12')
+  assert.equal(response.body.meals[0].id, 'meal-1')
+  assert.equal(response.body.meals[0].sortOrder, 0)
+})
+
+test('day item reorder rejects duplicate item keys', async () => {
+  const response = await request(createTestApp())
+    .patch('/api/trips/trip-1/day-items/reorder')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      items: [
+        {
+          itemType: 'meal',
+          itemId: 'meal-1',
+          tripDate: '2026-08-11',
+          sortOrder: 0,
+        },
+        {
+          itemType: 'meal',
+          itemId: 'meal-1',
+          tripDate: '2026-08-11',
+          sortOrder: 1,
+        },
+      ],
+    })
+
+  assert.equal(response.status, 400)
+  assert.match(response.body.message, /unique/i)
+})
+
+test('day item reorder rejects dates outside the trip', async () => {
+  const response = await request(createTestApp())
+    .patch('/api/trips/trip-1/day-items/reorder')
+    .set('Authorization', 'Bearer valid-token')
+    .send({
+      items: [
+        {
+          itemType: 'meal',
+          itemId: 'meal-1',
+          tripDate: '2026-08-13',
+          sortOrder: 0,
+        },
+      ],
+    })
+
+  assert.equal(response.status, 400)
+  assert.match(response.body.message, /within the trip/i)
 })
 
 test('authenticated users can delete an activity', async () => {

@@ -10,10 +10,13 @@ import {
   MealSchema,
   TripDetailSchema,
   TripSchema,
+  ReorderActivitiesInputSchema,
+  ReorderDayItemsInputSchema,
   UpdateHousingStayInputSchema,
   UpdateMealInputSchema,
   UpdateTripDayInputSchema,
   UpdateTripInputSchema,
+  UpdateActivityInputSchema,
   type Activity,
   type CreateActivityInput,
   type CreateHousingStayInput,
@@ -29,8 +32,11 @@ import {
   type UpdateTripDayInput,
   type UpdateTripInput,
   type UpdateActivityInput,
+  type ReorderActivitiesInput,
+  type ReorderDayItemsInput,
 } from '@planleggreise/models'
 import { z } from 'zod'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createUserSupabaseClient } from './supabase.js'
 
 const tripRowSchema = z.object({
@@ -51,7 +57,7 @@ const activityRowSchema = z.object({
   id: z.string(),
   trip_id: z.string(),
   trip_date: DateOnlySchema,
-  title: z.string(),
+  title: z.string().nullable(),
   start_time: z.string().nullable(),
   end_time: z.string().nullable(),
   all_day: z.boolean(),
@@ -75,11 +81,14 @@ const mealRowSchema = z.object({
   id: z.string(),
   trip_id: z.string(),
   trip_date: DateOnlySchema,
-  title: z.string(),
+  title: z.string().nullable(),
   start_time: z.string().nullable(),
   end_time: z.string().nullable(),
   all_day: z.boolean(),
   notes: z.string().nullable(),
+  google_maps_url: z.string().nullable(),
+  place_name: z.string().nullable(),
+  place_address: z.string().nullable(),
   sort_order: z.number().int(),
 })
 
@@ -87,7 +96,44 @@ const activityColumns =
   'id, trip_id, trip_date, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order'
 const housingStayColumns = 'id, trip_id, name, check_in, check_out, notes'
 const mealColumns =
-  'id, trip_id, trip_date, title, start_time, end_time, all_day, notes, sort_order'
+  'id, trip_id, trip_date, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order'
+
+async function getHighestDayItemSortOrder(
+  client: SupabaseClient,
+  tripId: string,
+  tripDate: string,
+) {
+  const [{ data: activities, error: activitiesError }, { data: meals, error: mealsError }] =
+    await Promise.all([
+      client
+        .from('activities')
+        .select('sort_order')
+        .eq('trip_id', tripId)
+        .eq('trip_date', tripDate)
+        .order('sort_order', { ascending: false })
+        .limit(1),
+      client
+        .from('meals')
+        .select('sort_order')
+        .eq('trip_id', tripId)
+        .eq('trip_date', tripDate)
+        .order('sort_order', { ascending: false })
+        .limit(1),
+    ])
+
+  if (activitiesError) {
+    throw activitiesError
+  }
+  if (mealsError) {
+    throw mealsError
+  }
+
+  const highestSortOrders = z
+    .array(z.object({ sort_order: z.number().int() }))
+    .parse([...(activities ?? []), ...(meals ?? [])])
+
+  return Math.max(-1, ...highestSortOrders.map((item) => item.sort_order))
+}
 
 export interface TripRepository {
   listTrips(userId: string, accessToken: string): Promise<Trip[]>
@@ -188,6 +234,18 @@ export interface TripRepository {
     activityId: string,
     input: UpdateActivityInput,
   ): Promise<Activity | null>
+  reorderActivities(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+    input: ReorderActivitiesInput,
+  ): Promise<Activity[] | null>
+  reorderDayItems(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+    input: ReorderDayItemsInput,
+  ): Promise<{ activities: Activity[]; meals: Meal[] } | null>
   deleteActivity(
     userId: string,
     accessToken: string,
@@ -308,6 +366,9 @@ function mapMealRow(row: unknown): Meal {
     endTime: parsedRow.end_time?.slice(0, 5) ?? null,
     allDay: parsedRow.all_day,
     notes: parsedRow.notes,
+    googleMapsUrl: parsedRow.google_maps_url,
+    placeName: parsedRow.place_name,
+    placeAddress: parsedRow.place_address,
     sortOrder: parsedRow.sort_order,
   })
 }
@@ -750,6 +811,11 @@ export function createSupabaseTripRepository(): TripRepository {
       const parsedInput = CreateMealInputSchema.parse(input)
       const client = createUserSupabaseClient(accessToken)
       const mealId = randomUUID()
+      const highestSortOrder = await getHighestDayItemSortOrder(
+        client,
+        tripId,
+        parsedInput.tripDate,
+      )
       const { error } = await client.from('meals').insert({
         id: mealId,
         trip_id: tripId,
@@ -759,6 +825,10 @@ export function createSupabaseTripRepository(): TripRepository {
         end_time: parsedInput.endTime,
         all_day: parsedInput.allDay,
         notes: parsedInput.notes,
+        google_maps_url: parsedInput.googleMapsUrl,
+        place_name: parsedInput.placeName,
+        place_address: parsedInput.placeAddress,
+        sort_order: highestSortOrder + 1,
       })
 
       if (error) {
@@ -810,6 +880,9 @@ export function createSupabaseTripRepository(): TripRepository {
           end_time: parsedInput.endTime,
           all_day: parsedInput.allDay,
           notes: parsedInput.notes,
+          google_maps_url: parsedInput.googleMapsUrl,
+          place_name: parsedInput.placeName,
+          place_address: parsedInput.placeAddress,
         })
         .eq('trip_id', tripId)
         .eq('id', mealId)
@@ -854,6 +927,11 @@ export function createSupabaseTripRepository(): TripRepository {
       const parsedInput = CreateActivityInputSchema.parse(input)
       const client = createUserSupabaseClient(accessToken)
       const activityId = randomUUID()
+      const highestSortOrder = await getHighestDayItemSortOrder(
+        client,
+        tripId,
+        parsedInput.tripDate,
+      )
       const { error } = await client.from('activities').insert({
         id: activityId,
         trip_id: tripId,
@@ -866,6 +944,7 @@ export function createSupabaseTripRepository(): TripRepository {
         google_maps_url: parsedInput.googleMapsUrl,
         place_name: parsedInput.placeName,
         place_address: parsedInput.placeAddress,
+        sort_order: highestSortOrder + 1,
       })
 
       if (error) {
@@ -898,6 +977,7 @@ export function createSupabaseTripRepository(): TripRepository {
         notes: currentActivity.notes,
         ...input,
       })
+      const parsedUpdateInput = UpdateActivityInputSchema.parse(input)
       const { error } = await client
         .from('activities')
         .update({
@@ -910,6 +990,8 @@ export function createSupabaseTripRepository(): TripRepository {
           google_maps_url: parsedInput.googleMapsUrl,
           place_name: parsedInput.placeName,
           place_address: parsedInput.placeAddress,
+          sort_order:
+            parsedUpdateInput.sortOrder ?? currentActivity.sortOrder,
         })
         .eq('trip_id', tripId)
         .eq('id', activityId)
@@ -919,6 +1001,114 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       return selectActivity(client, tripId, activityId)
+    },
+
+    async reorderActivities(_userId, accessToken, tripId, input) {
+      const parsedInput = ReorderActivitiesInputSchema.parse(input)
+      const client = createUserSupabaseClient(accessToken)
+      const currentActivities = await listActivities(client, tripId)
+      const currentActivityIds = new Set(
+        currentActivities.map((activity) => activity.id),
+      )
+
+      if (
+        parsedInput.activities.some(
+          (activity) => !currentActivityIds.has(activity.activityId),
+        )
+      ) {
+        return null
+      }
+
+      const updatedActivities = await Promise.all(
+        parsedInput.activities.map(async (activity) => {
+          const { data, error } = await client
+            .from('activities')
+            .update({
+              trip_date: activity.tripDate,
+              sort_order: activity.sortOrder,
+            })
+            .eq('trip_id', tripId)
+            .eq('id', activity.activityId)
+            .select(activityColumns)
+            .single()
+
+          if (error) {
+            throw error
+          }
+
+          return mapActivityRow(data)
+        }),
+      )
+
+      return updatedActivities
+    },
+
+    async reorderDayItems(_userId, accessToken, tripId, input) {
+      const parsedInput = ReorderDayItemsInputSchema.parse(input)
+      const client = createUserSupabaseClient(accessToken)
+      const [currentActivities, currentMeals] = await Promise.all([
+        listActivities(client, tripId),
+        listMeals(client, tripId),
+      ])
+      const currentItemKeys = new Set([
+        ...currentActivities.map((activity) => `activity:${activity.id}`),
+        ...currentMeals.map((meal) => `meal:${meal.id}`),
+      ])
+
+      if (
+        parsedInput.items.some((item) =>
+          !currentItemKeys.has(`${item.itemType}:${item.itemId}`),
+        )
+      ) {
+        return null
+      }
+
+      const updatedActivities = await Promise.all(
+        parsedInput.items
+          .filter((item) => item.itemType === 'activity')
+          .map(async (item) => {
+            const { data, error } = await client
+              .from('activities')
+              .update({
+                trip_date: item.tripDate,
+                sort_order: item.sortOrder,
+              })
+              .eq('trip_id', tripId)
+              .eq('id', item.itemId)
+              .select(activityColumns)
+              .single()
+
+            if (error) {
+              throw error
+            }
+
+            return mapActivityRow(data)
+          }),
+      )
+      const updatedMeals = await Promise.all(
+        parsedInput.items
+          .filter((item) => item.itemType === 'meal')
+          .map(async (item) => {
+            const { data, error } = await client
+              .from('meals')
+              .update({
+                trip_date: item.tripDate,
+                sort_order: item.sortOrder,
+              })
+              .eq('trip_id', tripId)
+              .eq('id', item.itemId)
+              .select(mealColumns)
+              .single()
+
+            if (error) {
+              throw error
+            }
+
+            return mapMealRow(data)
+          }),
+      )
+
+      return { activities: updatedActivities, meals: updatedMeals }
     },
 
     async deleteActivity(_userId, accessToken, tripId, activityId) {

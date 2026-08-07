@@ -35,14 +35,18 @@ vertical slice supports Google login, private trip creation, authenticated
 trip listing, trip settings, recoverable trip archiving, activities, and
 generated days for each inclusive trip date. Trips, days, accommodation stays,
 meals, and activities support editable notes; non-empty notes appear in travel
-mode. Trips may contain at most 60 inclusive calendar days. The frontend uses
+mode. On desktop, the planner has All, Housing, and Meals tabs. Activities and
+meals share one order and can be dragged between days; timed items are kept
+before later timed items when a drop would otherwise place them too far down.
+New activities and meals default to all-day. Trips may contain at most 60
+inclusive calendar days. The frontend uses
 `/trips/<trip-id>` URLs for
 bookmarked and shareable trip plans; access remains protected by authentication
 and Supabase row-level security.
 
-To add activities from Google Maps links, enable Places API (New) in Google
-Cloud and set `GOOGLE_PLACES_API_KEY` in `apps/backend/.env`. Keep this key
-backend-only; it must not be added to a `VITE_*` variable.
+To add activities or meals from Google Maps links, enable Places API (New) in
+Google Cloud and set `GOOGLE_PLACES_API_KEY` in `apps/backend/.env`. Keep this
+key backend-only; it must not be added to a `VITE_*` variable.
 
 Apply all migrations in `supabase/migrations` to the Supabase project before
 using trip persistence. Deleting a trip archives it by setting `deleted_at`;

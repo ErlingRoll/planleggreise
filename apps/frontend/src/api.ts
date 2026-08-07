@@ -6,6 +6,9 @@ import {
   HousingStaySchema,
   MealSchema,
   TripDetailSchema,
+  ReorderActivitiesInputSchema,
+  ReorderDayItemsInputSchema,
+  ReorderedDayItemsSchema,
   TripDaySchema,
   TripSchema,
   UpdateHousingStayInputSchema,
@@ -26,6 +29,8 @@ import {
   type UpdateTripDayInput,
   type UpdateTripInput,
   type UpdateActivityInput,
+  type ReorderActivityInput,
+  type ReorderDayItemInput,
 } from '@planleggreise/models'
 
 export type {
@@ -43,6 +48,8 @@ export type {
   UpdateTripDayInput,
   UpdateTripInput,
   UpdateActivityInput,
+  ReorderActivityInput,
+  ReorderDayItemInput,
 } from '@planleggreise/models'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ''
@@ -232,6 +239,34 @@ export async function updateActivity(
         body: JSON.stringify(UpdateActivityInputSchema.parse(input)),
       },
     ),
+  )
+}
+
+export async function reorderActivities(
+  accessToken: string,
+  tripId: string,
+  activities: ReorderActivityInput[],
+): Promise<Activity[]> {
+  return ActivitySchema.array().parse(
+    await request(`/api/trips/${tripId}/activities/reorder`, accessToken, {
+      method: 'PATCH',
+      body: JSON.stringify(
+        ReorderActivitiesInputSchema.parse({ activities }),
+      ),
+    }),
+  )
+}
+
+export async function reorderDayItems(
+  accessToken: string,
+  tripId: string,
+  items: ReorderDayItemInput[],
+) {
+  return ReorderedDayItemsSchema.parse(
+    await request(`/api/trips/${tripId}/day-items/reorder`, accessToken, {
+      method: 'PATCH',
+      body: JSON.stringify(ReorderDayItemsInputSchema.parse({ items })),
+    }),
   )
 }
 

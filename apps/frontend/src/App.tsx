@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getErrorMessage } from './lib/errors'
 import { getSupabaseClient } from './lib/supabase'
+import { LoadingCover } from './components/LoadingCover'
 import { LoginScreen } from './features/auth/LoginScreen'
 import { TripDashboard } from './features/trips/TripDashboard'
 
@@ -56,7 +57,7 @@ export default function App() {
   }, [])
 
   if (!isAuthReady) {
-    return <div className="grid min-h-screen place-items-center bg-[#f5f1ea] text-[#69726c]">{t('common.loading')}</div>
+    return <LoadingCover fullScreen message={t('common.loading')} />
   }
 
   if (authError) {

@@ -13,6 +13,8 @@ import {
   CreateTripInputSchema,
   HousingStaySchema,
   MealSchema,
+  ReorderActivitiesInputSchema,
+  ReorderDayItemsInputSchema,
   TripDaySchema,
   UpdateHousingStayInputSchema,
   UpdateMealInputSchema,
@@ -615,11 +617,31 @@ export function createApp(dependencies: AppDependencies = {}) {
           return
         }
 
+        let mealInput = parsedInput.data
+
+        if (mealInput.googleMapsUrl) {
+          try {
+            const place = await googlePlacesResolver(mealInput.googleMapsUrl)
+            mealInput = {
+              ...mealInput,
+              title: mealInput.title?.trim() || null,
+              placeName: place.name,
+              placeAddress: place.address,
+            }
+          } catch (error) {
+            if (error instanceof GooglePlacesError) {
+              response.status(error.statusCode).json({ message: error.message })
+              return
+            }
+            throw error
+          }
+        }
+
         const meal = await tripRepository.createMeal(
           authenticatedRequest.user.id,
           authenticatedRequest.accessToken,
           tripId,
-          parsedInput.data,
+          mealInput,
         )
 
         if (!meal) {
@@ -684,6 +706,9 @@ export function createApp(dependencies: AppDependencies = {}) {
           endTime: currentMeal.endTime,
           allDay: currentMeal.allDay,
           notes: currentMeal.notes,
+          googleMapsUrl: currentMeal.googleMapsUrl,
+          placeName: currentMeal.placeName,
+          placeAddress: currentMeal.placeAddress,
           ...parsedInput.data,
         })
 
@@ -700,12 +725,43 @@ export function createApp(dependencies: AppDependencies = {}) {
           return
         }
 
+        let mealInput = parsedInput.data
+
+        if (parsedInput.data.googleMapsUrl) {
+          try {
+            const place = await googlePlacesResolver(
+              parsedInput.data.googleMapsUrl,
+            )
+            mealInput = {
+              ...mealInput,
+              title:
+                parsedInput.data.title === undefined
+                  ? currentMeal.title
+                  : parsedInput.data.title?.trim() || null,
+              placeName: place.name,
+              placeAddress: place.address,
+            }
+          } catch (error) {
+            if (error instanceof GooglePlacesError) {
+              response.status(error.statusCode).json({ message: error.message })
+              return
+            }
+            throw error
+          }
+        } else if (parsedInput.data.googleMapsUrl === null) {
+          mealInput = {
+            ...mealInput,
+            placeName: null,
+            placeAddress: null,
+          }
+        }
+
         const meal = await tripRepository.updateMeal(
           authenticatedRequest.user.id,
           authenticatedRequest.accessToken,
           tripId,
           mealId,
-          parsedInput.data,
+          mealInput,
         )
 
         if (!meal) {
@@ -802,7 +858,7 @@ export function createApp(dependencies: AppDependencies = {}) {
             const place = await googlePlacesResolver(activityInput.googleMapsUrl)
             activityInput = {
               ...activityInput,
-              title: place.name,
+              title: activityInput.title?.trim() || null,
               placeName: place.name,
               placeAddress: place.address,
             }
@@ -828,6 +884,161 @@ export function createApp(dependencies: AppDependencies = {}) {
         }
 
         response.status(201).json(ActivitySchema.parse(activity))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.patch(
+    '/api/trips/:tripId/activities/reorder',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+
+        if (typeof tripId !== 'string') {
+          response.status(400).json({ message: 'Trip id is required' })
+          return
+        }
+
+        const parsedInput = ReorderActivitiesInputSchema.safeParse(request.body)
+
+        if (!parsedInput.success) {
+          response.status(400).json({
+            message: 'Invalid activity order data',
+            issues: parsedInput.error.issues,
+          })
+          return
+        }
+
+        const activityIds = parsedInput.data.activities.map(
+          (activity) => activity.activityId,
+        )
+
+        if (new Set(activityIds).size !== activityIds.length) {
+          response.status(400).json({
+            message: 'Activity ids must be unique',
+          })
+          return
+        }
+
+        const trip = await tripRepository.getTrip(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+        )
+
+        if (!trip) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        if (
+          parsedInput.data.activities.some(
+            (activity) => !isDateWithinTrip(trip, activity.tripDate),
+          )
+        ) {
+          response.status(400).json({
+            message: 'The activity date must be within the trip dates',
+          })
+          return
+        }
+
+        const activities = await tripRepository.reorderActivities(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          parsedInput.data,
+        )
+
+        if (!activities) {
+          response.status(404).json({ message: 'Activity not found' })
+          return
+        }
+
+        response.json(ActivitySchema.array().parse(activities))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.patch(
+    '/api/trips/:tripId/day-items/reorder',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+
+        if (typeof tripId !== 'string') {
+          response.status(400).json({ message: 'Trip id is required' })
+          return
+        }
+
+        const parsedInput = ReorderDayItemsInputSchema.safeParse(request.body)
+
+        if (!parsedInput.success) {
+          response.status(400).json({
+            message: 'Invalid day item order data',
+            issues: parsedInput.error.issues,
+          })
+          return
+        }
+
+        const itemKeys = parsedInput.data.items.map(
+          (item) => `${item.itemType}:${item.itemId}`,
+        )
+
+        if (new Set(itemKeys).size !== itemKeys.length) {
+          response.status(400).json({
+            message: 'Day item ids must be unique',
+          })
+          return
+        }
+
+        const trip = await tripRepository.getTrip(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+        )
+
+        if (!trip) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        if (
+          parsedInput.data.items.some(
+            (item) => !isDateWithinTrip(trip, item.tripDate),
+          )
+        ) {
+          response.status(400).json({
+            message: 'The day item date must be within the trip dates',
+          })
+          return
+        }
+
+        const reorderedItems = await tripRepository.reorderDayItems(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          parsedInput.data,
+        )
+
+        if (!reorderedItems) {
+          response.status(404).json({ message: 'Day item not found' })
+          return
+        }
+
+        response.json({
+          activities: ActivitySchema.array().parse(reorderedItems.activities),
+          meals: MealSchema.array().parse(reorderedItems.meals),
+        })
       } catch (error) {
         next(error)
       }
@@ -910,7 +1121,10 @@ export function createApp(dependencies: AppDependencies = {}) {
             const place = await googlePlacesResolver(parsedInput.data.googleMapsUrl)
             activityInput = {
               ...activityInput,
-              title: place.name,
+              title:
+                parsedInput.data.title === undefined
+                  ? currentActivity.title
+                  : parsedInput.data.title?.trim() || null,
               placeName: place.name,
               placeAddress: place.address,
             }

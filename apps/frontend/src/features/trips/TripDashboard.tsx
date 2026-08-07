@@ -128,13 +128,6 @@ export function TripDashboard({ session }: TripDashboardProps) {
   }
 
   function goBackToOverview() {
-    const historyIndex = window.history.state?.idx
-
-    if (typeof historyIndex === 'number' && historyIndex > 0) {
-      navigate(-1)
-      return
-    }
-
     navigate('/', { replace: true })
   }
 
@@ -162,7 +155,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
         <Link className="flex items-center gap-3 font-semibold tracking-tight text-[#274b48]" to="/">
           <span className="grid size-9 place-items-center rounded-xl bg-[#274b48] text-lg text-[#f9f5ed]">✦</span>
-          <span>planleggreise</span>
+          <span>Planleggreise</span>
         </Link>
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
@@ -178,7 +171,11 @@ export function TripDashboard({ session }: TripDashboardProps) {
       </nav>
 
       {tripId ? (
-        <section className="mx-auto max-w-2xl px-5 pb-12 pt-6 sm:px-8 sm:pt-10">
+        <section
+          className={`mx-auto ${
+            isTravelMode ? 'max-w-2xl' : 'max-w-7xl'
+          } px-5 pb-12 pt-6 sm:px-8 sm:pt-10`}
+        >
           <button
             className="inline-flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-[#69726c] transition hover:bg-[#e6eee3] hover:text-[#274b48]"
             onClick={goBackToOverview}

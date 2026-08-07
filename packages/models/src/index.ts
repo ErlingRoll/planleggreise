@@ -4,6 +4,7 @@ export {
   CreateHousingStayInputSchema,
   CreateMealInputSchema,
   CreateTripInputSchema,
+  DayItemTypeSchema,
   DateOnlySchema,
   getTripDurationInDays,
   isTripDurationWithinLimit,
@@ -20,11 +21,18 @@ export {
   UpdateTripDayInputSchema,
   UpdateTripInputSchema,
   UpdateActivityInputSchema,
+  ReorderActivityInputSchema,
+  ReorderActivitiesInputSchema,
+  ReorderDayItemInputSchema,
+  ReorderDayItemsInputSchema,
+  ReorderedDayItemsSchema,
 } from './trip.js'
+export { isAllowedGoogleMapsUrl } from './google-maps.js'
 export type {
   Activity,
   CreateActivityInput,
   CreateTripInput,
+  DayItemType,
   CreateHousingStayInput,
   CreateMealInput,
   HousingStay,
@@ -37,4 +45,8 @@ export type {
   UpdateTripDayInput,
   UpdateTripInput,
   UpdateActivityInput,
+  ReorderActivityInput,
+  ReorderActivitiesInput,
+  ReorderDayItemInput,
+  ReorderDayItemsInput,
 } from './trip.js'

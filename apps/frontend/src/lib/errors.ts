@@ -21,6 +21,17 @@ const errorTranslations: Record<string, string> = {
   'Google Places is not configured': 'errors.googlePlacesUnavailable',
 }
 
+const googleMapsErrorMessages = new Set([
+  'Google Maps link is invalid',
+  'Could not resolve Google Maps link',
+  'No place found for Google Maps link',
+  'Google Places is not configured',
+])
+
+export function isGoogleMapsError(reason: unknown) {
+  return reason instanceof Error && googleMapsErrorMessages.has(reason.message)
+}
+
 export function getErrorMessage(reason: unknown) {
   if (!(reason instanceof Error)) {
     return i18n.t('errors.generic')

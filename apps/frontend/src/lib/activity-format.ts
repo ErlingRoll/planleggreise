@@ -1,18 +1,46 @@
-import type { Activity } from '@planleggreise/models'
+import type { Activity, Meal } from '@planleggreise/models'
 
-export function sortActivities(activities: Activity[]) {
-  return [...activities].sort((left, right) => {
-    if (!left.startTime && !right.startTime) {
+export type DayItem = Activity | Meal
+
+export function getDayItemTitle(
+  item: Pick<DayItem, 'title' | 'placeName'>,
+  fallback: string,
+) {
+  return item.title?.trim() || item.placeName || fallback
+}
+
+export function getDayItemTime(item: Pick<DayItem, 'allDay' | 'startTime' | 'endTime'>) {
+  if (item.allDay) {
+    return null
+  }
+
+  return item.startTime ?? item.endTime
+}
+
+export function sortDayItems<T extends DayItem>(items: T[]) {
+  return [...items].sort((left, right) => {
+    if (left.sortOrder !== right.sortOrder) {
       return left.sortOrder - right.sortOrder
     }
-    if (!left.startTime) {
+
+    const leftTime = getDayItemTime(left)
+    const rightTime = getDayItemTime(right)
+
+    if (!leftTime && !rightTime) {
+      return 0
+    }
+    if (!leftTime) {
       return 1
     }
-    if (!right.startTime) {
+    if (!rightTime) {
       return -1
     }
-    return left.startTime.localeCompare(right.startTime)
+    return leftTime.localeCompare(rightTime)
   })
+}
+
+export function sortActivities(activities: Activity[]) {
+  return sortDayItems(activities)
 }
 
 export function formatActivityTime(
