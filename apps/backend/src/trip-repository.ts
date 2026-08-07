@@ -119,6 +119,7 @@ const databaseDateTimeSchema = z.coerce.date().transform((value) => value.toISOS
 const tripMemberRowSchema = z.object({
   trip_id: z.string(),
   user_id: z.string(),
+  name: z.string().nullable(),
   email: z.string().nullable(),
   created_at: databaseDateTimeSchema,
 })
@@ -143,6 +144,7 @@ const tripAccessRequestRowSchema = z.object({
   id: z.string(),
   trip_id: z.string(),
   requester_id: z.string(),
+  requester_name: z.string().nullable(),
   email: z.string(),
   source: z.enum(["email", "link"]),
   status: z.enum(["pending", "approved", "denied"]),
@@ -200,6 +202,7 @@ export interface TripRepository {
     accessToken: string,
     input: CreateTripInput,
     userEmail?: string | null,
+    userName?: string | null,
   ): Promise<Trip>
   updateTrip(
     userId: string,
@@ -309,6 +312,7 @@ export interface TripRepository {
     accessToken: string,
     tripId: string,
     email: string,
+    requesterName: string | null,
     input: RequestTripAccessInput,
   ): Promise<TripAccessStatus | null>
   approveTripAccessRequest(
@@ -471,6 +475,7 @@ function mapTripMemberRow(row: unknown, ownerId: string): TripMember {
 
   return TripMemberSchema.parse({
     userId: parsedRow.user_id,
+    name: parsedRow.name,
     email: parsedRow.email,
     role: parsedRow.user_id === ownerId ? "owner" : "member",
     joinedAt: parsedRow.created_at,
@@ -521,7 +526,7 @@ function mapTripAccessStatus(status: TripAccessStatus["status"], isNew = false):
 async function getLatestTripAccessRequest(client: SupabaseClient, userId: string, tripId: string) {
   const { data, error } = await client
     .from("trip_access_requests")
-    .select("id, trip_id, requester_id, email, source, status, created_at")
+    .select("id, trip_id, requester_id, requester_name, email, source, status, created_at")
     .eq("trip_id", tripId)
     .eq("requester_id", userId)
     .order("created_at", { ascending: false })
@@ -710,7 +715,7 @@ export function createSupabaseTripRepository(): TripRepository {
       })
     },
 
-    async createTrip(userId, accessToken, input, userEmail) {
+    async createTrip(userId, accessToken, input, userEmail, userName) {
       const parsedInput = CreateTripInputSchema.parse(input)
       const client = createUserSupabaseClient(accessToken)
       const tripId = randomUUID()
@@ -730,6 +735,7 @@ export function createSupabaseTripRepository(): TripRepository {
       const { error: memberError } = await client.from("trip_members").insert({
         trip_id: tripId,
         user_id: userId,
+        name: userName?.trim() || null,
         email: userEmail?.trim().toLowerCase() ?? null,
       })
 
@@ -1266,7 +1272,7 @@ export function createSupabaseTripRepository(): TripRepository {
       ] = await Promise.all([
         client
           .from("trip_members")
-          .select("trip_id, user_id, email, created_at")
+          .select("trip_id, user_id, name, email, created_at")
           .eq("trip_id", tripId)
           .order("created_at", { ascending: true }),
         client
@@ -1276,7 +1282,7 @@ export function createSupabaseTripRepository(): TripRepository {
           .order("created_at", { ascending: false }),
         client
           .from("trip_access_requests")
-          .select("id, trip_id, requester_id, email, source, status, created_at")
+          .select("id, trip_id, requester_id, requester_name, email, source, status, created_at")
           .eq("trip_id", tripId)
           .order("created_at", { ascending: false }),
       ])
@@ -1398,7 +1404,7 @@ export function createSupabaseTripRepository(): TripRepository {
       return mapTripAccessLinkRow(data)
     },
 
-    async requestTripAccess(userId, accessToken, tripId, email, input) {
+    async requestTripAccess(userId, accessToken, tripId, email, requesterName, input) {
       const parsedInput = RequestTripAccessInputSchema.parse(input)
       const client = createUserSupabaseClient(accessToken)
       if (await this.getTrip(userId, accessToken, tripId)) {
@@ -1467,12 +1473,13 @@ export function createSupabaseTripRepository(): TripRepository {
         .insert({
           trip_id: tripId,
           requester_id: userId,
+          requester_name: requesterName?.trim() || null,
           email: email.toLowerCase(),
           source,
           invitation_id: invitationId,
           access_link_id: accessLinkId,
         })
-        .select("id, trip_id, requester_id, email, source, status, created_at")
+        .select("id, trip_id, requester_id, requester_name, email, source, status, created_at")
         .single()
 
       if (error) {
@@ -1497,7 +1504,9 @@ export function createSupabaseTripRepository(): TripRepository {
 
       const { data: requestData, error: requestError } = await client
         .from("trip_access_requests")
-        .select("id, trip_id, requester_id, email, source, status, created_at, invitation_id")
+        .select(
+          "id, trip_id, requester_id, requester_name, email, source, status, created_at, invitation_id",
+        )
         .eq("id", requestId)
         .eq("trip_id", tripId)
         .maybeSingle()
@@ -1514,6 +1523,7 @@ export function createSupabaseTripRepository(): TripRepository {
           id: z.string(),
           trip_id: z.string(),
           requester_id: z.string(),
+          requester_name: z.string().nullable(),
           email: z.string(),
           source: z.enum(["email", "link"]),
           status: z.enum(["pending", "approved", "denied"]),
@@ -1528,7 +1538,7 @@ export function createSupabaseTripRepository(): TripRepository {
 
       const { data: existingMember, error: memberLookupError } = await client
         .from("trip_members")
-        .select("trip_id, user_id, email, created_at")
+        .select("trip_id, user_id, name, email, created_at")
         .eq("trip_id", tripId)
         .eq("user_id", request.requester_id)
         .maybeSingle()
@@ -1544,9 +1554,10 @@ export function createSupabaseTripRepository(): TripRepository {
           .insert({
             trip_id: tripId,
             user_id: request.requester_id,
+            name: request.requester_name,
             email: request.email,
           })
-          .select("trip_id, user_id, email, created_at")
+          .select("trip_id, user_id, name, email, created_at")
           .single()
 
         if (memberError) {
@@ -1592,7 +1603,7 @@ export function createSupabaseTripRepository(): TripRepository {
         .eq("id", requestId)
         .eq("trip_id", tripId)
         .eq("status", "pending")
-        .select("id, trip_id, requester_id, email, source, status, created_at")
+        .select("id, trip_id, requester_id, requester_name, email, source, status, created_at")
         .maybeSingle()
 
       if (error) {

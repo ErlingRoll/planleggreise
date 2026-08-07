@@ -322,13 +322,36 @@ export function TripSharingSettings({
 
       <div className="mt-5 grid gap-2">
         <h5 className="text-sm font-semibold text-muted">{t("tripSettings.members")}</h5>
+        <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto_auto] gap-2 px-3 text-xs font-semibold uppercase tracking-wide text-muted sm:grid">
+          <span>{t("tripSettings.memberName")}</span>
+          <span>{t("tripSettings.memberEmail")}</span>
+          <span>{t("tripSettings.memberRole")}</span>
+          <span className="sr-only">{t("tripSettings.remove")}</span>
+        </div>
         {sharing.members.map((member) => (
           <div
-            className="flex items-center justify-between gap-3 rounded-xl bg-surface p-3"
+            className="grid gap-2 rounded-xl bg-surface p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto_auto] sm:items-center"
             key={member.userId}
           >
-            <span className="min-w-0 truncate text-sm text-ink">
-              {member.email ?? member.userId}
+            <div className="min-w-0">
+              <span className="mr-2 text-xs font-semibold text-muted sm:hidden">
+                {t("tripSettings.memberName")}
+              </span>
+              <span className="truncate text-sm text-ink">
+                {member.name ?? t("tripSettings.memberNameUnavailable")}
+              </span>
+            </div>
+            <div className="min-w-0">
+              <span className="mr-2 text-xs font-semibold text-muted sm:hidden">
+                {t("tripSettings.memberEmail")}
+              </span>
+              <span className="truncate text-sm text-muted">{member.email ?? member.userId}</span>
+            </div>
+            <span className="text-xs font-semibold text-muted">
+              <span className="mr-2 sm:hidden">{t("tripSettings.memberRole")}</span>
+              {member.role === "owner"
+                ? t("tripSettings.ownerRole")
+                : t("tripSettings.memberRoleLabel")}
             </span>
             {member.role === "member" && (
               <button
@@ -337,7 +360,7 @@ export function TripSharingSettings({
                 onClick={() =>
                   setPendingDeletion({
                     id: member.userId,
-                    label: member.email ?? member.userId,
+                    label: member.name ?? member.email ?? member.userId,
                     type: "member",
                   })
                 }

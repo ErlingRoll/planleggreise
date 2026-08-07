@@ -11,6 +11,7 @@ export const TripAccessStatusSchema = z.object({
 
 export const TripMemberSchema = z.object({
   userId: z.string(),
+  name: z.string().nullable(),
   email: z.string().email().nullable(),
   role: TripMemberRoleSchema,
   joinedAt: z.string().datetime(),

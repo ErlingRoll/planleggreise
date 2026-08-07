@@ -330,6 +330,7 @@ export function createApp(dependencies: AppDependencies = {}) {
           authenticatedRequest.accessToken,
           tripId,
           authenticatedRequest.user.email,
+          authenticatedRequest.user.name,
           parsedInput.data,
         )
         if (!accessStatus) {
@@ -777,6 +778,7 @@ export function createApp(dependencies: AppDependencies = {}) {
           authenticatedRequest.accessToken,
           parsedInput.data,
           authenticatedRequest.user.email,
+          authenticatedRequest.user.name,
         )
         response.status(201).json(trip)
       } catch (error) {

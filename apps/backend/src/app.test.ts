@@ -101,7 +101,9 @@ function createTestApp(
 ) {
   const authService: AuthService = {
     authenticate: async (accessToken) =>
-      accessToken === "valid-token" ? { id: "user-1", email: "user@example.com" } : null,
+      accessToken === "valid-token"
+        ? { id: "user-1", name: "Test User", email: "user@example.com" }
+        : null,
   }
   const tripRepository: TripRepository = {
     listTrips: async () => [testTrip],
