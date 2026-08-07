@@ -29,7 +29,7 @@ const resources = {
       },
       auth: {
         continueWithGoogle: "Fortsett med Google",
-        description: "Logg inn for å samle reisene dine på ett rolig sted.",
+        description: "Logg inn for å starte reisen din.",
         heading: "Planlegg litt. Opplev mer.",
         openingGoogle: "Åpner Google ...",
         rememberMe: "Husk meg på denne enheten",
