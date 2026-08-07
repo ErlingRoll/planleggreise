@@ -1,5 +1,6 @@
 import "dotenv/config"
 import { createApp } from "./app.js"
+import { PRODUCT_NAME } from "./brand.js"
 
 const port = Number(process.env.PORT ?? 3001)
 
@@ -8,5 +9,5 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 }
 
 createApp().listen(port, () => {
-  console.log(`Planleggreise API listening on http://localhost:${port}`)
+  console.log(`${PRODUCT_NAME} API listening on http://localhost:${port}`)
 })

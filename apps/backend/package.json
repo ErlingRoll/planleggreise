@@ -1,5 +1,5 @@
 {
-  "name": "@planleggreise/backend",
+  "name": "@turprep/backend",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -10,7 +10,7 @@
     "test": "tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
-    "@planleggreise/models": "^0.1.0",
+    "@turprep/models": "^0.1.0",
     "@supabase/supabase-js": "^2.57.4",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",

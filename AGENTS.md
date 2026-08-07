@@ -1,14 +1,13 @@
-# Planleggreise agent guide
+# Turprep agent guide
 
 ## Project overview
 
-Planleggreise is a travel planning web application. The repository is an npm
+Turprep is a travel planning web application. The repository is an npm
 workspace monorepo. The frontend and backend currently live in the same
 repository, but the backend is intentionally structured as a separate
 application so it can be deployed independently later.
 
-**Planleggreise** is the tentative final product name. Use planleggreise for new product
-copy unless a branding task explicitly addresses the existing prototype.
+**Turprep** is the product name. Use Turprep for new product copy.
 
 ## Product decisions
 
@@ -147,7 +146,7 @@ or progress tracking until the relevant product behavior is requested.
 - Runs on `http://localhost:3000`.
 - Calls the backend through `/api`.
 - Vite proxies `/api` to `http://localhost:3001` during development.
-- Frontend API responses must use schemas from `@planleggreise/models`.
+- Frontend API responses must use schemas from `@turprep/models`.
 - Keep UI-only state, presentation types, and components in this app.
 - Keep frontend page components focused on orchestration; split substantial UI
   sections and repeated interaction patterns into focused components rather
@@ -208,11 +207,11 @@ backend, and frontend together.
 Workspace-specific commands are also available:
 
 ```bash
-npm run build --workspace @planleggreise/models
-npm run build --workspace @planleggreise/backend
-npm run build --workspace @planleggreise/frontend
-npm run dev --workspace @planleggreise/backend
-npm run dev --workspace @planleggreise/frontend
+npm run build --workspace @turprep/models
+npm run build --workspace @turprep/backend
+npm run build --workspace @turprep/frontend
+npm run dev --workspace @turprep/backend
+npm run dev --workspace @turprep/frontend
 ```
 
 ## Configuration

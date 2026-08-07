@@ -34,25 +34,37 @@ import { TripDayNavigator } from "./TripDayNavigator"
 import { TripDetailsHeader } from "./TripDetailsHeader"
 import { useTripRealtime } from "./useTripRealtime"
 import type { DayItemRecord, DropTarget, MovingItem, PlannerTab } from "./planner-types"
-import { isAllowedGoogleMapsUrl } from "@planleggreise/models"
+import { isAllowedGoogleMapsUrl } from "@turprep/models"
+import { storageKeys } from "../../lib/brand"
 
-const daySelectionCookiePrefix = "planleggreise-selected-days-"
+const daySelectionCookiePrefix = storageKeys.selectedDaysPrefix
+const legacyDaySelectionCookiePrefix = storageKeys.legacySelectedDaysPrefix
 const daySelectionCookieMaxAge = 60 * 60 * 24 * 365
 
 function getDaySelectionCookieName(tripId: string) {
   return `${daySelectionCookiePrefix}${tripId}`
 }
 
+function getLegacyDaySelectionCookieName(tripId: string) {
+  return `${legacyDaySelectionCookiePrefix}${tripId}`
+}
+
 function readSelectedDayDates(tripId: string, validDates: string[]) {
   const cookieName = getDaySelectionCookieName(tripId)
-  const cookie = document.cookie.split("; ").find((entry) => entry.startsWith(`${cookieName}=`))
+  const legacyCookieName = getLegacyDaySelectionCookieName(tripId)
+  const cookie =
+    document.cookie.split("; ").find((entry) => entry.startsWith(`${cookieName}=`)) ??
+    document.cookie.split("; ").find((entry) => entry.startsWith(`${legacyCookieName}=`))
+  const storedCookieName = cookie?.startsWith(`${cookieName}=`) ? cookieName : legacyCookieName
 
   if (!cookie) {
     return null
   }
 
   try {
-    const storedDates: unknown = JSON.parse(decodeURIComponent(cookie.slice(cookieName.length + 1)))
+    const storedDates: unknown = JSON.parse(
+      decodeURIComponent(cookie.slice(storedCookieName.length + 1)),
+    )
 
     if (
       !Array.isArray(storedDates) ||
@@ -61,7 +73,13 @@ function readSelectedDayDates(tripId: string, validDates: string[]) {
       return null
     }
 
-    return storedDates.filter((date) => validDates.includes(date))
+    const selectedDates = storedDates.filter((date) => validDates.includes(date))
+
+    if (storedCookieName === legacyCookieName) {
+      writeSelectedDayDates(tripId, selectedDates)
+    }
+
+    return selectedDates
   } catch {
     return null
   }

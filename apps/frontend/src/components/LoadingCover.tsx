@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next"
+import { PRODUCT_NAME } from "../lib/brand"
 
 type LoadingCoverProps = {
   fullScreen?: boolean
@@ -42,7 +43,7 @@ export function LoadingCover({ fullScreen = false, message }: LoadingCoverProps)
           </span>
         </div>
         <p className="mt-7 text-xs font-bold uppercase tracking-[0.24em] text-accent-text">
-          planleggreise
+          {PRODUCT_NAME}
         </p>
         <p className="mt-3 text-lg font-semibold text-brand">{message ?? t("common.loading")}</p>
         <div

@@ -1,10 +1,11 @@
 import { useLayoutEffect, useMemo, useState, type ReactNode } from "react"
 import { ThemeContext, type Theme } from "./theme-context"
+import { readMigratedStorageValue, storageKeys } from "../lib/brand"
 
-const themeStorageKey = "planleggreise-theme"
+const themeStorageKey = storageKeys.theme
 
 function getInitialTheme(): Theme {
-  const storedTheme = window.localStorage.getItem(themeStorageKey)
+  const storedTheme = readMigratedStorageValue(themeStorageKey, storageKeys.legacyTheme)
 
   if (storedTheme === "light" || storedTheme === "dark") {
     return storedTheme

@@ -1,5 +1,6 @@
 import { z } from "zod"
-import { isAllowedGoogleMapsUrl } from "@planleggreise/models"
+import { isAllowedGoogleMapsUrl } from "@turprep/models"
+import { PRODUCT_USER_AGENT } from "./brand.js"
 
 const placeDetailsSchema = z.object({
   displayName: z.object({ text: z.string().min(1) }),
@@ -44,7 +45,7 @@ async function resolveRedirectUrl(inputUrl: URL): Promise<URL> {
 
   for (let redirectCount = 0; redirectCount <= 5; redirectCount += 1) {
     const response = await fetch(currentUrl, {
-      headers: { "User-Agent": "planleggreise/1.0" },
+      headers: { "User-Agent": PRODUCT_USER_AGENT },
       redirect: "manual",
     })
 

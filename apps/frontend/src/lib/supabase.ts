@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
+import { readMigratedStorageValue, storageKeys } from "./brand"
 
-const persistencePreferenceKey = "planleggreise.remember-session"
+const persistencePreferenceKey = storageKeys.rememberSession
 
 function getSupabaseConfig() {
   const url = import.meta.env.VITE_SUPABASE_URL
@@ -16,7 +17,10 @@ function getSupabaseConfig() {
 }
 
 function getStoredPersistencePreference(): boolean {
-  return window.localStorage.getItem(persistencePreferenceKey) !== "false"
+  return (
+    readMigratedStorageValue(persistencePreferenceKey, storageKeys.legacyRememberSession) !==
+    "false"
+  )
 }
 
 let client: SupabaseClient | null = null

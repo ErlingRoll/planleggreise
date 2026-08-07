@@ -1,9 +1,10 @@
 import i18n from "i18next"
 import { initReactI18next } from "react-i18next"
+import { readMigratedStorageValue, storageKeys } from "./lib/brand"
 
 export type SupportedLanguage = "nb" | "en"
 
-const languageStorageKey = "planleggreise-language"
+const languageStorageKey = storageKeys.language
 
 const resources = {
   nb: {
@@ -479,7 +480,7 @@ export function getWeekdayLabels(language: SupportedLanguage) {
 }
 
 function getInitialLanguage(): SupportedLanguage {
-  const storedLanguage = window.localStorage.getItem(languageStorageKey)
+  const storedLanguage = readMigratedStorageValue(languageStorageKey, storageKeys.legacyLanguage)
   return storedLanguage === "en" ? "en" : "nb"
 }
 

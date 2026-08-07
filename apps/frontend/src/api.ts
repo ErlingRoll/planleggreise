@@ -47,7 +47,7 @@ import {
   type TripInvitation,
   type TripMember,
   type TripSharing,
-} from "@planleggreise/models"
+} from "@turprep/models"
 import { HttpError, notifyUnhandledHttpError } from "./lib/http-errors"
 
 export type {
@@ -75,7 +75,7 @@ export type {
   TripInvitation,
   TripMember,
   TripSharing,
-} from "@planleggreise/models"
+} from "@turprep/models"
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ""
 

@@ -1,4 +1,4 @@
-import { MAX_TRIP_DAYS } from "@planleggreise/models"
+import { MAX_TRIP_DAYS } from "@turprep/models"
 import i18n from "../i18n"
 import { markHttpErrorHandled } from "./http-errors"
 

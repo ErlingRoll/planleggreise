@@ -5,6 +5,7 @@ import { getErrorMessage } from "../../lib/errors"
 import { LanguageSwitcher } from "../../components/LanguageSwitcher"
 import { MobileMenuButton } from "../../components/MobileMenuButton"
 import { ThemeToggle } from "../../components/ThemeToggle"
+import { PRODUCT_NAME } from "../../lib/brand"
 
 export function LoginScreen() {
   const { t } = useTranslation()
@@ -45,7 +46,7 @@ export function LoginScreen() {
               <span className="grid size-10 place-items-center rounded-xl bg-brand-surface text-lg text-on-brand">
                 ✦
               </span>
-              <span>planleggreise</span>
+              <span>{PRODUCT_NAME}</span>
             </div>
             <div className="hidden items-center gap-2 sm:flex">
               <ThemeToggle />

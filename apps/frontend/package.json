@@ -1,5 +1,5 @@
 {
-  "name": "@planleggreise/frontend",
+  "name": "@turprep/frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@planleggreise/models": "^0.1.0",
+    "@turprep/models": "^0.1.0",
     "@supabase/supabase-js": "^2.57.4",
     "i18next": "^26.3.6",
     "react": "^19.2.8",

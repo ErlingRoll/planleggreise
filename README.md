@@ -1,6 +1,9 @@
-# planleggreise
+# Turprep
 
 Travel planning app built as a small npm workspace. The API is kept in its own Express application so it can be deployed independently later, while the Vite development server proxies API requests locally.
+
+The production application is branded as **Turprep** and is intended to run at
+`https://turprep.com`.
 
 ## Stack
 
@@ -86,3 +89,17 @@ Shared models belong in `packages/models/src`. Define each model's Zod schema th
   function environment. Never commit these values.
 - Apply the trip-sharing migration before using invitations, access links, or
   Realtime trip updates.
+
+## Production deployment
+
+Configure the frontend deployment with the `turprep.com` custom domain and set
+the backend environment values to the production frontend URL:
+
+```env
+CORS_ORIGIN=https://turprep.com
+FRONTEND_APP_URL=https://turprep.com
+```
+
+Add `https://turprep.com` as the Supabase Site URL and OAuth redirect URL. Use a
+verified Turprep sender domain for sharing email notifications before enabling
+production email delivery.

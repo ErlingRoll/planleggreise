@@ -1,4 +1,4 @@
-import type { Trip } from "@planleggreise/models"
+import type { Trip } from "@turprep/models"
 import i18n, { getDateLocale } from "../i18n"
 
 export function formatDate(date: string) {

@@ -35,7 +35,7 @@ import {
   type TripMember,
   type ReorderDayItemInput,
   type UpdateActivityInput,
-} from "@planleggreise/models"
+} from "@turprep/models"
 import { createSupabaseAuthService, type AuthenticatedUser, type AuthService } from "./auth.js"
 import {
   createSupabaseTripRepository,
@@ -49,6 +49,7 @@ import {
   type GooglePlacesResolver,
 } from "./google-places.js"
 import { createSharingEmailSender, type SharingEmailSender } from "./sharing-email.js"
+import { PRODUCT_NAME } from "./brand.js"
 
 type AuthenticatedRequest = Request & {
   accessToken: string
@@ -151,7 +152,7 @@ export function createApp(dependencies: AppDependencies = {}) {
   app.get("/api/health", (_request: Request, response: Response) => {
     response.json({
       status: "ok",
-      service: "planleggreise-api",
+      service: "turprep-api",
       timestamp: new Date().toISOString(),
     })
   })
@@ -451,7 +452,7 @@ export function createApp(dependencies: AppDependencies = {}) {
           to: accessRequest.email,
           subject: "Your trip access request was denied",
           actionUrl: `${process.env.FRONTEND_APP_URL ?? "http://localhost:3000"}/`,
-          actionLabel: "Open Planleggreise",
+          actionLabel: `Open ${PRODUCT_NAME}`,
         })
 
         response.json(TripAccessRequestSchema.parse(accessRequest))
@@ -549,7 +550,7 @@ export function createApp(dependencies: AppDependencies = {}) {
             to: removed.email,
             subject: "Your access to a trip was removed",
             actionUrl: `${process.env.FRONTEND_APP_URL ?? "http://localhost:3000"}/`,
-            actionLabel: "Open Planleggreise",
+            actionLabel: `Open ${PRODUCT_NAME}`,
           })
         }
 

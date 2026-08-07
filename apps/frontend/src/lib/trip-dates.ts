@@ -1,8 +1,4 @@
-import {
-  getTripDurationInDays,
-  isTripDurationWithinLimit,
-  MAX_TRIP_DAYS,
-} from "@planleggreise/models"
+import { getTripDurationInDays, isTripDurationWithinLimit, MAX_TRIP_DAYS } from "@turprep/models"
 import i18n from "../i18n"
 
 export { MAX_TRIP_DAYS }

@@ -1,4 +1,4 @@
-import type { Activity, Meal } from "@planleggreise/models"
+import type { Activity, Meal } from "@turprep/models"
 
 export type DayItem = Activity | Meal
 

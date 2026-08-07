@@ -13,6 +13,7 @@ import { useTripRealtime } from "./useTripRealtime"
 import { LanguageSwitcher } from "../../components/LanguageSwitcher"
 import { MobileMenuButton } from "../../components/MobileMenuButton"
 import { ThemeToggle } from "../../components/ThemeToggle"
+import { PRODUCT_NAME } from "../../lib/brand"
 
 type TripDashboardProps = {
   session: Session
@@ -161,7 +162,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
           <span className="grid size-9 place-items-center rounded-xl bg-brand-surface text-lg text-on-brand">
             ✦
           </span>
-          <span>Planleggreise</span>
+          <span>{PRODUCT_NAME}</span>
         </Link>
         <div className="flex items-center gap-2">
           <div className="hidden items-center gap-3 sm:flex">

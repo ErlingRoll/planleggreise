@@ -1,0 +1,15 @@
+{
+  "name": "Turprep",
+  "short_name": "Turprep",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9f5ed",
+  "theme_color": "#274b48",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

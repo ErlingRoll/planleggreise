@@ -1,4 +1,6 @@
-const httpErrorEventName = "planleggreise:http-error"
+import { storageKeys } from "./brand"
+
+const httpErrorEventName = storageKeys.httpErrorEvent
 
 export class HttpError extends Error {
   readonly status: number

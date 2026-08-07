@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import request from "supertest"
-import { isAllowedGoogleMapsUrl } from "@planleggreise/models"
+import { isAllowedGoogleMapsUrl } from "@turprep/models"
 import type {
   Activity,
   CreateActivityInput,
@@ -16,7 +16,7 @@ import type {
   TripSharing,
   UpdateTripInput,
   UpdateActivityInput,
-} from "@planleggreise/models"
+} from "@turprep/models"
 import type { AuthService } from "./auth.js"
 import { createApp } from "./app.js"
 import { createGooglePlacesResolver, type GooglePlacesResolver } from "./google-places.js"
