@@ -130,6 +130,7 @@ export function TripDetails({
   const [selectedDayDates, setSelectedDayDates] = useState<string[]>([])
   const [lastClickedDayDate, setLastClickedDayDate] = useState("")
   const [plannerTab, setPlannerTab] = useState<PlannerTab>("all")
+  const [showMobileHousing, setShowMobileHousing] = useState(false)
   const [draggedItem, setDraggedItem] = useState<DayItemRecord | null>(null)
   const [movingItem, setMovingItem] = useState<MovingItem | null>(null)
   const [moveTargetDate, setMoveTargetDate] = useState("")
@@ -970,14 +971,19 @@ export function TripDetails({
         />
 
         <div className="min-w-0">
-          <div className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-surface-muted p-1">
+          <div className="mb-4 grid grid-cols-4 gap-1 rounded-xl bg-surface-muted p-1 lg:grid-cols-3">
             {(["all", "activities", "meals"] as const).map((tab) => (
               <button
                 className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-                  plannerTab === tab ? "bg-surface text-on-surface shadow-sm" : "text-muted"
+                  !showMobileHousing && plannerTab === tab
+                    ? "bg-surface text-on-surface shadow-sm"
+                    : "text-muted"
                 }`}
                 key={tab}
-                onClick={() => setPlannerTab(tab)}
+                onClick={() => {
+                  setShowMobileHousing(false)
+                  setPlannerTab(tab)
+                }}
                 type="button"
               >
                 {tab === "all"
@@ -987,8 +993,26 @@ export function TripDetails({
                     : t("tripDetails.meals")}
               </button>
             ))}
+            <button
+              className={`rounded-lg px-3 py-2 text-sm font-semibold lg:hidden ${
+                showMobileHousing ? "bg-surface text-on-surface shadow-sm" : "text-muted"
+              }`}
+              onClick={() => setShowMobileHousing(true)}
+              type="button"
+            >
+              {t("tripDetails.housing")}
+            </button>
           </div>
-          <div className="grid gap-3">
+          <div className={`${showMobileHousing ? "block" : "hidden"} lg:hidden`}>
+            <TripAuxiliaryDetails
+              accessToken={accessToken}
+              onTripUpdated={onTripUpdated}
+              selectedDayDate={selectedDay.date}
+              selectedDayDates={selectedDayDates}
+              trip={currentTrip}
+            />
+          </div>
+          <div className={`grid gap-3 ${showMobileHousing ? "hidden lg:grid" : ""}`}>
             {trip.days.map((day) => (
               <TripDayCard
                 day={day}
@@ -1048,7 +1072,7 @@ export function TripDetails({
               </TripDayCard>
             ))}
           </div>
-          <div className="lg:hidden">
+          <div className={`${showMobileHousing ? "hidden" : "block"} lg:hidden`}>
             <TripAuxiliaryDetails
               accessToken={accessToken}
               onTripUpdated={onTripUpdated}
