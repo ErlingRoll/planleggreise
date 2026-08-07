@@ -6,6 +6,7 @@ import {
 } from '../../lib/supabase'
 import { getErrorMessage } from '../../lib/errors'
 import { LanguageSwitcher } from '../../components/LanguageSwitcher'
+import { ThemeToggle } from '../../components/ThemeToggle'
 
 export function LoginScreen() {
   const { t } = useTranslation()
@@ -44,7 +45,10 @@ export function LoginScreen() {
             <span className="grid size-10 place-items-center rounded-xl bg-[#274b48] text-lg text-[#f9f5ed]">✦</span>
             <span>planleggreise</span>
           </div>
-          <LanguageSwitcher />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <LanguageSwitcher />
+          </div>
         </div>
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#d06f4c]">{t('auth.tagline')}</p>
         <h1 className="mt-4 text-4xl font-medium leading-tight tracking-[-0.04em] text-[#274b48]">

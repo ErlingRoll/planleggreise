@@ -16,6 +16,7 @@ import { TripDetails } from './TripDetails'
 import { TripForm } from './TripForm'
 import { TravelMode } from './TravelMode'
 import { LanguageSwitcher } from '../../components/LanguageSwitcher'
+import { ThemeToggle } from '../../components/ThemeToggle'
 
 type TripDashboardProps = {
   session: Session
@@ -158,6 +159,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
           <span>Planleggreise</span>
         </Link>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <LanguageSwitcher />
           <span className="hidden max-w-48 truncate text-sm text-[#69726c] sm:block">{session.user.email}</span>
           <button

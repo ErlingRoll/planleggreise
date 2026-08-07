@@ -30,3 +30,207 @@ input[type='date'] {
 button:disabled {
   cursor: not-allowed;
 }
+
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: #151a19;
+}
+
+.dark [class~="bg-[#f5f1ea]"] {
+  background-color: #151a19;
+}
+
+.dark [class~="bg-[#faf8f3]"],
+.dark [class~="bg-white"] {
+  background-color: #202624;
+}
+
+.dark [class~="bg-[#f0f5ed]"] {
+  background-color: #23312b;
+}
+
+.dark [class~="bg-[#e6eee3]"] {
+  background-color: #2f4037;
+}
+
+.dark [class~="bg-[#eee8dd]"] {
+  background-color: #2b332f;
+}
+
+.dark [class~="bg-[#274b48]"] {
+  background-color: #31564d;
+}
+
+.dark [class~="bg-[#1c3b38]"] {
+  background-color: #24443d;
+}
+
+.dark [class~="bg-[#35605c]"] {
+  background-color: #467268;
+}
+
+.dark [class~="bg-[#d06f4c]"] {
+  background-color: #b86652;
+}
+
+.dark [class~="bg-[#e5b76b]"] {
+  background-color: #b28f46;
+}
+
+.dark [class~="bg-[#e5b76b]/20"] {
+  background-color: rgb(210 168 92 / 0.14);
+}
+
+.dark [class~="bg-[#e5b76b]/30"] {
+  background-color: rgb(210 168 92 / 0.2);
+}
+
+.dark [class~="bg-[#e5b76b]/40"] {
+  background-color: rgb(210 168 92 / 0.24);
+}
+
+.dark [class~="bg-[#e5b76b]/50"] {
+  background-color: rgb(210 168 92 / 0.35);
+}
+
+.dark [class~="bg-[#b9d1be]/40"] {
+  background-color: rgb(104 145 117 / 0.18);
+}
+
+.dark [class~="bg-[#fff0e9]"] {
+  background-color: #3c2926;
+}
+
+.dark [class~="bg-[#fff6f1]"] {
+  background-color: #342522;
+}
+
+.dark [class~="bg-[#fff7e6]"] {
+  background-color: #3a3020;
+}
+
+.dark [class~="border-[#d9d4ca]"] {
+  border-color: #44504a;
+}
+
+.dark [class~="border-[#e1dbd0]"] {
+  border-color: #38443f;
+}
+
+.dark [class~="border-[#ded6ca]"] {
+  border-color: #39443e;
+}
+
+.dark [class~="border-[#c9c1b5]"] {
+  border-color: #4c5951;
+}
+
+.dark [class~="border-[#b9d1be]"] {
+  border-color: #52715e;
+}
+
+.dark [class~="border-[#e7b5a3]"] {
+  border-color: #75483e;
+}
+
+.dark [class~="border-[#e5b76b]/30"] {
+  border-color: rgb(210 168 92 / 0.35);
+}
+
+.dark [class~="border-t-[#d06f4c]"] {
+  border-top-color: #d88462;
+}
+
+.dark [class~="text-[#27302f]"] {
+  color: #e8efe9;
+}
+
+.dark [class~="text-[#274b48]"] {
+  color: #d1e4d5;
+}
+
+.dark [class~="text-[#f9f5ed]"],
+.dark [class~="text-[#fff8f3]"] {
+  color: #f4f3ed;
+}
+
+.dark [class~="text-[#69726c]"] {
+  color: #aab8ad;
+}
+
+.dark [class~="text-[#8a918b]"],
+.dark [class~="text-[#8b918b]"] {
+  color: #89968c;
+}
+
+.dark [class~="text-[#9b4e36]"] {
+  color: #f0a68b;
+}
+
+.dark [class~="text-[#9b6b24]"] {
+  color: #e0b86d;
+}
+
+.dark [class~="text-[#d06f4c]"] {
+  color: #e59776;
+}
+
+.dark [class~="text-[#b42318]"] {
+  color: #f58f81;
+}
+
+.dark [class~="text-[#526057]"] {
+  color: #c1cec3;
+}
+
+.dark [class~="text-[#52705b]"] {
+  color: #a5c6ad;
+}
+
+.dark [class~="text-[#5f5138]"] {
+  color: #d4c09b;
+}
+
+.dark [class~="text-[#c4c4bd]"] {
+  color: #68736b;
+}
+
+.dark [class~="hover:bg-[#e6eee3]"]:hover {
+  background-color: #385045;
+}
+
+.dark [class~="hover:bg-[#d9e8d9]"]:hover {
+  background-color: #3c5c4b;
+}
+
+.dark [class~="hover:bg-[#fff0e9]"]:hover {
+  background-color: #4a302a;
+}
+
+.dark [class~="hover:bg-[#274b48]"]:hover {
+  background-color: #467268;
+}
+
+.dark [class~="hover:bg-[#1c3b38]"]:hover {
+  background-color: #2d5549;
+}
+
+.dark [class~="hover:border-[#274b48]"]:hover,
+.dark [class~="focus:border-[#274b48]"]:focus {
+  border-color: #7ea78b;
+}
+
+.dark [class~="focus:ring-[#b9d1be]"]:focus {
+  --tw-ring-color: #638c72;
+}
+
+.dark [class~="accent-[#274b48]"] {
+  accent-color: #7ea78b;
+}
+
+.dark [class*="shadow-["] {
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.35);
+}

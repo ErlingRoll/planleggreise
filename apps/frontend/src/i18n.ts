@@ -65,6 +65,12 @@ const resources = {
         plan: 'Plan',
         travel: 'Reise',
       },
+      theme: {
+        darkMode: 'Mørk modus',
+        lightMode: 'Lys modus',
+        switchToDark: 'Bytt til mørk modus',
+        switchToLight: 'Bytt til lys modus',
+      },
       datePicker: {
         chooseDate: 'Velg dato',
         select: 'Velg {{label}}',
@@ -254,6 +260,12 @@ const resources = {
       tripModes: {
         plan: 'Plan',
         travel: 'Travel',
+      },
+      theme: {
+        darkMode: 'Dark mode',
+        lightMode: 'Light mode',
+        switchToDark: 'Switch to dark mode',
+        switchToLight: 'Switch to light mode',
       },
       datePicker: {
         chooseDate: 'Choose date',
