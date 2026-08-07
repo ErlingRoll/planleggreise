@@ -29,6 +29,20 @@ export {
   ReorderedDayItemsSchema,
 } from './trip.js'
 export { isAllowedGoogleMapsUrl } from './google-maps.js'
+export {
+  InviteTripMemberInputSchema,
+  RequestTripAccessInputSchema,
+  SharingInvitationStatusSchema,
+  SharingRequestSourceSchema,
+  SharingRequestStatusSchema,
+  TripAccessLinkSchema,
+  TripAccessRequestSchema,
+  TripAccessStatusSchema,
+  TripInvitationSchema,
+  TripMemberRoleSchema,
+  TripMemberSchema,
+  TripSharingSchema,
+} from './sharing.js'
 export type {
   Activity,
   CreateActivityInput,
@@ -51,3 +65,17 @@ export type {
   ReorderDayItemInput,
   ReorderDayItemsInput,
 } from './trip.js'
+export type {
+  InviteTripMemberInput,
+  RequestTripAccessInput,
+  SharingInvitationStatus,
+  SharingRequestSource,
+  SharingRequestStatus,
+  TripAccessLink,
+  TripAccessRequest,
+  TripAccessStatus,
+  TripInvitation,
+  TripMember,
+  TripMemberRole,
+  TripSharing,
+} from './sharing.js'

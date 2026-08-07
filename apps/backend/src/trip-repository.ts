@@ -12,6 +12,14 @@ import {
   TripSchema,
   ReorderActivitiesInputSchema,
   ReorderDayItemsInputSchema,
+  InviteTripMemberInputSchema,
+  RequestTripAccessInputSchema,
+  TripAccessLinkSchema,
+  TripAccessRequestSchema,
+  TripAccessStatusSchema,
+  TripInvitationSchema,
+  TripMemberSchema,
+  TripSharingSchema,
   UpdateHousingStayInputSchema,
   UpdateMealInputSchema,
   UpdateTripDayInputSchema,
@@ -34,6 +42,14 @@ import {
   type UpdateActivityInput,
   type ReorderActivitiesInput,
   type ReorderDayItemsInput,
+  type TripAccessLink,
+  type TripAccessRequest,
+  type TripAccessStatus,
+  type TripInvitation,
+  type TripMember,
+  type TripSharing,
+  type InviteTripMemberInput,
+  type RequestTripAccessInput,
 } from '@planleggreise/models'
 import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -93,6 +109,46 @@ const mealRowSchema = z.object({
   sort_order: z.number().int(),
 })
 
+const tripOwnerRowSchema = z.object({
+  id: z.string(),
+  owner_id: z.string(),
+})
+
+const databaseDateTimeSchema = z.coerce.date().transform((value) => value.toISOString())
+
+const tripMemberRowSchema = z.object({
+  trip_id: z.string(),
+  user_id: z.string(),
+  email: z.string().nullable(),
+  created_at: databaseDateTimeSchema,
+})
+
+const tripInvitationRowSchema = z.object({
+  id: z.string(),
+  trip_id: z.string(),
+  email: z.string(),
+  status: z.enum(['pending', 'accepted', 'declined', 'revoked']),
+  created_at: databaseDateTimeSchema,
+})
+
+const tripAccessLinkRowSchema = z.object({
+  id: z.string(),
+  trip_id: z.string(),
+  token: z.string(),
+  revoked_at: databaseDateTimeSchema.nullable(),
+  created_at: databaseDateTimeSchema,
+})
+
+const tripAccessRequestRowSchema = z.object({
+  id: z.string(),
+  trip_id: z.string(),
+  requester_id: z.string(),
+  email: z.string(),
+  source: z.enum(['email', 'link']),
+  status: z.enum(['pending', 'approved', 'denied']),
+  created_at: databaseDateTimeSchema,
+})
+
 const activityColumns =
   'id, trip_id, trip_date, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order'
 const housingStayColumns = 'id, trip_id, name, check_in, check_out, notes'
@@ -147,6 +203,7 @@ export interface TripRepository {
     userId: string,
     accessToken: string,
     input: CreateTripInput,
+    userEmail?: string | null,
   ): Promise<Trip>
   updateTrip(
     userId: string,
@@ -247,6 +304,69 @@ export interface TripRepository {
     tripId: string,
     input: ReorderDayItemsInput,
   ): Promise<{ activities: Activity[]; meals: Meal[] } | null>
+  getTripSharing(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+  ): Promise<TripSharing | null>
+  getTripOwnerEmail(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+  ): Promise<string | null>
+  getTripAccessStatus(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+  ): Promise<TripAccessStatus>
+  createTripInvitation(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+    input: InviteTripMemberInput,
+  ): Promise<TripInvitation | null>
+  createTripAccessLink(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+  ): Promise<TripAccessLink | null>
+  requestTripAccess(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+    email: string,
+    input: RequestTripAccessInput,
+  ): Promise<TripAccessStatus | null>
+  approveTripAccessRequest(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+    requestId: string,
+  ): Promise<TripMember | null>
+  denyTripAccessRequest(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+    requestId: string,
+  ): Promise<TripAccessRequest | null>
+  revokeTripInvitation(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+    invitationId: string,
+  ): Promise<TripInvitation | null>
+  revokeTripAccessLink(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+    linkId: string,
+  ): Promise<TripAccessLink | null>
+  removeTripMember(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+    memberId: string,
+  ): Promise<{ email: string | null } | null>
   deleteActivity(
     userId: string,
     accessToken: string,
@@ -378,6 +498,99 @@ function mapMealRow(row: unknown): Meal {
   })
 }
 
+function mapTripMemberRow(row: unknown, ownerId: string): TripMember {
+  const parsedRow = tripMemberRowSchema.parse(row)
+
+  return TripMemberSchema.parse({
+    userId: parsedRow.user_id,
+    email: parsedRow.email,
+    role: parsedRow.user_id === ownerId ? 'owner' : 'member',
+    joinedAt: parsedRow.created_at,
+  })
+}
+
+function mapTripInvitationRow(row: unknown): TripInvitation {
+  const parsedRow = tripInvitationRowSchema.parse(row)
+
+  return TripInvitationSchema.parse({
+    id: parsedRow.id,
+    tripId: parsedRow.trip_id,
+    email: parsedRow.email,
+    status: parsedRow.status,
+    createdAt: parsedRow.created_at,
+  })
+}
+
+function mapTripAccessLinkRow(row: unknown): TripAccessLink {
+  const parsedRow = tripAccessLinkRowSchema.parse(row)
+
+  return TripAccessLinkSchema.parse({
+    id: parsedRow.id,
+    tripId: parsedRow.trip_id,
+    token: parsedRow.token,
+    revokedAt: parsedRow.revoked_at,
+    createdAt: parsedRow.created_at,
+  })
+}
+
+function mapTripAccessRequestRow(row: unknown): TripAccessRequest {
+  const parsedRow = tripAccessRequestRowSchema.parse(row)
+
+  return TripAccessRequestSchema.parse({
+    id: parsedRow.id,
+    tripId: parsedRow.trip_id,
+    email: parsedRow.email,
+    source: parsedRow.source,
+    status: parsedRow.status,
+    createdAt: parsedRow.created_at,
+  })
+}
+
+function mapTripAccessStatus(
+  status: TripAccessStatus['status'],
+  isNew = false,
+): TripAccessStatus {
+  return TripAccessStatusSchema.parse({ status, isNew })
+}
+
+async function getLatestTripAccessRequest(
+  client: SupabaseClient,
+  userId: string,
+  tripId: string,
+) {
+  const { data, error } = await client
+    .from('trip_access_requests')
+    .select('id, trip_id, requester_id, email, source, status, created_at')
+    .eq('trip_id', tripId)
+    .eq('requester_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  if (error) {
+    throw error
+  }
+
+  const rows = z.array(tripAccessRequestRowSchema).parse(data)
+  return rows[0] ?? null
+}
+
+async function getTripOwnerId(
+  client: SupabaseClient,
+  tripId: string,
+): Promise<string | null> {
+  const { data, error } = await client
+    .from('trips')
+    .select('id, owner_id')
+    .eq('id', tripId)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  return data ? tripOwnerRowSchema.parse(data).owner_id : null
+}
+
 async function selectActivity(
   client: ReturnType<typeof createUserSupabaseClient>,
   tripId: string,
@@ -497,7 +710,6 @@ export function createSupabaseTripRepository(): TripRepository {
       const { data, error } = await client
         .from('trips')
         .select('id, name, start_date, end_date, notes')
-        .eq('owner_id', userId)
         .is('deleted_at', null)
         .order('start_date', { ascending: true })
 
@@ -514,7 +726,6 @@ export function createSupabaseTripRepository(): TripRepository {
         .from('trips')
         .select('id, name, start_date, end_date, notes')
         .eq('id', tripId)
-        .eq('owner_id', userId)
         .is('deleted_at', null)
         .maybeSingle()
 
@@ -541,7 +752,7 @@ export function createSupabaseTripRepository(): TripRepository {
       })
     },
 
-    async createTrip(userId, accessToken, input) {
+    async createTrip(userId, accessToken, input, userEmail) {
       const parsedInput = CreateTripInputSchema.parse(input)
       const client = createUserSupabaseClient(accessToken)
       const tripId = randomUUID()
@@ -558,6 +769,16 @@ export function createSupabaseTripRepository(): TripRepository {
 
       if (error) {
         throw error
+      }
+
+      const { error: memberError } = await client.from('trip_members').insert({
+        trip_id: tripId,
+        user_id: userId,
+        email: userEmail?.trim().toLowerCase() ?? null,
+      })
+
+      if (memberError) {
+        throw memberError
       }
 
       const { data, error: readError } = await client
@@ -600,7 +821,6 @@ export function createSupabaseTripRepository(): TripRepository {
           updated_at: new Date().toISOString(),
         })
         .eq('id', tripId)
-        .eq('owner_id', userId)
 
       if (error) {
         throw error
@@ -1123,6 +1343,453 @@ export function createSupabaseTripRepository(): TripRepository {
       )
 
       return { activities: updatedActivities, meals: updatedMeals }
+    },
+
+    async getTripSharing(userId, accessToken, tripId) {
+      const client = createUserSupabaseClient(accessToken)
+      const ownerId = await getTripOwnerId(client, tripId)
+
+      if (!ownerId) {
+        return null
+      }
+
+      const [
+        { data: memberRows, error: membersError },
+        { data: invitationRows, error: invitationsError },
+        { data: requestRows, error: requestsError },
+      ] = await Promise.all([
+        client
+          .from('trip_members')
+          .select('trip_id, user_id, email, created_at')
+          .eq('trip_id', tripId)
+          .order('created_at', { ascending: true }),
+        client
+          .from('trip_invitations')
+          .select('id, trip_id, email, status, created_at')
+          .eq('trip_id', tripId)
+          .order('created_at', { ascending: false }),
+        client
+          .from('trip_access_requests')
+          .select('id, trip_id, requester_id, email, source, status, created_at')
+          .eq('trip_id', tripId)
+          .order('created_at', { ascending: false }),
+      ])
+
+      if (membersError) {
+        throw membersError
+      }
+      if (invitationsError) {
+        throw invitationsError
+      }
+      if (requestsError) {
+        throw requestsError
+      }
+
+      let accessLinks: TripAccessLink[] = []
+      if (ownerId === userId) {
+        const { data: linkRows, error: linksError } = await client
+          .from('trip_access_links')
+          .select('id, trip_id, token, revoked_at, created_at')
+          .eq('trip_id', tripId)
+          .order('created_at', { ascending: false })
+
+        if (linksError) {
+          throw linksError
+        }
+
+        accessLinks = z
+          .array(tripAccessLinkRowSchema)
+          .parse(linkRows)
+          .map(mapTripAccessLinkRow)
+      }
+
+      return TripSharingSchema.parse({
+        ownerId,
+        canManage: ownerId === userId,
+        members: z
+          .array(tripMemberRowSchema)
+          .parse(memberRows)
+          .map((member) => mapTripMemberRow(member, ownerId)),
+        invitations: z
+          .array(tripInvitationRowSchema)
+          .parse(invitationRows)
+          .map(mapTripInvitationRow),
+        requests: z
+          .array(tripAccessRequestRowSchema)
+          .parse(requestRows)
+          .map(mapTripAccessRequestRow),
+        accessLinks,
+      })
+    },
+
+    async getTripOwnerEmail(_userId, accessToken, tripId) {
+      const client = createUserSupabaseClient(accessToken)
+      const { data, error } = await client.rpc('get_trip_owner_email', {
+        target_trip_id: tripId,
+      })
+
+      if (error) {
+        throw error
+      }
+
+      return data ? z.string().email().parse(data) : null
+    },
+
+    async getTripAccessStatus(userId, accessToken, tripId) {
+      const trip = await this.getTrip(userId, accessToken, tripId)
+      if (trip) {
+        return mapTripAccessStatus('approved')
+      }
+
+      const client = createUserSupabaseClient(accessToken)
+      const request = await getLatestTripAccessRequest(client, userId, tripId)
+      return mapTripAccessStatus(
+        request?.status === 'approved' ? 'none' : request?.status ?? 'none',
+      )
+    },
+
+    async createTripInvitation(userId, accessToken, tripId, input) {
+      const client = createUserSupabaseClient(accessToken)
+      if ((await getTripOwnerId(client, tripId)) !== userId) {
+        return null
+      }
+
+      const parsedInput = InviteTripMemberInputSchema.parse(input)
+      const { data, error } = await client
+        .from('trip_invitations')
+        .insert({
+          trip_id: tripId,
+          inviter_id: userId,
+          email: parsedInput.email.toLowerCase(),
+        })
+        .select('id, trip_id, email, status, created_at')
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      return mapTripInvitationRow(data)
+    },
+
+    async createTripAccessLink(userId, accessToken, tripId) {
+      const client = createUserSupabaseClient(accessToken)
+      if ((await getTripOwnerId(client, tripId)) !== userId) {
+        return null
+      }
+
+      const { data, error } = await client
+        .from('trip_access_links')
+        .insert({
+          trip_id: tripId,
+          created_by: userId,
+          token: randomUUID(),
+        })
+        .select('id, trip_id, token, revoked_at, created_at')
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      return mapTripAccessLinkRow(data)
+    },
+
+    async requestTripAccess(userId, accessToken, tripId, email, input) {
+      const parsedInput = RequestTripAccessInputSchema.parse(input)
+      const client = createUserSupabaseClient(accessToken)
+      if (await this.getTrip(userId, accessToken, tripId)) {
+        return mapTripAccessStatus('approved')
+      }
+
+      const existingRequest = await getLatestTripAccessRequest(
+        client,
+        userId,
+        tripId,
+      )
+      if (existingRequest) {
+        if (existingRequest.status === 'pending') {
+          return mapTripAccessStatus('pending')
+        }
+        if (existingRequest.status === 'denied') {
+          return mapTripAccessStatus('denied')
+        }
+      }
+
+      let source: 'email' | 'link'
+      let invitationId: string | null = null
+      let accessLinkId: string | null = null
+
+      if (parsedInput.invitationId) {
+        const { data, error } = await client
+          .from('trip_invitations')
+          .select('id, trip_id, email, status, created_at')
+          .eq('id', parsedInput.invitationId)
+          .eq('trip_id', tripId)
+          .maybeSingle()
+
+        if (error) {
+          throw error
+        }
+
+        const invitation = data
+          ? tripInvitationRowSchema.parse(data)
+          : null
+        if (
+          !invitation ||
+          invitation.status !== 'pending' ||
+          invitation.email.toLowerCase() !== email.toLowerCase()
+        ) {
+          return null
+        }
+
+        source = 'email'
+        invitationId = invitation.id
+      } else if (parsedInput.accessLinkToken) {
+        const { data, error } = await client.rpc('get_trip_access_link', {
+          target_trip_id: tripId,
+          target_token: parsedInput.accessLinkToken,
+        })
+
+        if (error) {
+          throw error
+        }
+        const link = z.array(tripAccessLinkRowSchema).parse(data)
+        if (link.length === 0) {
+          return null
+        }
+
+        source = 'link'
+        accessLinkId = link[0].id
+      } else {
+        return null
+      }
+
+      const { data, error } = await client
+        .from('trip_access_requests')
+        .insert({
+          trip_id: tripId,
+          requester_id: userId,
+          email: email.toLowerCase(),
+          source,
+          invitation_id: invitationId,
+          access_link_id: accessLinkId,
+        })
+        .select(
+          'id, trip_id, requester_id, email, source, status, created_at',
+        )
+        .single()
+
+      if (error) {
+        if (error.code === '23505') {
+          const request = await getLatestTripAccessRequest(
+            client,
+            userId,
+            tripId,
+          )
+          if (request) {
+            return mapTripAccessStatus(request.status)
+          }
+        }
+        throw error
+      }
+
+      mapTripAccessRequestRow(data)
+      return mapTripAccessStatus('pending', true)
+    },
+
+    async approveTripAccessRequest(
+      userId,
+      accessToken,
+      tripId,
+      requestId,
+    ) {
+      const client = createUserSupabaseClient(accessToken)
+      if ((await getTripOwnerId(client, tripId)) !== userId) {
+        return null
+      }
+
+      const { data: requestData, error: requestError } = await client
+        .from('trip_access_requests')
+        .select(
+          'id, trip_id, requester_id, email, source, status, created_at, invitation_id',
+        )
+        .eq('id', requestId)
+        .eq('trip_id', tripId)
+        .maybeSingle()
+
+      if (requestError) {
+        throw requestError
+      }
+      if (!requestData) {
+        return null
+      }
+
+      const request = z
+        .object({
+          id: z.string(),
+          trip_id: z.string(),
+          requester_id: z.string(),
+          email: z.string(),
+          source: z.enum(['email', 'link']),
+          status: z.enum(['pending', 'approved', 'denied']),
+          created_at: databaseDateTimeSchema,
+          invitation_id: z.string().nullable(),
+        })
+        .parse(requestData)
+
+      if (request.status !== 'pending') {
+        return null
+      }
+
+      const { data: existingMember, error: memberLookupError } = await client
+        .from('trip_members')
+        .select('trip_id, user_id, email, created_at')
+        .eq('trip_id', tripId)
+        .eq('user_id', request.requester_id)
+        .maybeSingle()
+
+      if (memberLookupError) {
+        throw memberLookupError
+      }
+
+      let memberRow = existingMember
+      if (!memberRow) {
+        const { data: insertedMember, error: memberError } = await client
+          .from('trip_members')
+          .insert({
+            trip_id: tripId,
+            user_id: request.requester_id,
+            email: request.email,
+          })
+          .select('trip_id, user_id, email, created_at')
+          .single()
+
+        if (memberError) {
+          throw memberError
+        }
+        memberRow = insertedMember
+      }
+
+      const { error: updateError } = await client
+        .from('trip_access_requests')
+        .update({ status: 'approved' })
+        .eq('id', requestId)
+        .eq('trip_id', tripId)
+
+      if (updateError) {
+        throw updateError
+      }
+
+      if (request.invitation_id) {
+        const { error: invitationError } = await client
+          .from('trip_invitations')
+          .update({ status: 'accepted' })
+          .eq('id', request.invitation_id)
+          .eq('trip_id', tripId)
+
+        if (invitationError) {
+          throw invitationError
+        }
+      }
+
+      return mapTripMemberRow(memberRow, userId)
+    },
+
+    async denyTripAccessRequest(userId, accessToken, tripId, requestId) {
+      const client = createUserSupabaseClient(accessToken)
+      if ((await getTripOwnerId(client, tripId)) !== userId) {
+        return null
+      }
+
+      const { data, error } = await client
+        .from('trip_access_requests')
+        .update({ status: 'denied' })
+        .eq('id', requestId)
+        .eq('trip_id', tripId)
+        .eq('status', 'pending')
+        .select('id, trip_id, requester_id, email, source, status, created_at')
+        .maybeSingle()
+
+      if (error) {
+        throw error
+      }
+      return data ? mapTripAccessRequestRow(data) : null
+    },
+
+    async revokeTripInvitation(userId, accessToken, tripId, invitationId) {
+      const client = createUserSupabaseClient(accessToken)
+      if ((await getTripOwnerId(client, tripId)) !== userId) {
+        return null
+      }
+
+      const { data, error } = await client
+        .from('trip_invitations')
+        .update({ status: 'revoked' })
+        .eq('id', invitationId)
+        .eq('trip_id', tripId)
+        .eq('status', 'pending')
+        .select('id, trip_id, email, status, created_at')
+        .maybeSingle()
+
+      if (error) {
+        throw error
+      }
+      return data ? mapTripInvitationRow(data) : null
+    },
+
+    async revokeTripAccessLink(userId, accessToken, tripId, linkId) {
+      const client = createUserSupabaseClient(accessToken)
+      if ((await getTripOwnerId(client, tripId)) !== userId) {
+        return null
+      }
+
+      const { data, error } = await client
+        .from('trip_access_links')
+        .update({ revoked_at: new Date().toISOString() })
+        .eq('id', linkId)
+        .eq('trip_id', tripId)
+        .is('revoked_at', null)
+        .select('id, trip_id, token, revoked_at, created_at')
+        .maybeSingle()
+
+      if (error) {
+        throw error
+      }
+      return data ? mapTripAccessLinkRow(data) : null
+    },
+
+    async removeTripMember(userId, accessToken, tripId, memberId) {
+      const client = createUserSupabaseClient(accessToken)
+      if ((await getTripOwnerId(client, tripId)) !== userId || memberId === userId) {
+        return null
+      }
+
+      const { data: member, error: memberError } = await client
+        .from('trip_members')
+        .select('email')
+        .eq('trip_id', tripId)
+        .eq('user_id', memberId)
+        .maybeSingle()
+
+      if (memberError) {
+        throw memberError
+      }
+      if (!member) {
+        return null
+      }
+
+      const { error } = await client
+        .from('trip_members')
+        .delete()
+        .eq('trip_id', tripId)
+        .eq('user_id', memberId)
+
+      if (error) {
+        throw error
+      }
+
+      return { email: z.object({ email: z.string().email().nullable() }).parse(member).email }
     },
 
     async deleteActivity(_userId, accessToken, tripId, activityId) {

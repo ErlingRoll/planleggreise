@@ -24,7 +24,7 @@ export function LoginScreen() {
       const { error: signInError } = await client.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: `${window.location.origin}${window.location.pathname}${window.location.search}`,
         },
       })
 

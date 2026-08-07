@@ -79,3 +79,10 @@ Shared models belong in `packages/models/src`. Define each model's Zod schema th
 - The backend currently uses the user's bearer token so Supabase RLS remains
   effective. Do not replace this with a privileged service-role client
   without explicitly designing the security boundary.
+- Sharing email notifications use the `send-sharing-email` Supabase Edge
+  Function. Configure `SHARING_EMAIL_FUNCTION_URL` and
+  `SHARING_EMAIL_FUNCTION_SECRET` in the backend, and configure
+  `RESEND_API_KEY`, `SHARING_EMAIL_FROM`, and the same function secret in the
+  function environment. Never commit these values.
+- Apply the trip-sharing migration before using invitations, access links, or
+  Realtime trip updates.

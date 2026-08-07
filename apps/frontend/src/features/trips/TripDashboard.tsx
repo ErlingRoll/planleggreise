@@ -15,6 +15,7 @@ import { getSupabaseClient } from '../../lib/supabase'
 import { TripDetails } from './TripDetails'
 import { TripForm } from './TripForm'
 import { TravelMode } from './TravelMode'
+import { useTripRealtime } from './useTripRealtime'
 import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import { ThemeToggle } from '../../components/ThemeToggle'
 
@@ -95,6 +96,14 @@ export function TripDashboard({ session }: TripDashboardProps) {
       isMounted = false
     }
   }, [tripId, session.access_token])
+
+  useTripRealtime({
+    accessToken: session.access_token,
+    isPaused: () => false,
+    onError: setDetailsError,
+    onTripUpdated: handleTripUpdated,
+    tripId: isTravelMode ? tripId : undefined,
+  })
 
   const filteredTrips = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -189,6 +198,9 @@ export function TripDashboard({ session }: TripDashboardProps) {
           <h1 className="mt-5 text-3xl font-medium tracking-[-0.04em] text-brand">
             {isTravelMode ? t('travelMode.title') : t('dashboard.plan')}
           </h1>
+          {isTravelMode && detailsError && (
+            <p className="mt-4 text-sm text-error">{detailsError}</p>
+          )}
           <nav
             aria-label={t('tripModes.plan')}
             className="mt-5 grid grid-cols-2 rounded-xl bg-surface-muted p-1"

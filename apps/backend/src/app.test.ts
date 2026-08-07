@@ -12,6 +12,8 @@ import type {
   Meal,
   Trip,
   TripDetail,
+  TripAccessLink,
+  TripSharing,
   UpdateTripInput,
   UpdateActivityInput,
 } from '@planleggreise/models'
@@ -100,6 +102,7 @@ const allDayTripDetail: TripDetail = {
 function createTestApp(
   googlePlacesResolver?: GooglePlacesResolver,
   tripDetail = testTripDetail,
+  repositoryOverrides: Partial<TripRepository> = {},
 ) {
   const authService: AuthService = {
     authenticate: async (accessToken) =>
@@ -226,10 +229,25 @@ function createTestApp(
           sortOrder: item.sortOrder,
         })),
     }),
+    getTripSharing: async () => null,
+    getTripOwnerEmail: async () => null,
+    getTripAccessStatus: async () => ({ status: 'none', isNew: false }),
+    createTripInvitation: async () => null,
+    createTripAccessLink: async () => null,
+    requestTripAccess: async () => null,
+    approveTripAccessRequest: async () => null,
+    denyTripAccessRequest: async () => null,
+    revokeTripInvitation: async () => null,
+    revokeTripAccessLink: async () => null,
+    removeTripMember: async () => null,
     deleteActivity: async () => true,
   }
 
-  return createApp({ authService, tripRepository, googlePlacesResolver })
+  return createApp({
+    authService,
+    tripRepository: { ...tripRepository, ...repositoryOverrides },
+    googlePlacesResolver,
+  })
 }
 
 test('health endpoint is public', async () => {
@@ -244,6 +262,82 @@ test('trip list requires authentication', async () => {
 
   assert.equal(response.status, 401)
   assert.equal(response.body.message, 'Authentication required')
+})
+
+test('sharing endpoints require authentication', async () => {
+  const response = await request(createTestApp()).get(
+    '/api/trips/trip-1/sharing',
+  )
+
+  assert.equal(response.status, 401)
+})
+
+test('trip owners can create an access link', async () => {
+  const accessLink: TripAccessLink = {
+    id: 'link-1',
+    tripId: 'trip-1',
+    token: 'link-token',
+    revokedAt: null,
+    createdAt: '2026-08-07T08:00:00.000Z',
+  }
+  const response = await request(
+    createTestApp(undefined, testTripDetail, {
+      createTripAccessLink: async () => accessLink,
+    }),
+  )
+    .post('/api/trips/trip-1/sharing/access-links')
+    .set('Authorization', 'Bearer valid-token')
+
+  assert.equal(response.status, 201)
+  assert.deepEqual(response.body, accessLink)
+})
+
+test('accessible users can view trip sharing state', async () => {
+  const sharing: TripSharing = {
+    ownerId: 'user-1',
+    canManage: true,
+    members: [],
+    invitations: [],
+    requests: [],
+    accessLinks: [],
+  }
+  const response = await request(
+    createTestApp(undefined, testTripDetail, {
+      getTripSharing: async () => sharing,
+    }),
+  )
+    .get('/api/trips/trip-1/sharing')
+    .set('Authorization', 'Bearer valid-token')
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(response.body, sharing)
+})
+
+test('authenticated users can view their trip access status', async () => {
+  const response = await request(
+    createTestApp(undefined, testTripDetail, {
+      getTripAccessStatus: async () => ({ status: 'pending', isNew: false }),
+    }),
+  )
+    .get('/api/trips/trip-1/sharing/access-status')
+    .set('Authorization', 'Bearer valid-token')
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(response.body, { status: 'pending', isNew: false })
+})
+
+test('existing access requests are returned without sending a duplicate request', async () => {
+  const response = await request(
+    createTestApp(undefined, testTripDetail, {
+      requestTripAccess: async () => ({ status: 'pending', isNew: false }),
+    }),
+  )
+    .post('/api/trips/trip-1/sharing/access-requests')
+    .set('Authorization', 'Bearer valid-token')
+    .send({ invitationId: '11111111-1111-4111-8111-111111111111' })
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(response.body, { status: 'pending', isNew: false })
 })
 
 test('authenticated users can list trips', async () => {

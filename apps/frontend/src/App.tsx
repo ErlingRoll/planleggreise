@@ -6,6 +6,7 @@ import { getErrorMessage } from './lib/errors'
 import { getSupabaseClient } from './lib/supabase'
 import { LoadingCover } from './components/LoadingCover'
 import { LoginScreen } from './features/auth/LoginScreen'
+import { TripAccessRequestScreen } from './features/trips/TripAccessRequestScreen'
 import { TripDashboard } from './features/trips/TripDashboard'
 
 export default function App() {
@@ -74,6 +75,12 @@ export default function App() {
 
   return (
     <Routes>
+      <Route
+        element={
+          <TripAccessRequestScreen accessToken={session.access_token} />
+        }
+        path="/trips/:tripId/request-access"
+      />
       <Route element={<TripDashboard session={session} />} path="/" />
       <Route element={<TripDashboard session={session} />} path="/trips/:tripId" />
       <Route

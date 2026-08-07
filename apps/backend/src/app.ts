@@ -11,10 +11,18 @@ import {
   CreateHousingStayInputSchema,
   CreateMealInputSchema,
   CreateTripInputSchema,
+  InviteTripMemberInputSchema,
   HousingStaySchema,
   MealSchema,
   ReorderActivitiesInputSchema,
   ReorderDayItemsInputSchema,
+  RequestTripAccessInputSchema,
+  TripAccessLinkSchema,
+  TripAccessRequestSchema,
+  TripAccessStatusSchema,
+  TripInvitationSchema,
+  TripMemberSchema,
+  TripSharingSchema,
   TripDaySchema,
   UpdateHousingStayInputSchema,
   UpdateMealInputSchema,
@@ -24,6 +32,7 @@ import {
   isTripDurationWithinLimit,
   type Trip,
   type TripDetail,
+  type TripMember,
   type ReorderDayItemInput,
   type UpdateActivityInput,
 } from '@planleggreise/models'
@@ -43,6 +52,10 @@ import {
   GooglePlacesError,
   type GooglePlacesResolver,
 } from './google-places.js'
+import {
+  createSharingEmailSender,
+  type SharingEmailSender,
+} from './sharing-email.js'
 
 type AuthenticatedRequest = Request & {
   accessToken: string
@@ -53,6 +66,7 @@ export type AppDependencies = {
   authService?: AuthService
   tripRepository?: TripRepository
   googlePlacesResolver?: GooglePlacesResolver
+  sharingEmailSender?: SharingEmailSender
 }
 
 function getAccessToken(request: Request): string | null {
@@ -64,6 +78,11 @@ function getAccessToken(request: Request): string | null {
 
   const token = authorization.slice('Bearer '.length).trim()
   return token || null
+}
+
+function getSharingActionUrl(tripId: string, query: string) {
+  const appUrl = process.env.FRONTEND_APP_URL ?? 'http://localhost:3000'
+  return `${appUrl}/trips/${tripId}/request-access?${query}`
 }
 
 function getReorderedItemStartTime(
@@ -140,6 +159,8 @@ export function createApp(dependencies: AppDependencies = {}) {
     dependencies.tripRepository ?? createSupabaseTripRepository()
   const googlePlacesResolver =
     dependencies.googlePlacesResolver ?? createGooglePlacesResolver()
+  const sharingEmailSender =
+    dependencies.sharingEmailSender ?? createSharingEmailSender()
   const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:3000')
     .split(',')
     .map((origin) => origin.trim())
@@ -203,6 +224,368 @@ export function createApp(dependencies: AppDependencies = {}) {
         }
 
         response.json(trip)
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.get(
+    '/api/trips/:tripId/sharing',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+        if (typeof tripId !== 'string') {
+          response.status(400).json({ message: 'Trip id is required' })
+          return
+        }
+
+        const sharing = await tripRepository.getTripSharing(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+        )
+        if (!sharing) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        response.json(TripSharingSchema.parse(sharing))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.post(
+    '/api/trips/:tripId/sharing/invitations',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+        const parsedInput = InviteTripMemberInputSchema.safeParse(request.body)
+        if (typeof tripId !== 'string' || !parsedInput.success) {
+          response.status(400).json({ message: 'Invalid invitation data' })
+          return
+        }
+
+        const invitation = await tripRepository.createTripInvitation(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          parsedInput.data,
+        )
+        if (!invitation) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        await sharingEmailSender.send({
+          to: invitation.email,
+          subject: 'You have been invited to collaborate on a trip',
+          actionUrl: getSharingActionUrl(
+            tripId,
+            `invitationId=${encodeURIComponent(invitation.id)}`,
+          ),
+          actionLabel: 'Request access',
+        })
+
+        response.status(201).json(TripInvitationSchema.parse(invitation))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.post(
+    '/api/trips/:tripId/sharing/access-links',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+        if (typeof tripId !== 'string') {
+          response.status(400).json({ message: 'Trip id is required' })
+          return
+        }
+
+        const link = await tripRepository.createTripAccessLink(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+        )
+        if (!link) {
+          response.status(404).json({ message: 'Trip not found' })
+          return
+        }
+
+        response.status(201).json(TripAccessLinkSchema.parse(link))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.post(
+    '/api/trips/:tripId/sharing/access-requests',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+        const parsedInput = RequestTripAccessInputSchema.safeParse(request.body)
+        if (
+          typeof tripId !== 'string' ||
+          !parsedInput.success ||
+          !authenticatedRequest.user.email
+        ) {
+          response.status(400).json({ message: 'Invalid access request data' })
+          return
+        }
+
+        const accessStatus = await tripRepository.requestTripAccess(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          authenticatedRequest.user.email,
+          parsedInput.data,
+        )
+        if (!accessStatus) {
+          response.status(404).json({ message: 'Invitation or access link not found' })
+          return
+        }
+
+        if (accessStatus.status === 'pending' && accessStatus.isNew) {
+          const ownerEmail = await tripRepository.getTripOwnerEmail(
+            authenticatedRequest.user.id,
+            authenticatedRequest.accessToken,
+            tripId,
+          )
+          if (ownerEmail) {
+            await sharingEmailSender.send({
+              to: ownerEmail,
+              subject: 'A user has requested access to your trip',
+              actionUrl: `${process.env.FRONTEND_APP_URL ?? 'http://localhost:3000'}/trips/${tripId}`,
+              actionLabel: 'Review access request',
+            })
+          }
+        }
+
+        response
+          .status(accessStatus.isNew ? 201 : 200)
+          .json(TripAccessStatusSchema.parse(accessStatus))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.get(
+    '/api/trips/:tripId/sharing/access-status',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+        if (typeof tripId !== 'string') {
+          response.status(400).json({ message: 'Trip id is required' })
+          return
+        }
+
+        const accessStatus = await tripRepository.getTripAccessStatus(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+        )
+        response.json(TripAccessStatusSchema.parse(accessStatus))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.patch(
+    '/api/trips/:tripId/sharing/requests/:requestId/approve',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId, requestId } = request.params
+        if (typeof tripId !== 'string' || typeof requestId !== 'string') {
+          response.status(400).json({ message: 'Access request id is required' })
+          return
+        }
+
+        const member = await tripRepository.approveTripAccessRequest(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          requestId,
+        )
+        if (!member) {
+          response.status(404).json({ message: 'Access request not found' })
+          return
+        }
+
+        if (member.email) {
+          await sharingEmailSender.send({
+            to: member.email,
+            subject: 'Your trip access request was approved',
+            actionUrl: `${process.env.FRONTEND_APP_URL ?? 'http://localhost:3000'}/trips/${tripId}`,
+            actionLabel: 'Open trip',
+          })
+        }
+
+        response.json(TripMemberSchema.parse(member))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.patch(
+    '/api/trips/:tripId/sharing/requests/:requestId/deny',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId, requestId } = request.params
+        if (typeof tripId !== 'string' || typeof requestId !== 'string') {
+          response.status(400).json({ message: 'Access request id is required' })
+          return
+        }
+
+        const accessRequest = await tripRepository.denyTripAccessRequest(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          requestId,
+        )
+        if (!accessRequest) {
+          response.status(404).json({ message: 'Access request not found' })
+          return
+        }
+
+        await sharingEmailSender.send({
+          to: accessRequest.email,
+          subject: 'Your trip access request was denied',
+          actionUrl: `${process.env.FRONTEND_APP_URL ?? 'http://localhost:3000'}/`,
+          actionLabel: 'Open Planleggreise',
+        })
+
+        response.json(TripAccessRequestSchema.parse(accessRequest))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.patch(
+    '/api/trips/:tripId/sharing/invitations/:invitationId/revoke',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId, invitationId } = request.params
+        if (typeof tripId !== 'string' || typeof invitationId !== 'string') {
+          response.status(400).json({ message: 'Invitation id is required' })
+          return
+        }
+
+        const invitation = await tripRepository.revokeTripInvitation(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          invitationId,
+        )
+        if (!invitation) {
+          response.status(404).json({ message: 'Invitation not found' })
+          return
+        }
+
+        response.json(TripInvitationSchema.parse(invitation))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.patch(
+    '/api/trips/:tripId/sharing/access-links/:linkId/revoke',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId, linkId } = request.params
+        if (typeof tripId !== 'string' || typeof linkId !== 'string') {
+          response.status(400).json({ message: 'Access link id is required' })
+          return
+        }
+
+        const link = await tripRepository.revokeTripAccessLink(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          linkId,
+        )
+        if (!link) {
+          response.status(404).json({ message: 'Access link not found' })
+          return
+        }
+
+        response.json(TripAccessLinkSchema.parse(link))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.delete(
+    '/api/trips/:tripId/sharing/members/:memberId',
+    (request, response, next) =>
+      requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId, memberId } = request.params
+        if (typeof tripId !== 'string' || typeof memberId !== 'string') {
+          response.status(400).json({ message: 'Member id is required' })
+          return
+        }
+
+        const removed = await tripRepository.removeTripMember(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          memberId,
+        )
+        if (!removed) {
+          response.status(404).json({ message: 'Member not found' })
+          return
+        }
+
+        if (removed.email) {
+          await sharingEmailSender.send({
+            to: removed.email,
+            subject: 'Your access to a trip was removed',
+            actionUrl: `${process.env.FRONTEND_APP_URL ?? 'http://localhost:3000'}/`,
+            actionLabel: 'Open Planleggreise',
+          })
+        }
+
+        response.status(204).send()
       } catch (error) {
         next(error)
       }
@@ -443,6 +826,7 @@ export function createApp(dependencies: AppDependencies = {}) {
           authenticatedRequest.user.id,
           authenticatedRequest.accessToken,
           parsedInput.data,
+          authenticatedRequest.user.email,
         )
         response.status(201).json(trip)
       } catch (error) {

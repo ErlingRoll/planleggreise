@@ -37,6 +37,7 @@ import { MoveDayItemForm } from './MoveDayItemForm'
 import { TripDayCard } from './TripDayCard'
 import { TripDayNavigator } from './TripDayNavigator'
 import { TripDetailsHeader } from './TripDetailsHeader'
+import { useTripRealtime } from './useTripRealtime'
 import type {
   DayItemRecord,
   DropTarget,
@@ -155,6 +156,14 @@ export function TripDetails({
   const reorderQueueRef = useRef(Promise.resolve())
   const pendingReorderCountRef = useRef(0)
   const reorderGenerationRef = useRef(0)
+
+  useTripRealtime({
+    accessToken,
+    isPaused: () => pendingReorderCountRef.current > 0,
+    onError: setActivityError,
+    onTripUpdated,
+    tripId: trip?.id,
+  })
 
   useEffect(() => {
     if (trip) {

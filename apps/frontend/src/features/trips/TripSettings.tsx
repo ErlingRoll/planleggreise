@@ -4,6 +4,7 @@ import { updateTrip, type TripDetail } from '../../api'
 import { DatePicker } from '../../components/DatePicker'
 import { getErrorMessage } from '../../lib/errors'
 import { getTripDurationMessage, shiftDate } from '../../lib/trip-dates'
+import { TripSharingSettings } from './TripSharingSettings'
 
 type TripSettingsProps = {
   accessToken: string
@@ -28,6 +29,7 @@ export function TripSettings({
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [canManageSharing, setCanManageSharing] = useState(false)
 
   useEffect(() => {
     setName(trip.name)
@@ -35,6 +37,7 @@ export function TripSettings({
     setStartDate(trip.startDate)
     setEndDate(trip.endDate)
     setError(null)
+    setCanManageSharing(false)
   }, [trip])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -155,14 +158,16 @@ export function TripSettings({
         {error && <p className="text-sm text-error">{error}</p>}
 
         <div className="flex flex-col-reverse gap-3 border-t border-border-card pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            className="rounded-xl border border-danger-border px-4 py-2.5 text-sm font-semibold text-error hover:bg-danger-surface disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={isDeleting || isSaving}
-            onClick={() => void handleDelete()}
-            type="button"
-          >
-            {isDeleting ? t('tripSettings.deleting') : t('tripSettings.delete')}
-          </button>
+          {canManageSharing && (
+            <button
+              className="rounded-xl border border-danger-border px-4 py-2.5 text-sm font-semibold text-error hover:bg-danger-surface disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isDeleting || isSaving}
+              onClick={() => void handleDelete()}
+              type="button"
+            >
+              {isDeleting ? t('tripSettings.deleting') : t('tripSettings.delete')}
+            </button>
+          )}
           <div className="flex flex-col-reverse gap-3 sm:flex-row">
             <button
               className="rounded-xl px-4 py-2.5 text-sm font-semibold text-muted hover:bg-surface-muted"
@@ -181,6 +186,11 @@ export function TripSettings({
           </div>
         </div>
       </form>
+      <TripSharingSettings
+        accessToken={accessToken}
+        onCanManageChange={setCanManageSharing}
+        trip={trip}
+      />
     </section>
   )
 }

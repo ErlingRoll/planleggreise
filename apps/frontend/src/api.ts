@@ -9,6 +9,14 @@ import {
   ReorderActivitiesInputSchema,
   ReorderDayItemsInputSchema,
   ReorderedDayItemsSchema,
+  InviteTripMemberInputSchema,
+  RequestTripAccessInputSchema,
+  TripAccessLinkSchema,
+  TripAccessRequestSchema,
+  TripAccessStatusSchema,
+  TripInvitationSchema,
+  TripMemberSchema,
+  TripSharingSchema,
   TripDaySchema,
   TripSchema,
   UpdateHousingStayInputSchema,
@@ -31,6 +39,14 @@ import {
   type UpdateActivityInput,
   type ReorderActivityInput,
   type ReorderDayItemInput,
+  type InviteTripMemberInput,
+  type RequestTripAccessInput,
+  type TripAccessLink,
+  type TripAccessRequest,
+  type TripAccessStatus,
+  type TripInvitation,
+  type TripMember,
+  type TripSharing,
 } from '@planleggreise/models'
 import { HttpError, notifyUnhandledHttpError } from './lib/http-errors'
 
@@ -51,6 +67,14 @@ export type {
   UpdateActivityInput,
   ReorderActivityInput,
   ReorderDayItemInput,
+  InviteTripMemberInput,
+  RequestTripAccessInput,
+  TripAccessLink,
+  TripAccessRequest,
+  TripAccessStatus,
+  TripInvitation,
+  TripMember,
+  TripSharing,
 } from '@planleggreise/models'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ''
@@ -93,6 +117,132 @@ export async function getTrip(
 ): Promise<TripDetail> {
   return TripDetailSchema.parse(
     await request(`/api/trips/${tripId}`, accessToken),
+  )
+}
+
+export async function getTripSharing(
+  accessToken: string,
+  tripId: string,
+): Promise<TripSharing> {
+  return TripSharingSchema.parse(
+    await request(`/api/trips/${tripId}/sharing`, accessToken),
+  )
+}
+
+export async function getTripAccessStatus(
+  accessToken: string,
+  tripId: string,
+): Promise<TripAccessStatus> {
+  return TripAccessStatusSchema.parse(
+    await request(
+      `/api/trips/${tripId}/sharing/access-status`,
+      accessToken,
+    ),
+  )
+}
+
+export async function createTripInvitation(
+  accessToken: string,
+  tripId: string,
+  input: InviteTripMemberInput,
+): Promise<TripInvitation> {
+  return TripInvitationSchema.parse(
+    await request(`/api/trips/${tripId}/sharing/invitations`, accessToken, {
+      method: 'POST',
+      body: JSON.stringify(InviteTripMemberInputSchema.parse(input)),
+    }),
+  )
+}
+
+export async function createTripAccessLink(
+  accessToken: string,
+  tripId: string,
+): Promise<TripAccessLink> {
+  return TripAccessLinkSchema.parse(
+    await request(`/api/trips/${tripId}/sharing/access-links`, accessToken, {
+      method: 'POST',
+    }),
+  )
+}
+
+export async function requestTripAccess(
+  accessToken: string,
+  tripId: string,
+  input: RequestTripAccessInput,
+): Promise<TripAccessStatus> {
+  return TripAccessStatusSchema.parse(
+    await request(`/api/trips/${tripId}/sharing/access-requests`, accessToken, {
+      method: 'POST',
+      body: JSON.stringify(RequestTripAccessInputSchema.parse(input)),
+    }),
+  )
+}
+
+export async function approveTripAccessRequest(
+  accessToken: string,
+  tripId: string,
+  requestId: string,
+): Promise<TripMember> {
+  return TripMemberSchema.parse(
+    await request(
+      `/api/trips/${tripId}/sharing/requests/${requestId}/approve`,
+      accessToken,
+      { method: 'PATCH' },
+    ),
+  )
+}
+
+export async function denyTripAccessRequest(
+  accessToken: string,
+  tripId: string,
+  requestId: string,
+): Promise<TripAccessRequest> {
+  return TripAccessRequestSchema.parse(
+    await request(
+      `/api/trips/${tripId}/sharing/requests/${requestId}/deny`,
+      accessToken,
+      { method: 'PATCH' },
+    ),
+  )
+}
+
+export async function revokeTripInvitation(
+  accessToken: string,
+  tripId: string,
+  invitationId: string,
+): Promise<TripInvitation> {
+  return TripInvitationSchema.parse(
+    await request(
+      `/api/trips/${tripId}/sharing/invitations/${invitationId}/revoke`,
+      accessToken,
+      { method: 'PATCH' },
+    ),
+  )
+}
+
+export async function revokeTripAccessLink(
+  accessToken: string,
+  tripId: string,
+  linkId: string,
+): Promise<TripAccessLink> {
+  return TripAccessLinkSchema.parse(
+    await request(
+      `/api/trips/${tripId}/sharing/access-links/${linkId}/revoke`,
+      accessToken,
+      { method: 'PATCH' },
+    ),
+  )
+}
+
+export async function removeTripMember(
+  accessToken: string,
+  tripId: string,
+  memberId: string,
+): Promise<void> {
+  await request(
+    `/api/trips/${tripId}/sharing/members/${memberId}`,
+    accessToken,
+    { method: 'DELETE' },
   )
 }
 
