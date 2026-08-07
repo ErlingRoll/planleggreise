@@ -5,13 +5,16 @@ import './index.css'
 import './i18n'
 import App from './App.tsx'
 import { ThemeProvider } from './components/ThemeProvider'
+import { ToastProvider } from './components/ToastProvider'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </ToastProvider>
     </ThemeProvider>
   </StrictMode>,
 )

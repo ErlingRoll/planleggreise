@@ -1,5 +1,6 @@
 import { MAX_TRIP_DAYS } from '@planleggreise/models'
 import i18n from '../i18n'
+import { markHttpErrorHandled } from './http-errors'
 
 const errorTranslations: Record<string, string> = {
   'Authentication required': 'errors.authenticationRequired',
@@ -33,6 +34,8 @@ export function isGoogleMapsError(reason: unknown) {
 }
 
 export function getErrorMessage(reason: unknown) {
+  markHttpErrorHandled(reason)
+
   if (!(reason instanceof Error)) {
     return i18n.t('errors.generic')
   }

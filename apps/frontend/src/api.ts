@@ -32,6 +32,7 @@ import {
   type ReorderActivityInput,
   type ReorderDayItemInput,
 } from '@planleggreise/models'
+import { HttpError, notifyUnhandledHttpError } from './lib/http-errors'
 
 export type {
   Activity,
@@ -65,8 +66,18 @@ async function request(path: string, accessToken: string, init?: RequestInit) {
   })
 
   if (!response.ok) {
-    const errorBody = (await response.json()) as { message?: string }
-    throw new Error(errorBody.message ?? `API request failed (${response.status})`)
+    let message = `API request failed (${response.status})`
+
+    try {
+      const errorBody = (await response.json()) as { message?: string }
+      message = errorBody.message ?? message
+    } catch {
+      // Keep the status-based message when the server does not return JSON.
+    }
+
+    const error = new HttpError(message, response.status)
+    notifyUnhandledHttpError(error)
+    throw error
   }
 
   return response.status === 204 ? null : response.json() as Promise<unknown>
