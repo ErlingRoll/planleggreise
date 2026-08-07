@@ -135,7 +135,7 @@ export function TripAuxiliaryDetails({
         <div className="flex items-center justify-between gap-3">
           <h3 className="font-semibold text-brand">{t('tripDetails.housing')}</h3>
           <button
-            className="rounded-lg px-2 py-1 text-sm font-semibold text-brand hover:bg-surface-muted"
+            className="rounded-lg px-2 py-1 text-sm font-semibold text-on-surface hover:bg-surface-muted"
             onClick={startNewForm}
             type="button"
           >
@@ -161,7 +161,7 @@ export function TripAuxiliaryDetails({
                     )}
                   </div>
                   <button
-                    className="rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-surface-muted"
+                    className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted"
                     onClick={() => editHousing(stay)}
                     type="button"
                   >
@@ -230,7 +230,7 @@ export function TripAuxiliaryDetails({
                 {t('common.cancel')}
               </button>
               <button
-                className="rounded-xl bg-brand px-3 py-2 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
+                className="rounded-xl bg-brand-surface px-3 py-2 text-sm font-semibold text-on-brand hover:bg-brand-surface-hover disabled:opacity-60"
                 disabled={isSaving}
                 type="submit"
               >

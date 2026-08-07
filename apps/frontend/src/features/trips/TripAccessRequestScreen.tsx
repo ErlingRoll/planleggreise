@@ -120,7 +120,7 @@ export function TripAccessRequestScreen({
           </button>
           {!isCheckingStatus && accessStatus?.status === 'none' && (
             <button
-              className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-on-brand disabled:opacity-60"
+              className="rounded-xl bg-brand-surface px-4 py-2.5 text-sm font-semibold text-on-brand disabled:opacity-60"
               disabled={isSubmitting}
               onClick={() => void handleRequest()}
               type="button"

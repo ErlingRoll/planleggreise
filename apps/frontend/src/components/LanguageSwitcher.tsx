@@ -70,7 +70,7 @@ export function LanguageSwitcher() {
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-label={t('language.label')}
-        className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-brand outline-none transition hover:border-brand focus:border-brand"
+        className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-on-surface outline-none transition hover:border-brand focus:border-brand"
         onClick={() => setIsOpen((current) => !current)}
         type="button"
       >
@@ -86,7 +86,7 @@ export function LanguageSwitcher() {
         >
           <button
             aria-selected={language === 'nb'}
-            className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-semibold text-brand hover:bg-surface-muted"
+            className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-semibold text-on-surface hover:bg-surface-muted"
             onClick={() => selectLanguage('nb')}
             role="option"
             type="button"
@@ -96,7 +96,7 @@ export function LanguageSwitcher() {
           </button>
           <button
             aria-selected={language === 'en'}
-            className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-semibold text-brand hover:bg-surface-muted"
+            className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-semibold text-on-surface hover:bg-surface-muted"
             onClick={() => selectLanguage('en')}
             role="option"
             type="button"

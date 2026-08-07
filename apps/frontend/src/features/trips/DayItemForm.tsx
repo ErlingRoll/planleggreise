@@ -155,7 +155,7 @@ export function DayItemForm({
           {t('common.cancel')}
         </button>
         <button
-          className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
+          className="rounded-xl bg-brand-surface px-4 py-2.5 text-sm font-semibold text-on-brand hover:bg-brand-surface-hover disabled:opacity-60"
           disabled={isSaving}
           type="submit"
         >

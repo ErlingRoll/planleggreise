@@ -17,6 +17,7 @@ import { TripForm } from './TripForm'
 import { TravelMode } from './TravelMode'
 import { useTripRealtime } from './useTripRealtime'
 import { LanguageSwitcher } from '../../components/LanguageSwitcher'
+import { MobileMenuButton } from '../../components/MobileMenuButton'
 import { ThemeToggle } from '../../components/ThemeToggle'
 
 type TripDashboardProps = {
@@ -37,6 +38,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [detailsError, setDetailsError] = useState<string | null>(null)
+  const [showMobileOptions, setShowMobileOptions] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -164,22 +166,44 @@ export function TripDashboard({ session }: TripDashboardProps) {
     <main className="min-h-screen bg-page text-ink">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
         <Link className="flex items-center gap-3 font-semibold tracking-tight text-brand" to="/">
-          <span className="grid size-9 place-items-center rounded-xl bg-brand text-lg text-on-brand">✦</span>
+          <span className="grid size-9 place-items-center rounded-xl bg-brand-surface text-lg text-on-brand">✦</span>
           <span>Planleggreise</span>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <div className="hidden items-center gap-3 sm:flex">
+            <ThemeToggle />
+            <LanguageSwitcher />
+            <span className="hidden max-w-48 truncate text-sm text-muted md:block">{session.user.email}</span>
+            <button
+              className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold transition hover:border-brand"
+              onClick={() => void signOut()}
+              type="button"
+            >
+              {t('dashboard.logOut')}
+            </button>
+          </div>
+          <MobileMenuButton
+            closeLabel={t('common.close')}
+            isOpen={showMobileOptions}
+            menuLabel={t('common.menu')}
+            onToggle={() => setShowMobileOptions((current) => !current)}
+            openLabel={t('dashboard.openOptions')}
+          />
+        </div>
+      </nav>
+      {showMobileOptions && (
+        <div className="mx-auto flex max-w-6xl justify-end gap-2 border-t border-border-card px-5 pt-3 sm:hidden">
           <ThemeToggle />
           <LanguageSwitcher />
-          <span className="hidden max-w-48 truncate text-sm text-muted sm:block">{session.user.email}</span>
           <button
-            className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold transition hover:border-brand"
+            className="rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-on-surface"
             onClick={() => void signOut()}
             type="button"
           >
             {t('dashboard.logOut')}
           </button>
         </div>
-      </nav>
+      )}
 
       {tripId ? (
         <section
@@ -188,7 +212,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
           } px-5 pb-12 pt-6 sm:px-8 sm:pt-10`}
         >
           <button
-            className="inline-flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-muted transition hover:bg-surface-muted hover:text-brand"
+            className="inline-flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-muted transition hover:bg-surface-muted hover:text-on-surface"
             onClick={goBackToOverview}
             type="button"
           >
@@ -208,7 +232,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
             <Link
               className={`rounded-lg px-3 py-2 text-center text-sm font-semibold ${
                 !isTravelMode
-                  ? 'bg-surface text-brand shadow-sm'
+                  ? 'bg-surface text-on-surface shadow-sm'
                   : 'text-muted'
               }`}
               to={`/trips/${tripId}`}
@@ -218,7 +242,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
             <Link
               className={`rounded-lg px-3 py-2 text-center text-sm font-semibold ${
                 isTravelMode
-                  ? 'bg-surface text-brand shadow-sm'
+                  ? 'bg-surface text-on-surface shadow-sm'
                   : 'text-muted'
               }`}
               to={`/trips/${tripId}/travel`}
@@ -252,7 +276,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
               </p>
             </div>
             <button
-              className="rounded-xl bg-brand px-5 py-3 font-semibold text-on-brand transition hover:bg-brand-hover"
+              className="rounded-xl bg-brand-surface px-5 py-3 font-semibold text-on-brand transition hover:bg-brand-surface-hover"
               onClick={() => setIsCreating((current) => !current)}
               type="button"
             >

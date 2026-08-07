@@ -42,7 +42,7 @@ export function MoveDayItemForm({
           {t('common.cancel')}
         </button>
         <button
-          className="rounded-xl bg-brand px-3 py-2 text-sm font-semibold text-on-brand hover:bg-brand-hover"
+          className="rounded-xl bg-brand-surface px-3 py-2 text-sm font-semibold text-on-brand hover:bg-brand-surface-hover"
           type="submit"
         >
           {t('common.move')}

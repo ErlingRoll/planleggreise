@@ -171,7 +171,7 @@ export function DayItemList({
               </div>
               <div className="flex shrink-0 flex-wrap justify-end gap-1">
                 <button
-                  className="rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-surface-muted disabled:opacity-50"
+                  className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
                   disabled={editingItemId !== null || movingItem !== null}
                   onClick={() => onStartMoving(record)}
                   type="button"
@@ -179,7 +179,7 @@ export function DayItemList({
                   {t('common.move')}
                 </button>
                 <button
-                  className="rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-surface-muted disabled:opacity-50"
+                  className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
                   disabled={movingItem !== null}
                   onClick={() =>
                     record.itemType === 'meal'

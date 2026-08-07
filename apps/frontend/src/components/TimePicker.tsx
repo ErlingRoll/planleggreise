@@ -226,7 +226,7 @@ export function TimePicker({ label, value, onChange }: TimePickerProps) {
                   aria-invalid={hasInvalidHour && draftHourInput !== ''}
                   aria-label={t('timePicker.hour')}
                   autoComplete="off"
-                  className={`min-h-12 w-full rounded-xl border bg-surface px-3 text-center text-2xl font-semibold tabular-nums text-brand outline-none transition focus:ring-2 focus:ring-soft ${
+                  className={`min-h-12 w-full rounded-xl border bg-surface px-3 text-center text-2xl font-semibold tabular-nums text-on-surface outline-none transition focus:ring-2 focus:ring-soft ${
                     hasInvalidHour && draftHourInput !== ''
                       ? 'border-error-strong focus:border-error-strong'
                       : 'border-border focus:border-brand'
@@ -251,7 +251,7 @@ export function TimePicker({ label, value, onChange }: TimePickerProps) {
                 <input
                   aria-invalid={hasInvalidMinute && draftMinuteInput !== ''}
                   aria-label={t('timePicker.minute')}
-                  className={`min-h-12 w-full rounded-xl border bg-surface px-3 text-center text-2xl font-semibold tabular-nums text-brand outline-none transition focus:ring-2 focus:ring-soft ${
+                  className={`min-h-12 w-full rounded-xl border bg-surface px-3 text-center text-2xl font-semibold tabular-nums text-on-surface outline-none transition focus:ring-2 focus:ring-soft ${
                     hasInvalidMinute && draftMinuteInput !== ''
                       ? 'border-error-strong focus:border-error-strong'
                       : 'border-border focus:border-brand'
@@ -291,7 +291,7 @@ export function TimePicker({ label, value, onChange }: TimePickerProps) {
                 {t('common.cancel')}
               </button>
               <button
-                className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl bg-brand-surface px-4 py-2.5 text-sm font-semibold text-on-brand hover:bg-brand-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={!draftTime}
                 onClick={savePicker}
                 type="button"

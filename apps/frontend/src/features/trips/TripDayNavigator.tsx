@@ -31,7 +31,7 @@ export function TripDayNavigator({
             {t('tripDetails.dayNavigator')}
           </h4>
           <button
-            className="rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-surface-muted"
+            className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted"
             onClick={onSelectAll}
             type="button"
           >
@@ -47,8 +47,8 @@ export function TripDayNavigator({
               <div
                 className={`flex items-center gap-2 rounded-xl px-2 py-2 transition ${
                   isActive
-                    ? 'bg-brand text-on-brand'
-                    : 'text-muted hover:bg-surface-muted hover:text-brand'
+                    ? 'bg-brand-surface text-on-brand'
+                    : 'text-muted hover:bg-surface-muted hover:text-on-surface'
                 }`}
                 key={day.date}
               >

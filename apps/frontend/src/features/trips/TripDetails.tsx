@@ -1125,7 +1125,7 @@ export function TripDetails({
               <button
                 className={`rounded-lg px-3 py-2 text-sm font-semibold ${
                   plannerTab === tab
-                    ? 'bg-surface text-brand shadow-sm'
+                    ? 'bg-surface text-on-surface shadow-sm'
                     : 'text-muted'
                 }`}
                 key={tab}

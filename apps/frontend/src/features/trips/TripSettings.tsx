@@ -116,7 +116,7 @@ export function TripSettings({
         <label className="grid gap-2 text-sm font-medium text-muted">
           {t('tripSettings.name')}
           <input
-            className="rounded-xl border border-border bg-white px-3 py-2.5 text-ink outline-none focus:border-brand"
+            className="rounded-xl border border-border bg-input px-3 py-2.5 text-input-ink outline-none focus:border-brand"
             onChange={(event) => setName(event.target.value)}
             required
             value={name}
@@ -125,7 +125,7 @@ export function TripSettings({
         <label className="grid gap-2 text-sm font-medium text-muted">
           {t('tripSettings.notes')}
           <textarea
-            className="min-h-24 resize-y rounded-xl border border-border bg-white px-3 py-2.5 text-ink outline-none focus:border-brand"
+            className="min-h-24 resize-y rounded-xl border border-border bg-input px-3 py-2.5 text-input-ink outline-none focus:border-brand"
             onChange={(event) => setNotes(event.target.value)}
             placeholder={t('tripSettings.notesPlaceholder')}
             value={notes}
@@ -177,7 +177,7 @@ export function TripSettings({
               {t('tripSettings.cancel')}
             </button>
             <button
-              className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
+              className="rounded-xl bg-brand-surface px-4 py-2.5 text-sm font-semibold text-on-brand hover:bg-brand-surface-hover disabled:opacity-60"
               disabled={isSaving || isDeleting}
               type="submit"
             >

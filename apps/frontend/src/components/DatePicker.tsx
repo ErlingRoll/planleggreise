@@ -159,7 +159,7 @@ export function DatePicker({
           <div className="flex items-center justify-between gap-3">
             <button
               aria-label={t('common.previousMonth')}
-              className="grid size-11 place-items-center rounded-xl text-2xl text-brand hover:bg-surface-muted"
+              className="grid size-11 place-items-center rounded-xl text-2xl text-on-surface hover:bg-surface-muted"
               onClick={() => moveMonth(-1)}
               type="button"
             >
@@ -170,7 +170,7 @@ export function DatePicker({
             </p>
             <button
               aria-label={t('common.nextMonth')}
-              className="grid size-11 place-items-center rounded-xl text-2xl text-brand hover:bg-surface-muted"
+              className="grid size-11 place-items-center rounded-xl text-2xl text-on-surface hover:bg-surface-muted"
               onClick={() => moveMonth(1)}
               type="button"
             >
@@ -203,7 +203,7 @@ export function DatePicker({
                   aria-pressed={isSelected}
                   className={`min-h-11 rounded-xl text-sm font-medium transition ${
                     isSelected
-                      ? 'bg-brand text-on-brand'
+                      ? 'bg-brand-surface text-on-brand'
                       : isDisabled
                         ? 'cursor-not-allowed text-disabled'
                         : 'text-ink hover:bg-surface-muted'

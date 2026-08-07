@@ -16,7 +16,7 @@ export function TripDetailsHeader({
   const { t } = useTranslation()
 
   return (
-    <div className="rounded-2xl bg-brand p-5 text-on-brand">
+    <div className="rounded-2xl bg-brand-surface p-5 text-on-brand">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm text-soft">{formatDateRange(trip)}</p>

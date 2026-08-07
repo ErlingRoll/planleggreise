@@ -75,7 +75,7 @@ export function TripDayCard({
         </div>
         <div className="ml-auto flex shrink-0 flex-col items-end gap-1">
           <button
-            className="rounded-lg px-2 py-1 text-sm font-semibold text-brand hover:bg-surface-muted"
+            className="rounded-lg px-2 py-1 text-sm font-semibold text-on-surface hover:bg-surface-muted"
             disabled={editingItemId !== null}
             onClick={() => {
               if (editingItemId !== null) {
@@ -137,7 +137,7 @@ export function TripDayCard({
               {t('common.cancel')}
             </button>
             <button
-              className="rounded-xl bg-brand px-3 py-2 text-sm font-semibold text-on-brand hover:bg-brand-hover disabled:opacity-60"
+              className="rounded-xl bg-brand-surface px-3 py-2 text-sm font-semibold text-on-brand hover:bg-brand-surface-hover disabled:opacity-60"
               disabled={isSavingDayDetails}
               onClick={() => onSaveDayDetails(day.date)}
               type="button"

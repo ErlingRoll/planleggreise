@@ -265,7 +265,7 @@ export function TripSharingSettings({
             value={email}
           />
           <button
-            className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-on-brand disabled:opacity-60"
+            className="rounded-xl bg-brand-surface px-4 py-2.5 text-sm font-semibold text-on-brand disabled:opacity-60"
             disabled={isSaving || !email.trim()}
             onClick={() => void handleInvite()}
             type="button"
@@ -298,7 +298,7 @@ export function TripSharingSettings({
               <span className="text-sm text-ink">{request.email}</span>
               <div className="flex gap-2">
                 <button
-                  className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-on-brand disabled:opacity-60"
+                  className="rounded-lg bg-brand-surface px-3 py-1.5 text-xs font-semibold text-on-brand disabled:opacity-60"
                   disabled={isSaving}
                   onClick={() => void handleApprove(request.id)}
                   type="button"
@@ -386,7 +386,7 @@ export function TripSharingSettings({
               </code>
               <div className="flex shrink-0 gap-2">
                 <button
-                  className="rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-surface-muted disabled:opacity-60"
+                  className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-60"
                   onClick={() => void handleCopyLink(link.id, link.token)}
                   type="button"
                 >

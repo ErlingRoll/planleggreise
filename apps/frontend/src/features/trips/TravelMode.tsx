@@ -75,7 +75,7 @@ export function TravelMode({ trip }: TravelModeProps) {
         <div className="mt-4 flex items-center justify-between gap-3">
           <button
             aria-label={t('travelMode.previousDay')}
-            className="grid size-11 place-items-center rounded-xl text-2xl text-brand transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-30"
+            className="grid size-11 place-items-center rounded-xl text-2xl text-on-surface transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-30"
             disabled={selectedDayIndex === 0}
             onClick={() => moveDay(-1)}
             type="button"
@@ -99,7 +99,7 @@ export function TravelMode({ trip }: TravelModeProps) {
           </div>
           <button
             aria-label={t('travelMode.nextDay')}
-            className="grid size-11 place-items-center rounded-xl text-2xl text-brand transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-30"
+            className="grid size-11 place-items-center rounded-xl text-2xl text-on-surface transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-30"
             disabled={selectedDayIndex === trip.days.length - 1}
             onClick={() => moveDay(1)}
             type="button"
@@ -202,7 +202,7 @@ export function TravelMode({ trip }: TravelModeProps) {
               key={activity.id}
             >
               <div className="flex items-start gap-3">
-                <div className="grid min-w-16 place-items-center rounded-xl bg-brand px-2 py-2 text-sm font-semibold text-on-brand">
+                <div className="grid min-w-16 place-items-center rounded-xl bg-brand-surface px-2 py-2 text-sm font-semibold text-on-brand">
                   {formatActivityTime(activity, {
                     allDay: t('tripDetails.allDay'),
                     timeNotSet: t('tripDetails.timeNotSet'),
@@ -224,7 +224,7 @@ export function TravelMode({ trip }: TravelModeProps) {
                   )}
                   {activity.googleMapsUrl && (
                     <a
-                      className="mt-3 inline-flex rounded-lg bg-surface-muted px-3 py-2 text-sm font-semibold text-brand hover:bg-surface-soft"
+                      className="mt-3 inline-flex rounded-lg bg-surface-muted px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-soft"
                       href={activity.googleMapsUrl}
                       rel="noreferrer"
                       target="_blank"

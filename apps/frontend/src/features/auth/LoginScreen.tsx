@@ -6,6 +6,7 @@ import {
 } from '../../lib/supabase'
 import { getErrorMessage } from '../../lib/errors'
 import { LanguageSwitcher } from '../../components/LanguageSwitcher'
+import { MobileMenuButton } from '../../components/MobileMenuButton'
 import { ThemeToggle } from '../../components/ThemeToggle'
 
 export function LoginScreen() {
@@ -13,6 +14,7 @@ export function LoginScreen() {
   const [rememberSession, setRememberSession] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showMobileOptions, setShowMobileOptions] = useState(false)
 
   async function signInWithGoogle() {
     setIsLoading(true)
@@ -39,16 +41,31 @@ export function LoginScreen() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-page px-5 py-10 text-ink">
-      <section className="w-full max-w-md rounded-[2rem] border border-border-card bg-surface p-7 shadow-card sm:p-10">
-        <div className="mb-12 flex items-center justify-between gap-3 font-semibold tracking-tight text-brand">
-          <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-brand text-lg text-on-brand">✦</span>
-            <span>planleggreise</span>
+      <section className="w-full max-w-md rounded-[2rem] border border-border-card bg-surface p-7 shadow-card sm:p-10 lg:min-w-[42rem]">
+        <div className="mb-8 font-semibold tracking-tight text-brand sm:mb-12">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 place-items-center rounded-xl bg-brand-surface text-lg text-on-brand">✦</span>
+              <span>planleggreise</span>
+            </div>
+            <div className="hidden items-center gap-2 sm:flex">
+              <ThemeToggle />
+              <LanguageSwitcher />
+            </div>
+            <MobileMenuButton
+              closeLabel={t('common.close')}
+              isOpen={showMobileOptions}
+              menuLabel={t('common.menu')}
+              onToggle={() => setShowMobileOptions((current) => !current)}
+              openLabel={t('auth.openOptions')}
+            />
           </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <LanguageSwitcher />
-          </div>
+          {showMobileOptions && (
+            <div className="mt-3 flex justify-end gap-2 border-t border-border-card pt-3 sm:hidden">
+              <ThemeToggle />
+              <LanguageSwitcher />
+            </div>
+          )}
         </div>
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent-text">{t('auth.tagline')}</p>
         <h1 className="mt-4 text-4xl font-medium leading-tight tracking-[-0.04em] text-brand">
@@ -65,7 +82,7 @@ export function LoginScreen() {
         )}
 
         <button
-          className="mt-8 flex w-full items-center justify-center gap-3 rounded-xl bg-brand px-5 py-3.5 font-semibold text-on-brand transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-8 flex w-full items-center justify-center gap-3 rounded-xl bg-brand-surface px-5 py-3.5 font-semibold text-on-brand transition hover:bg-brand-surface-hover disabled:cursor-not-allowed disabled:opacity-60"
           disabled={isLoading}
           onClick={() => void signInWithGoogle()}
           type="button"

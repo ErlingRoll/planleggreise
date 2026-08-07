@@ -41,7 +41,7 @@ export function LoadingCover({
           />
           <span
             aria-hidden="true"
-            className="relative grid size-12 place-items-center rounded-2xl bg-brand text-2xl text-on-brand shadow-lg"
+            className="relative grid size-12 place-items-center rounded-2xl bg-brand-surface text-2xl text-on-brand shadow-lg"
           >
             ✦
           </span>
