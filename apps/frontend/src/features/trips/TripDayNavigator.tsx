@@ -28,7 +28,7 @@ export function TripDayNavigator({
   const { t } = useTranslation()
 
   return (
-    <aside className="sticky top-5 hidden self-start lg:block">
+    <aside className="hidden self-start lg:block">
       <div className="rounded-2xl border border-border-card bg-page p-3">
         <div className="flex items-center justify-between gap-2 px-2 py-2">
           <h4 className="text-sm font-semibold text-brand">{t("tripDetails.dayNavigator")}</h4>

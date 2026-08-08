@@ -491,7 +491,7 @@ export function TripMap({
           isMobileOpen
             ? "fixed inset-0 z-50 flex h-dvh flex-col rounded-none"
             : "hidden rounded-2xl lg:flex"
-        } border border-border-card bg-surface p-3 lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)] lg:min-h-96 lg:flex-col`}
+        } border border-border-card bg-surface p-3 lg:sticky lg:top-24 lg:h-[calc(100dvh-24rem)] lg:min-h-96 lg:flex-col`}
       >
         <div className="hidden shrink-0 items-center justify-between gap-3 px-1 lg:flex">
           <div className="flex items-center gap-3">
