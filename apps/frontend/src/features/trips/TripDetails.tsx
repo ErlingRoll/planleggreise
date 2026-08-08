@@ -1434,6 +1434,37 @@ export function TripDetails({
     }
   }
 
+  function renderDayHousing(dayDate: string) {
+    const isSelectedDay = dayDate === selectedDay.date
+
+    return (
+      <TripAuxiliaryDetails
+        accessToken={accessToken}
+        onTripUpdated={onTripUpdated}
+        onMoveHousingToBackup={(stay) => void moveHousingToBackup(stay)}
+        onLocateHousing={handleLocateHousing}
+        onPreferenceChange={(itemType, itemId, value) => {
+          void handlePreferenceChange(itemType, itemId, value)
+        }}
+        highlightedHousingId={
+          highlightedMapItemKey?.startsWith("housing:")
+            ? highlightedMapItemKey.slice("housing:".length)
+            : null
+        }
+        mapHousingAction={isSelectedDay ? mapHousingAction : null}
+        onMapHousingActionHandled={isSelectedDay ? () => setMapHousingAction(null) : undefined}
+        currencies={currencies}
+        onSaveDetails={handleSaveHousingDetails}
+        showDetails={showDetails}
+        selectedDayDate={dayDate}
+        selectedDayDates={[dayDate]}
+        savingPreferenceKey={savingPreferenceKey}
+        trip={currentTrip}
+        userId={userId}
+      />
+    )
+  }
+
   return (
     <div className="mt-6">
       <TripDetailsHeader
@@ -1532,58 +1563,6 @@ export function TripDetails({
               userId={userId}
             />
           </div>
-          <div className={`${showMobileHousing ? "hidden" : "block"} lg:hidden`}>
-            <TripAuxiliaryDetails
-              accessToken={accessToken}
-              onTripUpdated={onTripUpdated}
-              onMoveHousingToBackup={(stay) => void moveHousingToBackup(stay)}
-              onLocateHousing={handleLocateHousing}
-              onPreferenceChange={(itemType, itemId, value) => {
-                void handlePreferenceChange(itemType, itemId, value)
-              }}
-              highlightedHousingId={
-                highlightedMapItemKey?.startsWith("housing:")
-                  ? highlightedMapItemKey.slice("housing:".length)
-                  : null
-              }
-              mapHousingAction={mapHousingAction}
-              onMapHousingActionHandled={() => setMapHousingAction(null)}
-              currencies={currencies}
-              onSaveDetails={handleSaveHousingDetails}
-              showDetails={showDetails}
-              selectedDayDate={selectedDay.date}
-              selectedDayDates={selectedDayDates}
-              savingPreferenceKey={savingPreferenceKey}
-              trip={currentTrip}
-              userId={userId}
-            />
-          </div>
-          <div className="mt-5 hidden lg:block">
-            <TripAuxiliaryDetails
-              accessToken={accessToken}
-              onTripUpdated={onTripUpdated}
-              onMoveHousingToBackup={(stay) => void moveHousingToBackup(stay)}
-              onLocateHousing={handleLocateHousing}
-              onPreferenceChange={(itemType, itemId, value) => {
-                void handlePreferenceChange(itemType, itemId, value)
-              }}
-              highlightedHousingId={
-                highlightedMapItemKey?.startsWith("housing:")
-                  ? highlightedMapItemKey.slice("housing:".length)
-                  : null
-              }
-              mapHousingAction={mapHousingAction}
-              onMapHousingActionHandled={() => setMapHousingAction(null)}
-              currencies={currencies}
-              onSaveDetails={handleSaveHousingDetails}
-              showDetails={showDetails}
-              selectedDayDate={selectedDay.date}
-              selectedDayDates={selectedDayDates}
-              savingPreferenceKey={savingPreferenceKey}
-              trip={currentTrip}
-              userId={userId}
-            />
-          </div>
           <div className={`grid gap-3 ${showMobileHousing ? "hidden lg:grid" : ""}`}>
             {trip.days.map((day) => (
               <TripDayCard
@@ -1605,6 +1584,7 @@ export function TripDetails({
                 renderItemForm={renderDayItemForm}
                 scheduleSummary={getDayScheduleSummary(day)}
               >
+                {renderDayHousing(day.date)}
                 <DayItemList
                   day={day}
                   deletingItemId={deletingActivityId}
