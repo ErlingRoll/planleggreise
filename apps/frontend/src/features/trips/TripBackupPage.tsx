@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { useTranslation } from "react-i18next"
 import {
   createActivity,
@@ -19,13 +19,13 @@ import {
 import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { DatePicker } from "../../components/DatePicker"
 import { TimePicker } from "../../components/TimePicker"
+import { MobileMenuButton } from "../../components/MobileMenuButton"
 import { TripItemPreference } from "../../components/TripItemPreference"
 import { getErrorMessage, isGoogleMapsError } from "../../lib/errors"
 import { formatActivityTime, getDayItemTitle, sortActivities } from "../../lib/activity-format"
 import { formatDate } from "../../lib/date-format"
 import { shiftDate } from "../../lib/trip-dates"
 import { TripDayNavigator } from "./TripDayNavigator"
-import { TripMap, type TripMapMarker } from "./TripMap"
 import type { TripDaySelection } from "./useTripDaySelection"
 import {
   isAllowedGoogleMapsUrl,
@@ -73,6 +73,7 @@ export function TripBackupPage({
   const [deletingKey, setDeletingKey] = useState<string | null>(null)
   const [pendingDeletion, setPendingDeletion] = useState<BackupEntry | null>(null)
   const [savingPreferenceKey, setSavingPreferenceKey] = useState<string | null>(null)
+  const [openMenuKey, setOpenMenuKey] = useState<string | null>(null)
   const [isDesktop, setIsDesktop] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches,
   )
@@ -117,66 +118,6 @@ export function TripBackupPage({
       : allBackupMeals
   const backupHousing =
     isDesktop && !areAllDaysSelected ? allBackupHousing.filter(isHousingSelected) : allBackupHousing
-  const mapMarkers = useMemo<TripMapMarker[]>(() => {
-    const visibleActivities = isDesktop ? backupActivities : allBackupActivities
-    const visibleMeals = isDesktop ? backupMeals : allBackupMeals
-    const visibleHousing = isDesktop ? backupHousing : allBackupHousing
-
-    return [
-      ...visibleActivities.flatMap((activity) =>
-        activity.tripDate !== null && activity.latitude !== null && activity.longitude !== null
-          ? [
-              {
-                id: activity.id,
-                type: "activity" as const,
-                title: activity.title ?? activity.placeName ?? t("tripDetails.untitledItem"),
-                date: activity.tripDate,
-                latitude: activity.latitude,
-                longitude: activity.longitude,
-              },
-            ]
-          : [],
-      ),
-      ...visibleMeals.flatMap((meal) =>
-        meal.tripDate !== null && meal.latitude !== null && meal.longitude !== null
-          ? [
-              {
-                id: meal.id,
-                type: "meal" as const,
-                title: meal.title ?? meal.placeName ?? t("tripDetails.untitledItem"),
-                date: meal.tripDate,
-                latitude: meal.latitude,
-                longitude: meal.longitude,
-              },
-            ]
-          : [],
-      ),
-      ...visibleHousing.flatMap((stay) =>
-        stay.latitude !== null && stay.longitude !== null
-          ? [
-              {
-                id: stay.id,
-                type: "housing" as const,
-                title: stay.placeName ?? stay.name,
-                date: stay.checkIn ?? selectedDayDate,
-                latitude: stay.latitude,
-                longitude: stay.longitude,
-              },
-            ]
-          : [],
-      ),
-    ]
-  }, [
-    allBackupActivities,
-    allBackupHousing,
-    allBackupMeals,
-    backupActivities,
-    backupHousing,
-    backupMeals,
-    isDesktop,
-    selectedDayDate,
-    t,
-  ])
 
   function getReserveDayScheduleSummary(day: TripDetail["days"][number]) {
     const count =
@@ -694,7 +635,7 @@ export function TripBackupPage({
     )
   }
 
-  function renderItem(type: BackupType, item: BackupItem) {
+  function renderItem(type: BackupType, item: BackupItem, includeMoveToPlan = true) {
     const key = `${type}:${item.id}`
     const dayItem = type === "housing" ? null : (item as Activity | Meal)
     const housing = type === "housing" ? (item as HousingStay) : null
@@ -740,29 +681,52 @@ export function TripBackupPage({
             preferences={trip.preferences}
             userId={userId}
           />
-          <div className="flex flex-wrap justify-end gap-2">
-            <button
-              className="rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-surface-muted"
-              onClick={() => void moveToPlan({ item, type })}
-              type="button"
-            >
-              {t("backup.moveToPlan")}
-            </button>
-            <button
-              className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted"
-              onClick={() => startEdit(item, type)}
-              type="button"
-            >
-              {t("common.edit")}
-            </button>
-            <button
-              className="rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface"
-              disabled={deletingKey === key}
-              onClick={() => setPendingDeletion({ item, type })}
-              type="button"
-            >
-              {deletingKey === key ? "..." : t("common.delete")}
-            </button>
+          <div className="relative flex justify-end">
+            <MobileMenuButton
+              closeLabel={t("common.close")}
+              isOpen={openMenuKey === key}
+              menuLabel={t("common.menu")}
+              onToggle={() => setOpenMenuKey((currentKey) => (currentKey === key ? null : key))}
+              openLabel={t("common.menu")}
+              showOnDesktop
+            />
+            {openMenuKey === key && (
+              <div className="absolute right-0 top-full z-10 mt-1 grid min-w-40 gap-1 rounded-xl border border-border bg-surface p-1 shadow-popover">
+                {includeMoveToPlan && (
+                  <button
+                    className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-brand hover:bg-surface-muted"
+                    onClick={() => {
+                      setOpenMenuKey(null)
+                      void moveToPlan({ item, type })
+                    }}
+                    type="button"
+                  >
+                    {t("backup.moveToPlan")}
+                  </button>
+                )}
+                <button
+                  className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-on-surface hover:bg-surface-muted"
+                  onClick={() => {
+                    setOpenMenuKey(null)
+                    startEdit(item, type)
+                  }}
+                  type="button"
+                >
+                  {t("common.edit")}
+                </button>
+                <button
+                  className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-error hover:bg-danger-surface"
+                  disabled={deletingKey === key}
+                  onClick={() => {
+                    setOpenMenuKey(null)
+                    setPendingDeletion({ item, type })
+                  }}
+                  type="button"
+                >
+                  {deletingKey === key ? "..." : t("common.delete")}
+                </button>
+              </div>
+            )}
           </div>
           {editingId === item.id && formType === type && renderForm(true)}
         </div>
@@ -797,7 +761,7 @@ export function TripBackupPage({
           </label>
         </div>
       </div>
-      <div className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)_minmax(22rem,32rem)] lg:items-start lg:gap-5">
+      <div className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-5">
         <TripDayNavigator
           days={trip.days}
           getDayScheduleSummary={getReserveDayScheduleSummary}
@@ -840,7 +804,6 @@ export function TripBackupPage({
             ))}
           </div>
         </div>
-        <TripMap markers={mapMarkers} />
       </div>
       <ConfirmDialog
         cancelLabel={t("common.cancel")}

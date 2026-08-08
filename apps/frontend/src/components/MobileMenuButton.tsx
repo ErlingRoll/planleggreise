@@ -6,6 +6,7 @@ type MobileMenuButtonProps = {
   menuLabel: string
   onToggle: () => void
   openLabel: string
+  showOnDesktop?: boolean
 }
 
 export function MobileMenuButton({
@@ -14,6 +15,7 @@ export function MobileMenuButton({
   menuLabel,
   onToggle,
   openLabel,
+  showOnDesktop = false,
 }: MobileMenuButtonProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -34,7 +36,7 @@ export function MobileMenuButton({
 
     debounceRef.current = setTimeout(() => {
       debounceRef.current = null
-    }, 300)
+    }, 100)
   }
 
   function handlePointerCancel() {
@@ -48,7 +50,9 @@ export function MobileMenuButton({
     <button
       aria-expanded={isOpen}
       aria-label={isOpen ? closeLabel : openLabel}
-      className="touch-manipulation rounded-xl border border-border bg-surface p-2 text-on-surface sm:hidden"
+      className={`touch-manipulation rounded-xl border border-border bg-surface p-2 text-on-surface ${
+        showOnDesktop ? "" : "sm:hidden"
+      }`}
       onClick={handleToggle}
       onPointerCancel={handlePointerCancel}
       onPointerDown={handleToggle}

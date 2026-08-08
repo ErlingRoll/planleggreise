@@ -159,9 +159,10 @@ export function DayItemList({
                     setOpenMenuItemId((currentId) => (currentId === item.id ? null : item.id))
                   }
                   openLabel={t("common.menu")}
+                  showOnDesktop
                 />
                 {openMenuItemId === item.id && (
-                  <div className="absolute right-0 z-10 mt-1 grid min-w-40 gap-1 rounded-xl border border-border bg-surface p-1 shadow-popover sm:hidden">
+                  <div className="absolute right-0 z-10 mt-1 grid min-w-40 gap-1 rounded-xl border border-border bg-surface p-1 shadow-popover">
                     <button
                       className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
                       disabled={editingItemId !== null || movingItem !== null}
@@ -222,54 +223,6 @@ export function DayItemList({
                     </button>
                   </div>
                 )}
-                <div className="hidden flex-wrap justify-end gap-1 sm:flex">
-                  <button
-                    className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
-                    disabled={editingItemId !== null || movingItem !== null}
-                    onClick={() => onStartMoving(record)}
-                    type="button"
-                  >
-                    {t("common.move")}
-                  </button>
-                  <button
-                    className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
-                    disabled={editingItemId !== null || movingItem !== null}
-                    onClick={() =>
-                      record.itemType === "meal"
-                        ? onMoveMealToBackup(record.item)
-                        : onMoveActivityToBackup(record.item)
-                    }
-                    type="button"
-                  >
-                    {t("backup.moveToBackup")}
-                  </button>
-                  <button
-                    className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
-                    disabled={movingItem !== null}
-                    onClick={() =>
-                      record.itemType === "meal"
-                        ? onEditMeal(record.item)
-                        : onEditActivity(record.item)
-                    }
-                    type="button"
-                  >
-                    {t("common.edit")}
-                  </button>
-                  <button
-                    className="rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface disabled:opacity-50"
-                    disabled={
-                      deletingItemId === item.id || editingItemId !== null || movingItem !== null
-                    }
-                    onClick={() =>
-                      record.itemType === "meal"
-                        ? onDeleteMeal(record.item)
-                        : onDeleteActivity(record.item)
-                    }
-                    type="button"
-                  >
-                    {deletingItemId === item.id ? "..." : t("common.delete")}
-                  </button>
-                </div>
               </div>
             </div>
             {item.notes?.trim() && (

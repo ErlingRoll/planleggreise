@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 import {
   LngLatBounds,
@@ -24,7 +24,10 @@ export type TripMapMarker = {
 
 type TripMapProps = {
   markers: TripMapMarker[]
+  renderMarkerDetails?: (marker: TripMapMarker) => ReactNode
 }
+
+const markerDetailsAnimationDuration = 180
 
 function fitMapToMarkers(map: MapLibreMap, markers: TripMapMarker[]) {
   if (markers.length === 0) {
@@ -69,12 +72,17 @@ const defaultMapStyle: StyleSpecification = {
   ],
 }
 
-export function TripMap({ markers }: TripMapProps) {
+export function TripMap({ markers, renderMarkerDetails }: TripMapProps) {
   const { t } = useTranslation()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [selectedMarker, setSelectedMarker] = useState<TripMapMarker | null>(null)
+  const [isMarkerDetailsClosing, setIsMarkerDetailsClosing] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markerRefs = useRef<MapLibreMarker[]>([])
+  const markerDetailsCloseTimeoutRef = useRef<number | null>(null)
+  const renderMarkerDetailsRef = useRef(renderMarkerDetails)
+  renderMarkerDetailsRef.current = renderMarkerDetails
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -126,6 +134,23 @@ export function TripMap({ markers }: TripMapProps) {
       pointer.className = "trip-map-marker-pointer"
       element.append(label, pointer)
 
+      if (renderMarkerDetailsRef.current) {
+        element.addEventListener("click", (event) => {
+          if (window.innerWidth >= 1024) {
+            return
+          }
+
+          event.preventDefault()
+          event.stopImmediatePropagation()
+          if (markerDetailsCloseTimeoutRef.current !== null) {
+            window.clearTimeout(markerDetailsCloseTimeoutRef.current)
+            markerDetailsCloseTimeoutRef.current = null
+          }
+          setIsMarkerDetailsClosing(false)
+          setSelectedMarker(marker)
+        })
+      }
+
       const popup = new Popup({ offset: 18 }).setText(`${marker.title}\n${formatDate(marker.date)}`)
 
       const mapMarker = new Marker({ anchor: "bottom", element })
@@ -137,6 +162,14 @@ export function TripMap({ markers }: TripMapProps) {
     })
 
     fitMapToMarkers(map, markers)
+  }, [markers])
+
+  useEffect(() => {
+    setSelectedMarker((currentMarker) =>
+      currentMarker && markers.some((marker) => marker.id === currentMarker.id)
+        ? currentMarker
+        : null,
+    )
   }, [markers])
 
   useEffect(() => {
@@ -158,12 +191,41 @@ export function TripMap({ markers }: TripMapProps) {
     return () => cancelAnimationFrame(frame)
   }, [isMobileOpen, markers])
 
+  useEffect(
+    () => () => {
+      if (markerDetailsCloseTimeoutRef.current !== null) {
+        window.clearTimeout(markerDetailsCloseTimeoutRef.current)
+      }
+    },
+    [],
+  )
+
+  function closeMarkerDetails() {
+    setIsMarkerDetailsClosing(true)
+    if (markerDetailsCloseTimeoutRef.current !== null) {
+      window.clearTimeout(markerDetailsCloseTimeoutRef.current)
+    }
+    markerDetailsCloseTimeoutRef.current = window.setTimeout(() => {
+      setSelectedMarker(null)
+      setIsMarkerDetailsClosing(false)
+      markerDetailsCloseTimeoutRef.current = null
+    }, markerDetailsAnimationDuration)
+  }
+
   return (
     <>
       <button
         aria-expanded={isMobileOpen}
         className="fixed bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-full bg-brand px-5 py-3 text-sm font-semibold text-on-brand shadow-card lg:hidden"
-        onClick={() => setIsMobileOpen(true)}
+        onClick={() => {
+          if (markerDetailsCloseTimeoutRef.current !== null) {
+            window.clearTimeout(markerDetailsCloseTimeoutRef.current)
+            markerDetailsCloseTimeoutRef.current = null
+          }
+          setIsMarkerDetailsClosing(false)
+          setSelectedMarker(null)
+          setIsMobileOpen(true)
+        }}
         type="button"
       >
         {t("tripMap.open")}
@@ -201,13 +263,37 @@ export function TripMap({ markers }: TripMapProps) {
           <button
             aria-label={t("tripMap.close")}
             className="grid size-9 place-items-center rounded-lg text-xl text-on-surface hover:bg-surface-muted"
-            onClick={() => setIsMobileOpen(false)}
+            onClick={() => {
+              setSelectedMarker(null)
+              setIsMobileOpen(false)
+            }}
             type="button"
           >
             ×
           </button>
         </div>
       </section>
+      {selectedMarker && renderMarkerDetails && (
+        <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] p-3 lg:hidden">
+          <div
+            className={`trip-map-marker-details pointer-events-auto mx-auto max-w-xl${
+              isMarkerDetailsClosing ? " trip-map-marker-details-closing" : ""
+            }`}
+          >
+            {renderMarkerDetails(selectedMarker)}
+            <div className="flex justify-end pt-2">
+              <button
+                aria-label={t("tripMap.closeDetails")}
+                className="grid size-8 place-items-center rounded-lg bg-surface text-lg text-on-surface shadow-sm hover:bg-surface-muted"
+                onClick={closeMarkerDetails}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

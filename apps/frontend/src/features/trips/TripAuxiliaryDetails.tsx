@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react"
+import { useCallback, useEffect, useState, type FormEvent } from "react"
 import { useTranslation } from "react-i18next"
 import {
   createHousingStay,
@@ -9,6 +9,7 @@ import {
 } from "../../api"
 import { DatePicker } from "../../components/DatePicker"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
+import { MobileMenuButton } from "../../components/MobileMenuButton"
 import { TripItemPreference } from "../../components/TripItemPreference"
 import { getErrorMessage } from "../../lib/errors"
 import { shiftDate } from "../../lib/trip-dates"
@@ -29,6 +30,8 @@ type TripAuxiliaryDetailsProps = {
     itemId: string,
     value: TripItemPreferenceValue | null,
   ) => void
+  mapHousingAction?: { type: "edit" | "delete"; stayId: string } | null
+  onMapHousingActionHandled?: () => void
 }
 
 type FormMode = "housing" | null
@@ -43,6 +46,8 @@ export function TripAuxiliaryDetails({
   userId,
   savingPreferenceKey,
   onPreferenceChange,
+  mapHousingAction,
+  onMapHousingActionHandled,
 }: TripAuxiliaryDetailsProps) {
   const { t } = useTranslation()
   const visibleHousingStays = selectedDayDates
@@ -68,6 +73,7 @@ export function TripAuxiliaryDetails({
   const [isSaving, setIsSaving] = useState(false)
   const [deletingHousingId, setDeletingHousingId] = useState<string | null>(null)
   const [pendingHousingDeletion, setPendingHousingDeletion] = useState<HousingStay | null>(null)
+  const [openHousingMenuId, setOpenHousingMenuId] = useState<string | null>(null)
 
   function resetForm() {
     setFormMode(null)
@@ -89,16 +95,37 @@ export function TripAuxiliaryDetails({
     setFormMode("housing")
   }
 
-  function editHousing(stay: HousingStay) {
-    setFormMode("housing")
-    setEditingId(stay.id)
-    setName(stay.name)
-    setGoogleMapsUrl(stay.googleMapsUrl ?? "")
-    setCheckIn(stay.checkIn ?? trip.startDate)
-    setCheckOut(stay.checkOut ?? shiftDate(trip.endDate, 1))
-    setNotes(stay.notes ?? "")
-    setError(null)
-  }
+  const editHousing = useCallback(
+    (stay: HousingStay) => {
+      setFormMode("housing")
+      setEditingId(stay.id)
+      setName(stay.name)
+      setGoogleMapsUrl(stay.googleMapsUrl ?? "")
+      setCheckIn(stay.checkIn ?? trip.startDate)
+      setCheckOut(stay.checkOut ?? shiftDate(trip.endDate, 1))
+      setNotes(stay.notes ?? "")
+      setError(null)
+    },
+    [trip.endDate, trip.startDate],
+  )
+
+  useEffect(() => {
+    if (!mapHousingAction) {
+      return
+    }
+
+    const stay = trip.housingStays.find((currentStay) => currentStay.id === mapHousingAction.stayId)
+
+    if (stay) {
+      if (mapHousingAction.type === "edit") {
+        editHousing(stay)
+      } else {
+        setPendingHousingDeletion(stay)
+      }
+    }
+
+    onMapHousingActionHandled?.()
+  }, [editHousing, mapHousingAction, onMapHousingActionHandled, trip.housingStays])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -273,28 +300,53 @@ export function TripAuxiliaryDetails({
                     preferences={trip.preferences}
                     userId={userId}
                   />
-                  <div className="flex justify-end gap-2">
-                    <button
-                      className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted"
-                      onClick={() => onMoveHousingToBackup(stay)}
-                      type="button"
-                    >
-                      {t("backup.moveToBackup")}
-                    </button>
-                    <button
-                      className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted"
-                      onClick={() => editHousing(stay)}
-                      type="button"
-                    >
-                      {t("common.edit")}
-                    </button>
-                    <button
-                      className="rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface"
-                      onClick={() => setPendingHousingDeletion(stay)}
-                      type="button"
-                    >
-                      {t("common.delete")}
-                    </button>
+                  <div className="relative flex justify-end">
+                    <MobileMenuButton
+                      closeLabel={t("common.close")}
+                      isOpen={openHousingMenuId === stay.id}
+                      menuLabel={t("common.menu")}
+                      onToggle={() =>
+                        setOpenHousingMenuId((currentId) =>
+                          currentId === stay.id ? null : stay.id,
+                        )
+                      }
+                      openLabel={t("common.menu")}
+                      showOnDesktop
+                    />
+                    {openHousingMenuId === stay.id && (
+                      <div className="absolute right-0 top-full z-10 mt-1 grid min-w-40 gap-1 rounded-xl border border-border bg-surface p-1 shadow-popover">
+                        <button
+                          className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-on-surface hover:bg-surface-muted"
+                          onClick={() => {
+                            setOpenHousingMenuId(null)
+                            onMoveHousingToBackup(stay)
+                          }}
+                          type="button"
+                        >
+                          {t("backup.moveToBackup")}
+                        </button>
+                        <button
+                          className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-on-surface hover:bg-surface-muted"
+                          onClick={() => {
+                            setOpenHousingMenuId(null)
+                            editHousing(stay)
+                          }}
+                          type="button"
+                        >
+                          {t("common.edit")}
+                        </button>
+                        <button
+                          className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-error hover:bg-danger-surface"
+                          onClick={() => {
+                            setOpenHousingMenuId(null)
+                            setPendingHousingDeletion(stay)
+                          }}
+                          type="button"
+                        >
+                          {t("common.delete")}
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {editingId === stay.id && renderHousingForm(true)}
                 </div>

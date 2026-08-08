@@ -23,10 +23,14 @@ import {
   getDayItemTime,
   sortDayItems,
   sortActivities,
+  formatActivityTime,
+  getDayItemTitle,
   type DayItem,
 } from "../../lib/activity-format"
 import { LoadingCover } from "../../components/LoadingCover"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
+import { formatDate } from "../../lib/date-format"
+import { shiftDate } from "../../lib/trip-dates"
 import { TripAuxiliaryDetails } from "./TripAuxiliaryDetails"
 import { TripSettings } from "./TripSettings"
 import { DayItemForm } from "./DayItemForm"
@@ -37,6 +41,7 @@ import { TripDayNavigator } from "./TripDayNavigator"
 import { TripDetailsHeader } from "./TripDetailsHeader"
 import { TripMap, type TripMapMarker } from "./TripMap"
 import { useTripRealtime } from "./useTripRealtime"
+import { TripItemPreference } from "../../components/TripItemPreference"
 import type { TripDaySelection } from "./useTripDaySelection"
 import type { DayItemRecord, DropTarget, MovingItem, PlannerTab } from "./planner-types"
 import { isAllowedGoogleMapsUrl } from "@turprep/models"
@@ -54,6 +59,7 @@ type TripDetailsProps = {
 }
 
 type PendingDeletion = { item: Activity; type: "activity" } | { item: Meal; type: "meal" }
+type MapHousingAction = { type: "edit" | "delete"; stayId: string }
 
 function shiftTime(value: string, hours: number) {
   const match = /^(\d{2}):(\d{2})$/.exec(value)
@@ -101,6 +107,7 @@ export function TripDetails({
   const [isSavingDayDetails, setIsSavingDayDetails] = useState(false)
   const [plannerTab, setPlannerTab] = useState<PlannerTab>("all")
   const [showMobileHousing, setShowMobileHousing] = useState(false)
+  const [mapHousingAction, setMapHousingAction] = useState<MapHousingAction | null>(null)
   const [savingPreferenceKey, setSavingPreferenceKey] = useState<string | null>(null)
   const [draggedItem, setDraggedItem] = useState<DayItemRecord | null>(null)
   const [movingItem, setMovingItem] = useState<MovingItem | null>(null)
@@ -212,6 +219,128 @@ export function TripDetails({
     normalizedGoogleMapsUrl.length > 0 && !isAllowedGoogleMapsUrl(normalizedGoogleMapsUrl)
   const selectedDay =
     currentTrip.days.find((day) => day.date === selectedDayDate) ?? currentTrip.days[0]
+
+  function renderMapMarkerDetails(marker: TripMapMarker) {
+    if (marker.type === "housing") {
+      const stay = currentTrip.housingStays.find((currentStay) => currentStay.id === marker.id)
+
+      return stay ? (
+        <article className="rounded-xl bg-surface p-3">
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-brand">{stay.name}</p>
+              <p className="mt-1 text-sm text-muted">
+                {formatDate(stay.checkIn ?? currentTrip.startDate)} –{" "}
+                {formatDate(stay.checkOut ?? shiftDate(currentTrip.endDate, 1))}
+              </p>
+              {stay.notes?.trim() && (
+                <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{stay.notes}</p>
+              )}
+            </div>
+            <div className="flex shrink-0 gap-1">
+              <button
+                className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted"
+                onClick={() => setMapHousingAction({ type: "edit", stayId: stay.id })}
+                type="button"
+              >
+                {t("common.edit")}
+              </button>
+              <button
+                className="rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface"
+                onClick={() => setMapHousingAction({ type: "delete", stayId: stay.id })}
+                type="button"
+              >
+                {t("common.delete")}
+              </button>
+            </div>
+          </div>
+          <TripItemPreference
+            disabled={savingPreferenceKey === `housing:${stay.id}`}
+            itemId={stay.id}
+            itemType="housing"
+            onChange={(value) => void handlePreferenceChange("housing", stay.id, value)}
+            preferences={currentTrip.preferences}
+            userId={userId}
+          />
+        </article>
+      ) : null
+    }
+
+    const item =
+      marker.type === "activity"
+        ? currentTrip.days
+            .flatMap((day) => day.activities)
+            .find((activity) => activity.id === marker.id)
+        : currentTrip.meals.find((meal) => meal.id === marker.id)
+
+    if (!item) {
+      return null
+    }
+
+    const itemType = marker.type
+    return (
+      <article className="rounded-xl bg-surface p-3">
+        <div className="flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-brand">
+              {getDayItemTitle(item, t("tripDetails.untitledItem"))}
+            </p>
+            <p className="mt-1">
+              {formatActivityTime(item, {
+                allDay: t("tripDetails.allDay"),
+                timeNotSet: t("tripDetails.timeNotSet"),
+              })}
+            </p>
+            {itemType === "meal" && (
+              <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-accent-text">
+                {t("tripDetails.meal")}
+              </p>
+            )}
+            {item.placeAddress && <p className="mt-1 text-sm text-muted">{item.placeAddress}</p>}
+            {item.notes?.trim() && (
+              <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{item.notes}</p>
+            )}
+            {item.googleMapsUrl && (
+              <a
+                className="mt-2 inline-block text-sm font-semibold text-brand underline"
+                href={item.googleMapsUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {t("tripDetails.openGoogleMaps")}
+              </a>
+            )}
+          </div>
+          <div className="flex shrink-0 gap-1">
+            <button
+              className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted"
+              onClick={() => (itemType === "activity" ? editActivity(item) : editMeal(item))}
+              type="button"
+            >
+              {t("common.edit")}
+            </button>
+            <button
+              className="rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface"
+              onClick={() =>
+                itemType === "activity" ? requestDeleteActivity(item) : requestDeleteMeal(item)
+              }
+              type="button"
+            >
+              {t("common.delete")}
+            </button>
+          </div>
+        </div>
+        <TripItemPreference
+          disabled={savingPreferenceKey === `${itemType}:${item.id}`}
+          itemId={item.id}
+          itemType={itemType}
+          onChange={(value) => void handlePreferenceChange(itemType, item.id, value)}
+          preferences={currentTrip.preferences}
+          userId={userId}
+        />
+      </article>
+    )
+  }
 
   function resetActivityForm() {
     setTitle("")
@@ -1153,6 +1282,8 @@ export function TripDetails({
               onPreferenceChange={(itemType, itemId, value) => {
                 void handlePreferenceChange(itemType, itemId, value)
               }}
+              mapHousingAction={mapHousingAction}
+              onMapHousingActionHandled={() => setMapHousingAction(null)}
               savingPreferenceKey={savingPreferenceKey}
               trip={currentTrip}
               userId={userId}
@@ -1234,6 +1365,8 @@ export function TripDetails({
               onPreferenceChange={(itemType, itemId, value) => {
                 void handlePreferenceChange(itemType, itemId, value)
               }}
+              mapHousingAction={mapHousingAction}
+              onMapHousingActionHandled={() => setMapHousingAction(null)}
               selectedDayDate={selectedDay.date}
               selectedDayDates={selectedDayDates}
               savingPreferenceKey={savingPreferenceKey}
@@ -1243,7 +1376,7 @@ export function TripDetails({
           </div>
         </div>
         <aside className="contents lg:block">
-          <TripMap markers={mapMarkers} />
+          <TripMap markers={mapMarkers} renderMarkerDetails={renderMapMarkerDetails} />
           <div className="hidden lg:block">
             <TripAuxiliaryDetails
               accessToken={accessToken}
@@ -1252,6 +1385,8 @@ export function TripDetails({
               onPreferenceChange={(itemType, itemId, value) => {
                 void handlePreferenceChange(itemType, itemId, value)
               }}
+              mapHousingAction={mapHousingAction}
+              onMapHousingActionHandled={() => setMapHousingAction(null)}
               selectedDayDate={selectedDay.date}
               selectedDayDates={selectedDayDates}
               savingPreferenceKey={savingPreferenceKey}

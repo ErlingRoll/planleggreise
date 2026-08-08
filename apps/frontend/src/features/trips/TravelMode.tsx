@@ -109,6 +109,88 @@ export function TravelMode({ trip }: TravelModeProps) {
     }
   }
 
+  function renderMapMarkerDetails(marker: TripMapMarker) {
+    if (marker.type === "housing") {
+      const stay = housingForDay.find((currentStay) => currentStay.id === marker.id)
+
+      return stay ? (
+        <article className="rounded-xl bg-surface p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+            {t("travelMode.housing")}
+          </p>
+          <p className="mt-1 font-semibold text-brand">{stay.name}</p>
+          <p className="mt-1 text-sm text-muted">
+            {formatDate(stay.checkIn ?? trip.startDate)} –{" "}
+            {formatDate(stay.checkOut ?? trip.endDate)}
+          </p>
+          {stay.notes?.trim() && (
+            <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{stay.notes}</p>
+          )}
+          {stay.googleMapsUrl && (
+            <a
+              className="mt-2 inline-block text-sm font-semibold text-brand underline"
+              href={stay.googleMapsUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              {t("tripDetails.openGoogleMaps")}
+            </a>
+          )}
+        </article>
+      ) : null
+    }
+
+    const item =
+      marker.type === "activity"
+        ? selectedDay.activities.find((activity) => activity.id === marker.id)
+        : mealsForDay.find((meal) => meal.id === marker.id)
+
+    if (!item) {
+      return null
+    }
+
+    return (
+      <article className="rounded-xl bg-surface p-3">
+        <div className="flex items-start gap-3">
+          <div
+            className={`grid min-w-16 place-items-center rounded-xl px-2 py-2 text-sm font-semibold ${
+              marker.type === "activity"
+                ? "bg-brand-surface text-on-brand"
+                : "bg-accent text-on-accent"
+            }`}
+          >
+            {formatActivityTime(item, {
+              allDay: t("tripDetails.allDay"),
+              timeNotSet: t("tripDetails.timeNotSet"),
+            })}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+              {marker.type === "activity" ? t("tripDetails.activity") : t("travelMode.meal")}
+            </p>
+            <p className="mt-1 font-semibold text-brand">
+              {getDayItemTitle(item, t("tripDetails.untitledItem"))}
+            </p>
+            {item.placeAddress && <p className="mt-1 text-sm text-muted">{item.placeAddress}</p>}
+            {item.notes?.trim() && (
+              <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{item.notes}</p>
+            )}
+            {item.googleMapsUrl && (
+              <a
+                className="mt-2 inline-block text-sm font-semibold text-brand underline"
+                href={item.googleMapsUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {t("tripDetails.openGoogleMaps")}
+              </a>
+            )}
+          </div>
+        </div>
+      </article>
+    )
+  }
+
   return (
     <section className="mt-6">
       <div className="rounded-2xl border border-border-soft bg-surface-soft p-5">
@@ -266,7 +348,7 @@ export function TravelMode({ trip }: TravelModeProps) {
             )}
           </div>
         </div>
-        <TripMap markers={mapMarkers} />
+        <TripMap markers={mapMarkers} renderMarkerDetails={renderMapMarkerDetails} />
       </div>
     </section>
   )

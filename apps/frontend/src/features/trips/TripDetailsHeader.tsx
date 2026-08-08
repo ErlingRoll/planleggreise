@@ -21,9 +21,6 @@ export function TripDetailsHeader({
         <div>
           <p className="text-sm text-soft">{formatDateRange(trip)}</p>
           <h3 className="mt-2 text-2xl font-medium">{trip.name}</h3>
-          <p className="mt-2 text-sm text-soft">
-            {t("tripDetails.daysToFill", { count: trip.days.length })}
-          </p>
         </div>
         <button
           aria-expanded={showSettings}
