@@ -25,6 +25,7 @@ export type TripMapMarker = {
 type TripMapProps = {
   markers: TripMapMarker[]
   renderMarkerDetails?: (marker: TripMapMarker) => ReactNode
+  onMarkerClick?: (marker: TripMapMarker) => void
 }
 
 const markerDetailsAnimationDuration = 180
@@ -72,7 +73,7 @@ const defaultMapStyle: StyleSpecification = {
   ],
 }
 
-export function TripMap({ markers, renderMarkerDetails }: TripMapProps) {
+export function TripMap({ markers, renderMarkerDetails, onMarkerClick }: TripMapProps) {
   const { t } = useTranslation()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [selectedMarker, setSelectedMarker] = useState<TripMapMarker | null>(null)
@@ -82,7 +83,9 @@ export function TripMap({ markers, renderMarkerDetails }: TripMapProps) {
   const markerRefs = useRef<MapLibreMarker[]>([])
   const markerDetailsCloseTimeoutRef = useRef<number | null>(null)
   const renderMarkerDetailsRef = useRef(renderMarkerDetails)
+  const onMarkerClickRef = useRef(onMarkerClick)
   renderMarkerDetailsRef.current = renderMarkerDetails
+  onMarkerClickRef.current = onMarkerClick
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -134,9 +137,18 @@ export function TripMap({ markers, renderMarkerDetails }: TripMapProps) {
       pointer.className = "trip-map-marker-pointer"
       element.append(label, pointer)
 
-      if (renderMarkerDetailsRef.current) {
+      if (renderMarkerDetailsRef.current || onMarkerClickRef.current) {
         element.addEventListener("click", (event) => {
           if (window.innerWidth >= 1024) {
+            if (onMarkerClickRef.current) {
+              event.preventDefault()
+              event.stopImmediatePropagation()
+              onMarkerClickRef.current(marker)
+            }
+            return
+          }
+
+          if (!renderMarkerDetailsRef.current) {
             return
           }
 

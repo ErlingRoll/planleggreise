@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type DragEvent, type FormEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent } from "react"
 import { useTranslation } from "react-i18next"
 import {
   createActivity,
@@ -60,6 +60,7 @@ type TripDetailsProps = {
 
 type PendingDeletion = { item: Activity; type: "activity" } | { item: Meal; type: "meal" }
 type MapHousingAction = { type: "edit" | "delete"; stayId: string }
+type MapFocusRequest = { itemKey: string }
 
 function shiftTime(value: string, hours: number) {
   const match = /^(\d{2}):(\d{2})$/.exec(value)
@@ -108,6 +109,8 @@ export function TripDetails({
   const [plannerTab, setPlannerTab] = useState<PlannerTab>("all")
   const [showMobileHousing, setShowMobileHousing] = useState(false)
   const [mapHousingAction, setMapHousingAction] = useState<MapHousingAction | null>(null)
+  const [mapFocusRequest, setMapFocusRequest] = useState<MapFocusRequest | null>(null)
+  const [highlightedMapItemKey, setHighlightedMapItemKey] = useState<string | null>(null)
   const [savingPreferenceKey, setSavingPreferenceKey] = useState<string | null>(null)
   const [draggedItem, setDraggedItem] = useState<DayItemRecord | null>(null)
   const [movingItem, setMovingItem] = useState<MovingItem | null>(null)
@@ -117,6 +120,38 @@ export function TripDetails({
   const pendingReorderCountRef = useRef(0)
   const reorderGenerationRef = useRef(0)
   const { selectedDayDate, selectedDayDates, onSelectAll, onSelectDay, onToggleDay } = daySelection
+
+  useEffect(() => {
+    if (!mapFocusRequest) {
+      return
+    }
+
+    setHighlightedMapItemKey(null)
+    let highlightTimeout: number | null = null
+    const frame = requestAnimationFrame(() => {
+      const elements = Array.from(
+        document.querySelectorAll<HTMLElement>(`[data-trip-item-key="${mapFocusRequest.itemKey}"]`),
+      )
+      const element = elements.find((candidate) => candidate.getClientRects().length > 0)
+
+      if (!element) {
+        return
+      }
+
+      element.scrollIntoView({ behavior: "smooth", block: "center" })
+      setHighlightedMapItemKey(mapFocusRequest.itemKey)
+      highlightTimeout = window.setTimeout(() => {
+        setHighlightedMapItemKey(null)
+      }, 4800)
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
+      if (highlightTimeout !== null) {
+        window.clearTimeout(highlightTimeout)
+      }
+    }
+  }, [mapFocusRequest])
   const mapMarkers = useMemo<TripMapMarker[]>(() => {
     if (!trip) {
       return []
@@ -340,6 +375,18 @@ export function TripDetails({
         />
       </article>
     )
+  }
+
+  function handleMapMarkerClick(marker: TripMapMarker) {
+    const itemKey = `${marker.type}:${marker.id}`
+    setShowMobileHousing(false)
+    onSelectDay(marker.date, false)
+    setPlannerTab(
+      marker.type === "activity" ? "activities" : marker.type === "meal" ? "meals" : "all",
+    )
+    setMapFocusRequest({
+      itemKey,
+    })
   }
 
   function resetActivityForm() {
@@ -1282,6 +1329,11 @@ export function TripDetails({
               onPreferenceChange={(itemType, itemId, value) => {
                 void handlePreferenceChange(itemType, itemId, value)
               }}
+              highlightedHousingId={
+                highlightedMapItemKey?.startsWith("housing:")
+                  ? highlightedMapItemKey.slice("housing:".length)
+                  : null
+              }
               mapHousingAction={mapHousingAction}
               onMapHousingActionHandled={() => setMapHousingAction(null)}
               savingPreferenceKey={savingPreferenceKey}
@@ -1350,12 +1402,35 @@ export function TripDetails({
                   }}
                   renderEditForm={renderDayItemForm}
                   renderMoveForm={renderMoveItemForm}
+                  highlightedItemKey={highlightedMapItemKey}
                   preferences={currentTrip.preferences}
                   savingPreferenceKey={savingPreferenceKey}
                   userId={userId}
                 />
               </TripDayCard>
             ))}
+          </div>
+          <div className="mt-5 hidden lg:block">
+            <TripAuxiliaryDetails
+              accessToken={accessToken}
+              onTripUpdated={onTripUpdated}
+              onMoveHousingToBackup={(stay) => void moveHousingToBackup(stay)}
+              onPreferenceChange={(itemType, itemId, value) => {
+                void handlePreferenceChange(itemType, itemId, value)
+              }}
+              highlightedHousingId={
+                highlightedMapItemKey?.startsWith("housing:")
+                  ? highlightedMapItemKey.slice("housing:".length)
+                  : null
+              }
+              mapHousingAction={mapHousingAction}
+              onMapHousingActionHandled={() => setMapHousingAction(null)}
+              selectedDayDate={selectedDay.date}
+              selectedDayDates={selectedDayDates}
+              savingPreferenceKey={savingPreferenceKey}
+              trip={currentTrip}
+              userId={userId}
+            />
           </div>
           <div className={`${showMobileHousing ? "hidden" : "block"} lg:hidden`}>
             <TripAuxiliaryDetails
@@ -1365,6 +1440,11 @@ export function TripDetails({
               onPreferenceChange={(itemType, itemId, value) => {
                 void handlePreferenceChange(itemType, itemId, value)
               }}
+              highlightedHousingId={
+                highlightedMapItemKey?.startsWith("housing:")
+                  ? highlightedMapItemKey.slice("housing:".length)
+                  : null
+              }
               mapHousingAction={mapHousingAction}
               onMapHousingActionHandled={() => setMapHousingAction(null)}
               selectedDayDate={selectedDay.date}
@@ -1376,24 +1456,11 @@ export function TripDetails({
           </div>
         </div>
         <aside className="contents lg:block">
-          <TripMap markers={mapMarkers} renderMarkerDetails={renderMapMarkerDetails} />
-          <div className="hidden lg:block">
-            <TripAuxiliaryDetails
-              accessToken={accessToken}
-              onTripUpdated={onTripUpdated}
-              onMoveHousingToBackup={(stay) => void moveHousingToBackup(stay)}
-              onPreferenceChange={(itemType, itemId, value) => {
-                void handlePreferenceChange(itemType, itemId, value)
-              }}
-              mapHousingAction={mapHousingAction}
-              onMapHousingActionHandled={() => setMapHousingAction(null)}
-              selectedDayDate={selectedDay.date}
-              selectedDayDates={selectedDayDates}
-              savingPreferenceKey={savingPreferenceKey}
-              trip={currentTrip}
-              userId={userId}
-            />
-          </div>
+          <TripMap
+            markers={mapMarkers}
+            onMarkerClick={handleMapMarkerClick}
+            renderMarkerDetails={renderMapMarkerDetails}
+          />
         </aside>
       </div>
       <ConfirmDialog

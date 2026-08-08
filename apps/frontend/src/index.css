@@ -208,6 +208,10 @@ button:disabled {
   pointer-events: none;
 }
 
+.trip-map-card-focus {
+  animation: trip-map-card-focus 2.4s ease-in-out 2;
+}
+
 @keyframes trip-map-marker-details-in {
   from {
     opacity: 0;
@@ -229,6 +233,17 @@ button:disabled {
   to {
     opacity: 0;
     transform: translateY(-1rem);
+  }
+}
+
+@keyframes trip-map-card-focus {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+
+  50% {
+    box-shadow: 0 0 0 0.45rem color-mix(in srgb, var(--color-accent) 42%, transparent);
   }
 }
 

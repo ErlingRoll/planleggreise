@@ -30,6 +30,7 @@ type TripAuxiliaryDetailsProps = {
     itemId: string,
     value: TripItemPreferenceValue | null,
   ) => void
+  highlightedHousingId?: string | null
   mapHousingAction?: { type: "edit" | "delete"; stayId: string } | null
   onMapHousingActionHandled?: () => void
 }
@@ -46,6 +47,7 @@ export function TripAuxiliaryDetails({
   userId,
   savingPreferenceKey,
   onPreferenceChange,
+  highlightedHousingId,
   mapHousingAction,
   onMapHousingActionHandled,
 }: TripAuxiliaryDetailsProps) {
@@ -280,7 +282,13 @@ export function TripAuxiliaryDetails({
         ) : (
           <div className="mt-3 grid gap-2">
             {visibleHousingStays.map((stay) => (
-              <div className="rounded-xl bg-surface p-3" key={stay.id}>
+              <div
+                className={`rounded-xl bg-surface p-3 ${
+                  highlightedHousingId === stay.id ? "trip-map-card-focus" : ""
+                }`}
+                data-trip-item-key={`housing:${stay.id}`}
+                key={stay.id}
+              >
                 <div className="flex flex-col gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-brand">{stay.name}</p>

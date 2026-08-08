@@ -37,6 +37,7 @@ type DayItemListProps = {
   preferences: TripDetail["preferences"]
   userId: string
   savingPreferenceKey: string | null
+  highlightedItemKey?: string | null
   onPreferenceChange: (
     itemType: TripItemType,
     itemId: string,
@@ -73,6 +74,7 @@ export function DayItemList({
   preferences,
   userId,
   savingPreferenceKey,
+  highlightedItemKey,
   onPreferenceChange,
 }: DayItemListProps) {
   const { t } = useTranslation()
@@ -107,7 +109,13 @@ export function DayItemList({
         const fullItemIndex = items.findIndex((currentItem) => currentItem.id === item.id)
 
         return (
-          <div className="rounded-xl bg-surface p-3" key={`${record.itemType}:${item.id}`}>
+          <div
+            className={`rounded-xl bg-surface p-3 ${
+              highlightedItemKey === `${record.itemType}:${item.id}` ? "trip-map-card-focus" : ""
+            }`}
+            data-trip-item-key={`${record.itemType}:${item.id}`}
+            key={`${record.itemType}:${item.id}`}
+          >
             {dropTarget?.dayDate === day.date &&
               dropTarget.index === fullItemIndex &&
               shouldShowDropIndicator(itemIndex) && (
