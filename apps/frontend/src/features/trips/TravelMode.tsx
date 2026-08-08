@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import type { TripDetail } from "../../api"
+import { ItemDetailsDisplay } from "../../components/ItemDetails"
 import { MapLocateButton } from "../../components/MapLocateButton"
 import { formatActivityTime, getDayItemTitle, sortActivities } from "../../lib/activity-format"
 import { formatDate } from "../../lib/date-format"
@@ -8,6 +9,7 @@ import { TripMap, type TripMapMarker } from "./TripMap"
 
 type TravelModeProps = {
   trip: TripDetail
+  showDetails: boolean
 }
 
 function getTodayDate() {
@@ -29,7 +31,7 @@ function getRelevantDayIndex(days: TripDetail["days"]) {
   return nextDayIndex >= 0 ? nextDayIndex : days.length - 1
 }
 
-export function TravelMode({ trip }: TravelModeProps) {
+export function TravelMode({ trip, showDetails }: TravelModeProps) {
   const { t } = useTranslation()
   const [selectedDate, setSelectedDate] = useState(
     () => trip.days[getRelevantDayIndex(trip.days)]?.date ?? "",
@@ -87,6 +89,10 @@ export function TravelMode({ trip }: TravelModeProps) {
     return selectedIndex >= 0 ? selectedIndex : getRelevantDayIndex(trip.days)
   }, [selectedDate, trip.days])
   const selectedDay = trip.days[selectedDayIndex]
+  const itemDetailVisibility = {
+    showPrice: showDetails && trip.itemDetailVisibility.showPrice,
+    showWebsite: showDetails && trip.itemDetailVisibility.showWebsite,
+  }
   const today = getTodayDate()
   const isToday = selectedDay.date === today
   const isBeforeTrip = today < trip.startDate
@@ -194,6 +200,11 @@ export function TravelMode({ trip }: TravelModeProps) {
           {stay.notes?.trim() && (
             <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{stay.notes}</p>
           )}
+          <ItemDetailsDisplay
+            details={stay}
+            showPrice={itemDetailVisibility.showPrice}
+            showWebsite={itemDetailVisibility.showWebsite}
+          />
           {stay.googleMapsUrl && (
             <a
               className="mt-2 inline-block text-sm font-semibold text-brand underline"
@@ -243,6 +254,11 @@ export function TravelMode({ trip }: TravelModeProps) {
             {item.notes?.trim() && (
               <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{item.notes}</p>
             )}
+            <ItemDetailsDisplay
+              details={item}
+              showPrice={itemDetailVisibility.showPrice}
+              showWebsite={itemDetailVisibility.showWebsite}
+            />
             {item.googleMapsUrl && (
               <a
                 className="mt-2 inline-block text-sm font-semibold text-brand underline"
@@ -357,6 +373,11 @@ export function TravelMode({ trip }: TravelModeProps) {
                   {stay.notes?.trim() && (
                     <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{stay.notes}</p>
                   )}
+                  <ItemDetailsDisplay
+                    details={stay}
+                    showPrice={itemDetailVisibility.showPrice}
+                    showWebsite={itemDetailVisibility.showWebsite}
+                  />
                 </article>
               ))}
               {mealsForDay.map((meal) => (
@@ -387,6 +408,11 @@ export function TravelMode({ trip }: TravelModeProps) {
                             {meal.notes}
                           </p>
                         )}
+                        <ItemDetailsDisplay
+                          details={meal}
+                          showPrice={itemDetailVisibility.showPrice}
+                          showWebsite={itemDetailVisibility.showWebsite}
+                        />
                       </div>
                     </div>
                     {meal.latitude !== null && meal.longitude !== null && (
@@ -435,6 +461,11 @@ export function TravelMode({ trip }: TravelModeProps) {
                             {activity.notes}
                           </p>
                         )}
+                        <ItemDetailsDisplay
+                          details={activity}
+                          showPrice={itemDetailVisibility.showPrice}
+                          showWebsite={itemDetailVisibility.showWebsite}
+                        />
                         {activity.googleMapsUrl && (
                           <a
                             className="mt-3 inline-flex rounded-lg bg-surface-muted px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-soft"

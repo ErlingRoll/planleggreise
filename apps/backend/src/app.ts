@@ -18,6 +18,7 @@ import {
   ReorderDayItemsInputSchema,
   RequestTripAccessInputSchema,
   SetTripItemPreferenceInputSchema,
+  TripCurrencySettingsSchema,
   TripItemPreferenceSchema,
   TripAccessLinkSchema,
   TripAccessRequestSchema,
@@ -31,6 +32,9 @@ import {
   UpdateTripDayInputSchema,
   UpdateActivityInputSchema,
   UpdateTripInputSchema,
+  UpdateTripCurrencySettingsInputSchema,
+  TripItemDetailVisibilitySchema,
+  UpdateTripItemDetailVisibilityInputSchema,
   isTripDurationWithinLimit,
   type Trip,
   type TripDetail,
@@ -41,6 +45,7 @@ import {
 import { createSupabaseAuthService, type AuthenticatedUser, type AuthService } from "./auth.js"
 import {
   createSupabaseTripRepository,
+  CurrencyRemovalError,
   isDateWithinTrip,
   isValidDateRange,
   type TripRepository,
@@ -210,6 +215,146 @@ export function createApp(dependencies: AppDependencies = {}) {
       }
     },
   )
+
+  app.get(
+    "/api/trips/:tripId/currencies",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+        if (typeof tripId !== "string") {
+          response.status(400).json({ message: "Trip id is required" })
+          return
+        }
+
+        const settings = await tripRepository.getTripCurrencies(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+        )
+        if (!settings) {
+          response.status(404).json({ message: "Trip not found" })
+          return
+        }
+
+        response.json(TripCurrencySettingsSchema.parse(settings))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
+  app.put(
+    "/api/trips/:tripId/currencies",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+        const parsedInput = UpdateTripCurrencySettingsInputSchema.safeParse(request.body)
+        if (typeof tripId !== "string" || !parsedInput.success) {
+          response.status(400).json({
+            message: "Invalid currency settings",
+            issues: parsedInput.success ? undefined : parsedInput.error.issues,
+          })
+          return
+        }
+
+        const settings = await tripRepository.updateTripCurrencies(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          parsedInput.data,
+        )
+        if (!settings) {
+          response.status(404).json({ message: "Trip not found" })
+          return
+        }
+
+        response.json(TripCurrencySettingsSchema.parse(settings))
+      } catch (error) {
+        if (error instanceof CurrencyRemovalError) {
+          response.status(400).json({ message: error.message, currencies: error.currencies })
+          return
+        }
+        next(error)
+      }
+    },
+  )
+
+  app.patch(
+    "/api/trips/:tripId/currencies",
+    (request, response, next) => requireAuthenticatedUser(authService, request, response, next),
+    async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+        const parsedInput = UpdateTripCurrencySettingsInputSchema.safeParse(request.body)
+        if (typeof tripId !== "string" || !parsedInput.success) {
+          response.status(400).json({ message: "Invalid currency settings" })
+          return
+        }
+
+        const settings = await tripRepository.updateTripCurrencies(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          parsedInput.data,
+        )
+        if (!settings) {
+          response.status(404).json({ message: "Trip not found" })
+          return
+        }
+
+        response.json(TripCurrencySettingsSchema.parse(settings))
+      } catch (error) {
+        if (error instanceof CurrencyRemovalError) {
+          response.status(400).json({ message: error.message, currencies: error.currencies })
+          return
+        }
+        next(error)
+      }
+    },
+  )
+
+  {
+    const itemDetailVisibilityPath = "/api/trips/:tripId/item-detail-visibility"
+    const authenticate = (request: Request, response: Response, next: NextFunction) =>
+      requireAuthenticatedUser(authService, request, response, next)
+    const updateItemDetailVisibility = async (
+      request: Request,
+      response: Response,
+      next: NextFunction,
+    ) => {
+      try {
+        const authenticatedRequest = request as AuthenticatedRequest
+        const { tripId } = request.params
+        const parsedInput = UpdateTripItemDetailVisibilityInputSchema.safeParse(request.body)
+        if (typeof tripId !== "string" || !parsedInput.success) {
+          response.status(400).json({ message: "Invalid visibility settings" })
+          return
+        }
+
+        const settings = await tripRepository.updateTripItemDetailVisibility(
+          authenticatedRequest.user.id,
+          authenticatedRequest.accessToken,
+          tripId,
+          parsedInput.data,
+        )
+        if (!settings) {
+          response.status(404).json({ message: "Trip not found" })
+          return
+        }
+
+        response.json(TripItemDetailVisibilitySchema.parse(settings))
+      } catch (error) {
+        next(error)
+      }
+    }
+
+    app.put(itemDetailVisibilityPath, authenticate, updateItemDetailVisibility)
+  }
 
   app.get(
     "/api/trips/:tripId/sharing",
@@ -681,6 +826,10 @@ export function createApp(dependencies: AppDependencies = {}) {
 
         response.json(trip)
       } catch (error) {
+        if (error instanceof CurrencyRemovalError) {
+          response.status(400).json({ message: error.message })
+          return
+        }
         next(error)
       }
     },
@@ -944,6 +1093,9 @@ export function createApp(dependencies: AppDependencies = {}) {
           placeAddress: currentHousingStay.placeAddress,
           latitude: currentHousingStay.latitude,
           longitude: currentHousingStay.longitude,
+          priceAmount: currentHousingStay.priceAmount,
+          priceCurrency: currentHousingStay.priceCurrency,
+          website: currentHousingStay.website,
           ...parsedInput.data,
         })
 
@@ -1171,6 +1323,9 @@ export function createApp(dependencies: AppDependencies = {}) {
           placeAddress: currentMeal.placeAddress,
           latitude: currentMeal.latitude,
           longitude: currentMeal.longitude,
+          priceAmount: currentMeal.priceAmount,
+          priceCurrency: currentMeal.priceCurrency,
+          website: currentMeal.website,
           ...parsedInput.data,
         })
 
@@ -1554,6 +1709,9 @@ export function createApp(dependencies: AppDependencies = {}) {
           endTime: currentActivity.endTime,
           allDay: currentActivity.allDay,
           notes: currentActivity.notes,
+          priceAmount: currentActivity.priceAmount,
+          priceCurrency: currentActivity.priceCurrency,
+          website: currentActivity.website,
           ...parsedInput.data,
         }
         const parsedNextActivity = CreateActivityInputSchema.safeParse(nextActivity)

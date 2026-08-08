@@ -35,6 +35,31 @@ export const TimeOnlySchema = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
 
 export const NoteSchema = z.string().trim().max(2000).nullable()
 export const DayTitleSchema = z.string().trim().min(1).max(200).nullable()
+export const CurrencyCodeSchema = z
+  .string()
+  .trim()
+  .regex(/^[A-Za-z]{3}$/)
+  .transform((value) => value.toUpperCase())
+export const PriceAmountSchema = z
+  .number()
+  .finite()
+  .nonnegative()
+  .refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-8, {
+    message: "Price amount must have at most two decimal places",
+  })
+export const WebsiteSchema = z.string().trim().max(2000).nullable()
+
+const ItemDetailsSchema = z.object({
+  priceAmount: PriceAmountSchema.nullable().default(null),
+  priceCurrency: CurrencyCodeSchema.nullable().default(null),
+  website: WebsiteSchema.default(null),
+})
+
+export const AcceptedCurrenciesSchema = CurrencyCodeSchema.array()
+  .max(50)
+  .refine((currencies) => new Set(currencies).size === currencies.length, {
+    message: "Accepted currencies must be unique",
+  })
 
 export const TripSchema = z.object({
   id: z.string(),
@@ -42,6 +67,7 @@ export const TripSchema = z.object({
   startDate: DateOnlySchema,
   endDate: DateOnlySchema,
   notes: NoteSchema,
+  acceptedCurrencies: AcceptedCurrenciesSchema.optional(),
 })
 
 export const CreateTripInputSchema = z.object({
@@ -49,6 +75,7 @@ export const CreateTripInputSchema = z.object({
   startDate: DateOnlySchema,
   endDate: DateOnlySchema,
   notes: NoteSchema.optional().default(null),
+  acceptedCurrencies: AcceptedCurrenciesSchema.optional(),
 })
 
 export const UpdateTripInputSchema = z.object({
@@ -56,17 +83,20 @@ export const UpdateTripInputSchema = z.object({
   startDate: DateOnlySchema.optional(),
   endDate: DateOnlySchema.optional(),
   notes: NoteSchema.optional(),
+  acceptedCurrencies: AcceptedCurrenciesSchema.optional(),
 })
 
-const ActivityFieldsSchema = z.object({
-  tripDate: DateOnlySchema.nullable().optional().default(null),
-  isBackup: z.boolean().default(false),
-  title: z.string().trim().max(200).nullable(),
-  startTime: TimeOnlySchema.nullable(),
-  endTime: TimeOnlySchema.nullable(),
-  allDay: z.boolean(),
-  notes: z.string().trim().max(2000).nullable(),
-})
+const ActivityFieldsSchema = z
+  .object({
+    tripDate: DateOnlySchema.nullable().optional().default(null),
+    isBackup: z.boolean().default(false),
+    title: z.string().trim().max(200).nullable(),
+    startTime: TimeOnlySchema.nullable(),
+    endTime: TimeOnlySchema.nullable(),
+    allDay: z.boolean(),
+    notes: z.string().trim().max(2000).nullable(),
+  })
+  .merge(ItemDetailsSchema)
 
 const ActivityPlaceSchema = z.object({
   googleMapsUrl: z.string().url().nullable(),
@@ -81,6 +111,10 @@ function hasValidTimeRange(
   endTime: string | null | undefined,
 ) {
   return !startTime || !endTime || endTime >= startTime
+}
+
+function hasValidPrice(details: { priceAmount?: number | null; priceCurrency?: string | null }) {
+  return (details.priceAmount == null) === (details.priceCurrency == null)
 }
 
 export const ActivitySchema = ActivityFieldsSchema.extend({
@@ -108,6 +142,7 @@ export const CreateActivityInputSchema = ActivityFieldsSchema.extend({
     (activity) => hasValidTimeRange(activity.startTime, activity.endTime),
     "End time must be on or after start time",
   )
+  .refine(hasValidPrice, "A price amount and currency must be provided together")
 
 export const UpdateActivityInputSchema = z
   .object({
@@ -124,6 +159,9 @@ export const UpdateActivityInputSchema = z
     latitude: z.number().min(-90).max(90).nullable().optional(),
     longitude: z.number().min(-180).max(180).nullable().optional(),
     sortOrder: z.number().int().nonnegative().optional(),
+    priceAmount: PriceAmountSchema.nullable().optional(),
+    priceCurrency: CurrencyCodeSchema.nullable().optional(),
+    website: WebsiteSchema.optional(),
   })
   .refine(
     (activity) => hasValidTimeRange(activity.startTime, activity.endTime),
@@ -140,13 +178,15 @@ export const ReorderActivitiesInputSchema = z.object({
   activities: ReorderActivityInputSchema.array().min(1),
 })
 
-const HousingStayFieldsSchema = z.object({
-  name: z.string().trim().min(1).max(200),
-  checkIn: DateOnlySchema.nullable().optional().default(null),
-  checkOut: DateOnlySchema.nullable().optional().default(null),
-  isBackup: z.boolean().default(false),
-  notes: NoteSchema,
-})
+const HousingStayFieldsSchema = z
+  .object({
+    name: z.string().trim().min(1).max(200),
+    checkIn: DateOnlySchema.nullable().optional().default(null),
+    checkOut: DateOnlySchema.nullable().optional().default(null),
+    isBackup: z.boolean().default(false),
+    notes: NoteSchema,
+  })
+  .merge(ItemDetailsSchema)
 
 export const HousingStaySchema = HousingStayFieldsSchema.extend({
   id: z.string(),
@@ -159,12 +199,14 @@ export const CreateHousingStayInputSchema = HousingStayFieldsSchema.extend({
   placeAddress: z.string().trim().max(500).nullable().optional().default(null),
   latitude: z.number().min(-90).max(90).nullable().optional().default(null),
   longitude: z.number().min(-180).max(180).nullable().optional().default(null),
-}).refine(
-  (stay) =>
-    stay.isBackup ||
-    (stay.checkIn !== null && stay.checkOut !== null && stay.checkOut > stay.checkIn),
-  "A planned housing stay must have a valid date range",
-)
+})
+  .refine(
+    (stay) =>
+      stay.isBackup ||
+      (stay.checkIn !== null && stay.checkOut !== null && stay.checkOut > stay.checkIn),
+    "A planned housing stay must have a valid date range",
+  )
+  .refine(hasValidPrice, "A price amount and currency must be provided together")
 
 export const UpdateHousingStayInputSchema = z
   .object({
@@ -178,6 +220,9 @@ export const UpdateHousingStayInputSchema = z
     placeAddress: z.string().trim().max(500).nullable().optional(),
     latitude: z.number().min(-90).max(90).nullable().optional(),
     longitude: z.number().min(-180).max(180).nullable().optional(),
+    priceAmount: PriceAmountSchema.nullable().optional(),
+    priceCurrency: CurrencyCodeSchema.nullable().optional(),
+    website: WebsiteSchema.optional(),
   })
   .refine(
     (stay) =>
@@ -189,15 +234,17 @@ export const UpdateHousingStayInputSchema = z
     "Check-out must be after check-in",
   )
 
-const MealFieldsSchema = z.object({
-  tripDate: DateOnlySchema.nullable().optional().default(null),
-  isBackup: z.boolean().default(false),
-  title: z.string().trim().max(200).nullable(),
-  startTime: TimeOnlySchema.nullable(),
-  endTime: TimeOnlySchema.nullable(),
-  allDay: z.boolean(),
-  notes: NoteSchema,
-})
+const MealFieldsSchema = z
+  .object({
+    tripDate: DateOnlySchema.nullable().optional().default(null),
+    isBackup: z.boolean().default(false),
+    title: z.string().trim().max(200).nullable(),
+    startTime: TimeOnlySchema.nullable(),
+    endTime: TimeOnlySchema.nullable(),
+    allDay: z.boolean(),
+    notes: NoteSchema,
+  })
+  .merge(ItemDetailsSchema)
 
 export const MealSchema = MealFieldsSchema.extend({
   id: z.string(),
@@ -221,6 +268,7 @@ export const CreateMealInputSchema = MealFieldsSchema.extend({
     (meal) => hasValidTimeRange(meal.startTime, meal.endTime),
     "End time must be on or after start time",
   )
+  .refine(hasValidPrice, "A price amount and currency must be provided together")
 
 export const UpdateMealInputSchema = z
   .object({
@@ -237,6 +285,9 @@ export const UpdateMealInputSchema = z
     latitude: z.number().min(-90).max(90).nullable().optional(),
     longitude: z.number().min(-180).max(180).nullable().optional(),
     sortOrder: z.number().int().nonnegative().optional(),
+    priceAmount: PriceAmountSchema.nullable().optional(),
+    priceCurrency: CurrencyCodeSchema.nullable().optional(),
+    website: WebsiteSchema.optional(),
   })
   .refine(
     (meal) => hasValidTimeRange(meal.startTime, meal.endTime),
@@ -256,13 +307,31 @@ export const UpdateTripDayInputSchema = z.object({
   notes: NoteSchema.optional(),
 })
 
+export const TripItemDetailVisibilitySchema = z.object({
+  showPrice: z.boolean(),
+  showWebsite: z.boolean(),
+})
+
 export const TripDetailSchema = TripSchema.extend({
+  acceptedCurrencies: AcceptedCurrenciesSchema.default([]),
   days: TripDaySchema.array(),
   backupActivities: ActivitySchema.array().default([]),
   housingStays: HousingStaySchema.array().default([]),
   meals: MealSchema.array().default([]),
   preferences: TripItemPreferenceSchema.array().default([]),
+  itemDetailVisibility: TripItemDetailVisibilitySchema,
 })
+
+export const TripCurrencySettingsSchema = z.object({
+  tripId: z.string(),
+  acceptedCurrencies: AcceptedCurrenciesSchema,
+})
+
+export const UpdateTripCurrencySettingsInputSchema = z.object({
+  acceptedCurrencies: AcceptedCurrenciesSchema,
+})
+
+export const UpdateTripItemDetailVisibilityInputSchema = TripItemDetailVisibilitySchema
 
 export const DayItemTypeSchema = z.enum(["activity", "meal"])
 
@@ -283,6 +352,10 @@ export const ReorderedDayItemsSchema = z.object({
 })
 
 export type Trip = z.infer<typeof TripSchema>
+export type CurrencyCode = z.infer<typeof CurrencyCodeSchema>
+export type AcceptedCurrencies = z.infer<typeof AcceptedCurrenciesSchema>
+export type PriceAmount = z.infer<typeof PriceAmountSchema>
+export type Website = z.infer<typeof WebsiteSchema>
 export type CreateTripInput = z.infer<typeof CreateTripInputSchema>
 export type UpdateTripInput = z.infer<typeof UpdateTripInputSchema>
 export type Activity = z.infer<typeof ActivitySchema>
@@ -302,3 +375,9 @@ export type ReorderDayItemsInput = z.infer<typeof ReorderDayItemsInputSchema>
 export type TripDay = z.infer<typeof TripDaySchema>
 export type UpdateTripDayInput = z.infer<typeof UpdateTripDayInputSchema>
 export type TripDetail = z.infer<typeof TripDetailSchema>
+export type TripItemDetailVisibility = z.infer<typeof TripItemDetailVisibilitySchema>
+export type UpdateTripItemDetailVisibilityInput = z.infer<
+  typeof UpdateTripItemDetailVisibilityInputSchema
+>
+export type TripCurrencySettings = z.infer<typeof TripCurrencySettingsSchema>
+export type UpdateTripCurrencySettingsInput = z.infer<typeof UpdateTripCurrencySettingsInputSchema>

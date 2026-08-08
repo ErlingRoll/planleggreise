@@ -11,7 +11,9 @@ import { DatePicker } from "../../components/DatePicker"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { MapLocateButton } from "../../components/MapLocateButton"
 import { MobileMenuButton } from "../../components/MobileMenuButton"
+import { ItemDetailsEditor } from "../../components/ItemDetails"
 import { TripItemPreference } from "../../components/TripItemPreference"
+import type { ItemDetailValues } from "../../components/ItemDetails"
 import { getErrorMessage } from "../../lib/errors"
 import { shiftDate } from "../../lib/trip-dates"
 import { formatDate } from "../../lib/date-format"
@@ -35,6 +37,9 @@ type TripAuxiliaryDetailsProps = {
   onLocateHousing?: (stay: HousingStay) => void
   mapHousingAction?: { type: "edit" | "delete"; stayId: string } | null
   onMapHousingActionHandled?: () => void
+  currencies: string[]
+  onSaveDetails: (stay: HousingStay, details: ItemDetailValues) => Promise<void>
+  showDetails: boolean
 }
 
 type FormMode = "housing" | null
@@ -53,6 +58,9 @@ export function TripAuxiliaryDetails({
   onLocateHousing,
   mapHousingAction,
   onMapHousingActionHandled,
+  currencies,
+  onSaveDetails,
+  showDetails,
 }: TripAuxiliaryDetailsProps) {
   const { t } = useTranslation()
   const visibleHousingStays = selectedDayDates
@@ -157,6 +165,9 @@ export function TripAuxiliaryDetails({
               placeAddress: null,
               latitude: null,
               longitude: null,
+              priceAmount: null,
+              priceCurrency: null,
+              website: null,
             })
           : await createHousingStay(accessToken, trip.id, {
               name,
@@ -169,6 +180,9 @@ export function TripAuxiliaryDetails({
               placeAddress: null,
               latitude: null,
               longitude: null,
+              priceAmount: null,
+              priceCurrency: null,
+              website: null,
             })
         onTripUpdated({
           ...trip,
@@ -358,6 +372,17 @@ export function TripAuxiliaryDetails({
                   </div>
                   {stay.notes?.trim() && (
                     <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{stay.notes}</p>
+                  )}
+                  {showDetails && (
+                    <ItemDetailsEditor
+                      currencies={currencies}
+                      details={{
+                        priceAmount: stay.priceAmount ?? null,
+                        priceCurrency: stay.priceCurrency ?? null,
+                        website: stay.website ?? null,
+                      }}
+                      onSave={(details) => onSaveDetails(stay, details)}
+                    />
                   )}
                   <TripItemPreference
                     disabled={savingPreferenceKey === `housing:${stay.id}`}

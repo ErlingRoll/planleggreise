@@ -20,8 +20,11 @@ import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { DatePicker } from "../../components/DatePicker"
 import { TimePicker } from "../../components/TimePicker"
 import { MobileMenuButton } from "../../components/MobileMenuButton"
+import { ItemDetailsEditor } from "../../components/ItemDetails"
 import { TripItemPreference } from "../../components/TripItemPreference"
+import type { ItemDetailValues } from "../../components/ItemDetails"
 import { getErrorMessage, isGoogleMapsError } from "../../lib/errors"
+import { getDefaultCurrency } from "../../lib/currency"
 import { formatActivityTime, getDayItemTitle, sortActivities } from "../../lib/activity-format"
 import { formatDate } from "../../lib/date-format"
 import { shiftDate } from "../../lib/trip-dates"
@@ -53,6 +56,8 @@ export function TripBackupPage({
   daySelection,
 }: TripBackupPageProps) {
   const { t } = useTranslation()
+  const currencies =
+    trip.acceptedCurrencies.length > 0 ? trip.acceptedCurrencies : [getDefaultCurrency()]
   const [selectedType, setSelectedType] = useState<BackupType>("activity")
   const [formType, setFormType] = useState<BackupType | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -351,6 +356,9 @@ export function TripBackupPage({
               placeAddress: null,
               latitude: null,
               longitude: null,
+              priceAmount: null,
+              priceCurrency: null,
+              website: null,
             })
           : await createHousingStay(accessToken, trip.id, {
               name,
@@ -363,6 +371,9 @@ export function TripBackupPage({
               placeAddress: null,
               latitude: null,
               longitude: null,
+              priceAmount: null,
+              priceCurrency: null,
+              website: null,
             })
         onTripUpdated(updateTripItem(trip, saved, formType))
       } else {
@@ -379,6 +390,9 @@ export function TripBackupPage({
           placeAddress: null,
           latitude: null,
           longitude: null,
+          priceAmount: null,
+          priceCurrency: null,
+          website: null,
         }
         const saved =
           formType === "activity"
@@ -445,6 +459,17 @@ export function TripBackupPage({
     } catch (reason: unknown) {
       setFormError(getErrorMessage(reason))
     }
+  }
+
+  async function handleSaveDetails({ item, type }: BackupEntry, details: ItemDetailValues) {
+    const saved =
+      type === "activity"
+        ? await updateActivity(accessToken, trip.id, item.id, details)
+        : type === "meal"
+          ? await updateMeal(accessToken, trip.id, item.id, details)
+          : await updateHousingStay(accessToken, trip.id, item.id, details)
+
+    onTripUpdated(updateTripItem(trip, saved, type))
   }
 
   async function handleDelete({ item, type }: BackupEntry) {
@@ -725,6 +750,15 @@ export function TripBackupPage({
           {item.notes?.trim() && (
             <p className="whitespace-pre-wrap text-sm text-muted">{item.notes}</p>
           )}
+          <ItemDetailsEditor
+            currencies={currencies}
+            details={{
+              priceAmount: item.priceAmount ?? null,
+              priceCurrency: item.priceCurrency ?? null,
+              website: item.website ?? null,
+            }}
+            onSave={(details) => handleSaveDetails({ item, type }, details)}
+          />
           <TripItemPreference
             disabled={savingPreferenceKey === key}
             itemId={item.id}

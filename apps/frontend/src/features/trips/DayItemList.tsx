@@ -5,8 +5,10 @@ import { formatActivityTime, getDayItemTitle, type DayItem } from "../../lib/act
 import type { Activity, Meal, TripDetail } from "../../api"
 import { MapLocateButton } from "../../components/MapLocateButton"
 import { MobileMenuButton } from "../../components/MobileMenuButton"
+import { ItemDetailsEditor } from "../../components/ItemDetails"
 import { TripItemPreference } from "../../components/TripItemPreference"
 import type { TripItemPreferenceValue, TripItemType } from "@turprep/models"
+import type { ItemDetailValues } from "../../components/ItemDetails"
 import type { DayItemRecord, DropTarget, MovingItem, PlannerTab } from "./planner-types"
 
 type DayItemListProps = {
@@ -45,6 +47,9 @@ type DayItemListProps = {
     itemId: string,
     value: TripItemPreferenceValue | null,
   ) => void
+  currencies: string[]
+  onSaveDetails: (record: DayItemRecord, details: ItemDetailValues) => Promise<void>
+  showDetails: boolean
 }
 
 export function DayItemList({
@@ -79,6 +84,9 @@ export function DayItemList({
   highlightedItemKey,
   onLocateItem,
   onPreferenceChange,
+  currencies,
+  onSaveDetails,
+  showDetails,
 }: DayItemListProps) {
   const { t } = useTranslation()
   const [openMenuItemId, setOpenMenuItemId] = useState<string | null>(null)
@@ -146,6 +154,17 @@ export function DayItemList({
                   <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-accent-text">
                     {t("tripDetails.meal")}
                   </p>
+                )}
+                {showDetails && (
+                  <ItemDetailsEditor
+                    currencies={currencies}
+                    details={{
+                      priceAmount: item.priceAmount ?? null,
+                      priceCurrency: item.priceCurrency ?? null,
+                      website: item.website ?? null,
+                    }}
+                    onSave={(details) => onSaveDetails(record, details)}
+                  />
                 )}
                 {item.placeAddress && (
                   <p className="mt-1 text-sm text-muted">{item.placeAddress}</p>

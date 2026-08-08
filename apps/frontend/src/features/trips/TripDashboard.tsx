@@ -37,7 +37,12 @@ export function TripDashboard({ session }: TripDashboardProps) {
   const [error, setError] = useState<string | null>(null)
   const [detailsError, setDetailsError] = useState<string | null>(null)
   const [showMobileOptions, setShowMobileOptions] = useState(false)
+  const [showItemDetails, setShowItemDetails] = useState(true)
   const daySelection = useTripDaySelection(selectedTrip)
+
+  useEffect(() => {
+    setShowItemDetails(true)
+  }, [tripId])
 
   useEffect(() => {
     let isMounted = true
@@ -216,13 +221,28 @@ export function TripDashboard({ session }: TripDashboardProps) {
             <span aria-hidden="true">←</span>
             {t("dashboard.backToTrips")}
           </button>
-          <h1 className="mt-5 text-3xl font-medium tracking-[-0.04em] text-brand">
-            {isTravelMode
-              ? t("travelMode.title")
-              : isBackupMode
-                ? t("tripModes.backup")
-                : t("dashboard.plan")}
-          </h1>
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-3xl font-medium tracking-[-0.04em] text-brand">
+              {isTravelMode
+                ? t("travelMode.title")
+                : isBackupMode
+                  ? t("tripModes.backup")
+                  : t("dashboard.plan")}
+            </h1>
+            {!isBackupMode &&
+              selectedTrip &&
+              (selectedTrip.itemDetailVisibility.showPrice ||
+                selectedTrip.itemDetailVisibility.showWebsite) && (
+                <button
+                  aria-pressed={showItemDetails}
+                  className="rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-on-surface transition hover:border-brand"
+                  onClick={() => setShowItemDetails((current) => !current)}
+                  type="button"
+                >
+                  {showItemDetails ? t("dashboard.hideDetails") : t("dashboard.showDetails")}
+                </button>
+              )}
+          </div>
           {isTravelMode && detailsError && (
             <p className="mt-4 text-sm text-error">{detailsError}</p>
           )}
@@ -258,7 +278,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
             </Link>
           </nav>
           {isTravelMode && selectedTrip ? (
-            <TravelMode trip={selectedTrip} />
+            <TravelMode showDetails={showItemDetails} trip={selectedTrip} />
           ) : isBackupMode && selectedTrip ? (
             <TripBackupPage
               accessToken={session.access_token}
@@ -277,6 +297,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
               trip={selectedTrip}
               userId={session.user.id}
               daySelection={daySelection}
+              showDetails={showItemDetails}
             />
           )}
         </section>

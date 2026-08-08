@@ -19,12 +19,16 @@ import {
   TripMemberSchema,
   TripSharingSchema,
   TripItemPreferenceSchema,
+  TripCurrencySettingsSchema,
+  TripItemDetailVisibilitySchema,
   TripDaySchema,
   TripSchema,
   UpdateHousingStayInputSchema,
   UpdateMealInputSchema,
   UpdateTripInputSchema,
   UpdateActivityInputSchema,
+  UpdateTripCurrencySettingsInputSchema,
+  UpdateTripItemDetailVisibilityInputSchema,
   type Activity,
   type CreateActivityInput,
   type CreateHousingStayInput,
@@ -51,6 +55,10 @@ import {
   type TripSharing,
   type SetTripItemPreferenceInput,
   type TripItemPreference,
+  type TripCurrencySettings,
+  type UpdateTripCurrencySettingsInput,
+  type TripItemDetailVisibility,
+  type UpdateTripItemDetailVisibilityInput,
 } from "@turprep/models"
 import { HttpError, notifyUnhandledHttpError } from "./lib/http-errors"
 
@@ -81,6 +89,10 @@ export type {
   TripSharing,
   SetTripItemPreferenceInput,
   TripItemPreference,
+  TripCurrencySettings,
+  UpdateTripCurrencySettingsInput,
+  TripItemDetailVisibility,
+  UpdateTripItemDetailVisibilityInput,
 } from "@turprep/models"
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ""
@@ -119,6 +131,41 @@ export async function getTrips(accessToken: string): Promise<Trip[]> {
 
 export async function getTrip(accessToken: string, tripId: string): Promise<TripDetail> {
   return TripDetailSchema.parse(await request(`/api/trips/${tripId}`, accessToken))
+}
+
+export async function getTripCurrencies(
+  accessToken: string,
+  tripId: string,
+): Promise<TripCurrencySettings> {
+  return TripCurrencySettingsSchema.parse(
+    await request(`/api/trips/${tripId}/currencies`, accessToken),
+  )
+}
+
+export async function updateTripCurrencies(
+  accessToken: string,
+  tripId: string,
+  input: UpdateTripCurrencySettingsInput,
+): Promise<TripCurrencySettings> {
+  return TripCurrencySettingsSchema.parse(
+    await request(`/api/trips/${tripId}/currencies`, accessToken, {
+      method: "PUT",
+      body: JSON.stringify(UpdateTripCurrencySettingsInputSchema.parse(input)),
+    }),
+  )
+}
+
+export async function updateTripItemDetailVisibility(
+  accessToken: string,
+  tripId: string,
+  input: UpdateTripItemDetailVisibilityInput,
+): Promise<TripItemDetailVisibility> {
+  return TripItemDetailVisibilitySchema.parse(
+    await request(`/api/trips/${tripId}/item-detail-visibility`, accessToken, {
+      method: "PUT",
+      body: JSON.stringify(UpdateTripItemDetailVisibilityInputSchema.parse(input)),
+    }),
+  )
 }
 
 export async function setTripItemPreference(

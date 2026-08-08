@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 import { createTrip, type Trip } from "../../api"
 import { DatePicker } from "../../components/DatePicker"
 import { getErrorMessage } from "../../lib/errors"
+import { getDefaultCurrency } from "../../lib/currency"
 import { getTripDurationMessage, shiftDate } from "../../lib/trip-dates"
 
 type TripFormProps = {
@@ -49,6 +50,7 @@ export function TripForm({ accessToken, onCreated, onCancel }: TripFormProps) {
         startDate,
         endDate,
         notes,
+        acceptedCurrencies: [getDefaultCurrency()],
       })
       onCreated(trip)
     } catch (reason: unknown) {

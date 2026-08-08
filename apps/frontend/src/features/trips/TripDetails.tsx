@@ -31,6 +31,7 @@ import { LoadingCover } from "../../components/LoadingCover"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { formatDate } from "../../lib/date-format"
 import { shiftDate } from "../../lib/trip-dates"
+import { getDefaultCurrency } from "../../lib/currency"
 import { TripAuxiliaryDetails } from "./TripAuxiliaryDetails"
 import { TripSettings } from "./TripSettings"
 import { DayItemForm } from "./DayItemForm"
@@ -42,6 +43,7 @@ import { TripDetailsHeader } from "./TripDetailsHeader"
 import { TripMap, type TripMapMarker } from "./TripMap"
 import { useTripRealtime } from "./useTripRealtime"
 import { TripItemPreference } from "../../components/TripItemPreference"
+import { ItemDetailsDisplay, type ItemDetailValues } from "../../components/ItemDetails"
 import type { TripDaySelection } from "./useTripDaySelection"
 import type { DayItemRecord, DropTarget, MovingItem, PlannerTab } from "./planner-types"
 import { isAllowedGoogleMapsUrl } from "@turprep/models"
@@ -56,6 +58,7 @@ type TripDetailsProps = {
   onTripDeleted: (trip: TripDetail) => Promise<void>
   userId: string
   daySelection: TripDaySelection
+  showDetails: boolean
 }
 
 type PendingDeletion = { item: Activity; type: "activity" } | { item: Meal; type: "meal" }
@@ -85,6 +88,7 @@ export function TripDetails({
   onTripDeleted,
   userId,
   daySelection,
+  showDetails,
 }: TripDetailsProps) {
   const { t } = useTranslation()
   const [openDay, setOpenDay] = useState<string | null>(null)
@@ -258,11 +262,19 @@ export function TripDetails({
   }
 
   const currentTrip = trip
+  const currencies =
+    currentTrip.acceptedCurrencies.length > 0
+      ? currentTrip.acceptedCurrencies
+      : [getDefaultCurrency()]
   const normalizedGoogleMapsUrl = googleMapsUrl.trim()
   const googleMapsUrlIsInvalid =
     normalizedGoogleMapsUrl.length > 0 && !isAllowedGoogleMapsUrl(normalizedGoogleMapsUrl)
   const selectedDay =
     currentTrip.days.find((day) => day.date === selectedDayDate) ?? currentTrip.days[0]
+  const itemDetailVisibility = {
+    showPrice: showDetails && currentTrip.itemDetailVisibility.showPrice,
+    showWebsite: showDetails && currentTrip.itemDetailVisibility.showWebsite,
+  }
 
   function renderMapMarkerDetails(marker: TripMapMarker) {
     if (marker.type === "housing") {
@@ -280,6 +292,11 @@ export function TripDetails({
               {stay.notes?.trim() && (
                 <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{stay.notes}</p>
               )}
+              <ItemDetailsDisplay
+                details={stay}
+                showPrice={itemDetailVisibility.showPrice}
+                showWebsite={itemDetailVisibility.showWebsite}
+              />
             </div>
             <div className="flex shrink-0 gap-1">
               <button
@@ -344,6 +361,11 @@ export function TripDetails({
             {item.notes?.trim() && (
               <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{item.notes}</p>
             )}
+            <ItemDetailsDisplay
+              details={item}
+              showPrice={itemDetailVisibility.showPrice}
+              showWebsite={itemDetailVisibility.showWebsite}
+            />
             {item.googleMapsUrl && (
               <a
                 className="mt-2 inline-block text-sm font-semibold text-brand underline"
@@ -506,6 +528,49 @@ export function TripDetails({
       setActivityError(message)
       throw reason
     }
+  }
+
+  async function handleSaveDayItemDetails(record: DayItemRecord, details: ItemDetailValues) {
+    if (record.itemType === "meal") {
+      const savedMeal = await updateMeal(accessToken, currentTrip.id, record.item.id, details)
+      onTripUpdated({
+        ...currentTrip,
+        meals: currentTrip.meals.map((meal) => (meal.id === savedMeal.id ? savedMeal : meal)),
+      })
+      return
+    }
+
+    const day = currentTrip.days.find((currentDay) =>
+      currentDay.activities.some((activity) => activity.id === record.item.id),
+    )
+    if (!day) {
+      throw new Error(t("errors.activityNotFound"))
+    }
+
+    const savedActivity = await updateActivity(accessToken, currentTrip.id, record.item.id, details)
+    onTripUpdated({
+      ...currentTrip,
+      days: currentTrip.days.map((currentDay) =>
+        currentDay.date === day.date
+          ? {
+              ...currentDay,
+              activities: currentDay.activities.map((activity) =>
+                activity.id === savedActivity.id ? savedActivity : activity,
+              ),
+            }
+          : currentDay,
+      ),
+    })
+  }
+
+  async function handleSaveHousingDetails(stay: HousingStay, details: ItemDetailValues) {
+    const savedStay = await updateHousingStay(accessToken, currentTrip.id, stay.id, details)
+    onTripUpdated({
+      ...currentTrip,
+      housingStays: currentTrip.housingStays.map((currentStay) =>
+        currentStay.id === savedStay.id ? savedStay : currentStay,
+      ),
+    })
   }
 
   function resetActivityForm() {
@@ -1124,6 +1189,9 @@ export function TripDetails({
         placeAddress: null,
         latitude: null,
         longitude: null,
+        priceAmount: null,
+        priceCurrency: null,
+        website: null,
       }
       let nextTrip: TripDetail
       let savedItem: DayItem
@@ -1456,6 +1524,9 @@ export function TripDetails({
               }
               mapHousingAction={mapHousingAction}
               onMapHousingActionHandled={() => setMapHousingAction(null)}
+              currencies={currencies}
+              onSaveDetails={handleSaveHousingDetails}
+              showDetails={showDetails}
               savingPreferenceKey={savingPreferenceKey}
               trip={currentTrip}
               userId={userId}
@@ -1521,6 +1592,9 @@ export function TripDetails({
                   onPreferenceChange={(itemType, itemId, value) => {
                     void handlePreferenceChange(itemType, itemId, value)
                   }}
+                  currencies={currencies}
+                  onSaveDetails={(record, details) => handleSaveDayItemDetails(record, details)}
+                  showDetails={showDetails}
                   renderEditForm={renderDayItemForm}
                   renderMoveForm={renderMoveItemForm}
                   highlightedItemKey={highlightedMapItemKey}
@@ -1547,6 +1621,9 @@ export function TripDetails({
               }
               mapHousingAction={mapHousingAction}
               onMapHousingActionHandled={() => setMapHousingAction(null)}
+              currencies={currencies}
+              onSaveDetails={handleSaveHousingDetails}
+              showDetails={showDetails}
               selectedDayDate={selectedDay.date}
               selectedDayDates={selectedDayDates}
               savingPreferenceKey={savingPreferenceKey}
@@ -1570,6 +1647,9 @@ export function TripDetails({
               }
               mapHousingAction={mapHousingAction}
               onMapHousingActionHandled={() => setMapHousingAction(null)}
+              currencies={currencies}
+              onSaveDetails={handleSaveHousingDetails}
+              showDetails={showDetails}
               selectedDayDate={selectedDay.date}
               selectedDayDates={selectedDayDates}
               savingPreferenceKey={savingPreferenceKey}

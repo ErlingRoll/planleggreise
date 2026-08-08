@@ -5,6 +5,7 @@ import {
   CreateHousingStayInputSchema,
   CreateMealInputSchema,
   CreateTripInputSchema,
+  CurrencyCodeSchema,
   DateOnlySchema,
   HousingStaySchema,
   MealSchema,
@@ -22,6 +23,10 @@ import {
   TripMemberSchema,
   TripSharingSchema,
   TripItemPreferenceSchema,
+  TripCurrencySettingsSchema,
+  TripItemDetailVisibilitySchema,
+  UpdateTripCurrencySettingsInputSchema,
+  UpdateTripItemDetailVisibilityInputSchema,
   UpdateHousingStayInputSchema,
   UpdateMealInputSchema,
   UpdateTripDayInputSchema,
@@ -54,6 +59,10 @@ import {
   type RequestTripAccessInput,
   type SetTripItemPreferenceInput,
   type TripItemPreference,
+  type TripCurrencySettings,
+  type UpdateTripCurrencySettingsInput,
+  type TripItemDetailVisibility,
+  type UpdateTripItemDetailVisibilityInput,
 } from "@turprep/models"
 import { z } from "zod"
 import type { SupabaseClient } from "@supabase/supabase-js"
@@ -65,6 +74,7 @@ const tripRowSchema = z.object({
   start_date: DateOnlySchema,
   end_date: DateOnlySchema,
   notes: z.string().nullable(),
+  accepted_currencies: z.array(CurrencyCodeSchema).default([]),
 })
 
 const tripDayRowSchema = z.object({
@@ -89,6 +99,9 @@ const activityRowSchema = z.object({
   place_address: z.string().nullable(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
+  price_amount: z.number().nullable(),
+  price_currency: z.string().nullable(),
+  website: z.string().nullable(),
   sort_order: z.number().int(),
 })
 
@@ -105,6 +118,9 @@ const housingStayRowSchema = z.object({
   place_address: z.string().nullable(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
+  price_amount: z.number().nullable(),
+  price_currency: z.string().nullable(),
+  website: z.string().nullable(),
 })
 
 const mealRowSchema = z.object({
@@ -122,7 +138,10 @@ const mealRowSchema = z.object({
   place_address: z.string().nullable(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
+  price_amount: z.number().nullable(),
+  price_currency: z.string().nullable(),
   sort_order: z.number().int(),
+  website: z.string().nullable(),
 })
 
 const tripOwnerRowSchema = z.object({
@@ -178,12 +197,18 @@ const tripItemPreferenceRowSchema = z.object({
   updated_at: databaseDateTimeSchema,
 })
 
+const tripItemDetailVisibilityRowSchema = z.object({
+  show_price: z.boolean(),
+  show_website: z.boolean(),
+})
+
+const tripColumns = "id, name, start_date, end_date, notes, accepted_currencies"
 const activityColumns =
-  "id, trip_id, trip_date, is_backup, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, latitude, longitude, sort_order"
+  "id, trip_id, trip_date, is_backup, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, latitude, longitude, price_amount, price_currency, website, sort_order"
 const housingStayColumns =
-  "id, trip_id, name, check_in, check_out, is_backup, notes, google_maps_url, place_name, place_address, latitude, longitude"
+  "id, trip_id, name, check_in, check_out, is_backup, notes, google_maps_url, place_name, place_address, latitude, longitude, price_amount, price_currency, website"
 const mealColumns =
-  "id, trip_id, trip_date, is_backup, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, latitude, longitude, sort_order"
+  "id, trip_id, trip_date, is_backup, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, latitude, longitude, price_amount, price_currency, website, sort_order"
 
 async function getHighestDayItemSortOrder(
   client: SupabaseClient,
@@ -216,7 +241,6 @@ async function getHighestDayItemSortOrder(
   if (mealsError) {
     throw mealsError
   }
-
   const highestSortOrders = z
     .array(z.object({ sort_order: z.number().int() }))
     .parse([...(activities ?? []), ...(meals ?? [])])
@@ -246,6 +270,28 @@ export interface TripRepository {
     tripId: string,
     input: SetTripItemPreferenceInput,
   ): Promise<TripItemPreference | null>
+  getTripCurrencies(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+  ): Promise<TripCurrencySettings | null>
+  updateTripCurrencies(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+    input: UpdateTripCurrencySettingsInput,
+  ): Promise<TripCurrencySettings | null>
+  getTripItemDetailVisibility(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+  ): Promise<TripItemDetailVisibility | null>
+  updateTripItemDetailVisibility(
+    userId: string,
+    accessToken: string,
+    tripId: string,
+    input: UpdateTripItemDetailVisibilityInput,
+  ): Promise<TripItemDetailVisibility | null>
   deleteTrip(userId: string, accessToken: string, tripId: string): Promise<boolean>
   updateDay(
     userId: string,
@@ -389,6 +435,66 @@ export interface TripRepository {
   ): Promise<boolean>
 }
 
+export class CurrencyRemovalError extends Error {
+  readonly currencies: string[]
+
+  constructor(currencies: string[]) {
+    super(
+      `Cannot remove currencies currently used by trip items: ${currencies.join(", ")}. ` +
+        "Update the item prices before removing these currencies.",
+    )
+    this.name = "CurrencyRemovalError"
+    this.currencies = currencies
+  }
+}
+
+async function ensureCurrenciesAreNotUsedByTripItems(
+  client: SupabaseClient,
+  tripId: string,
+  acceptedCurrencies: string[],
+) {
+  const results = await Promise.all([
+    client
+      .from("activities")
+      .select("price_currency")
+      .eq("trip_id", tripId)
+      .not("price_currency", "is", null),
+    client
+      .from("meals")
+      .select("price_currency")
+      .eq("trip_id", tripId)
+      .not("price_currency", "is", null),
+    client
+      .from("housing_stays")
+      .select("price_currency")
+      .eq("trip_id", tripId)
+      .not("price_currency", "is", null),
+  ])
+
+  const usedCurrencies = new Set<string>()
+  for (const result of results) {
+    if (result.error) {
+      throw result.error
+    }
+
+    for (const row of z
+      .array(z.object({ price_currency: z.string().nullable() }))
+      .parse(result.data ?? [])) {
+      if (row.price_currency) {
+        usedCurrencies.add(CurrencyCodeSchema.parse(row.price_currency))
+      }
+    }
+  }
+
+  const removedCurrencies = [...usedCurrencies]
+    .filter((currency) => !acceptedCurrencies.includes(currency))
+    .sort()
+
+  if (removedCurrencies.length > 0) {
+    throw new CurrencyRemovalError(removedCurrencies)
+  }
+}
+
 function dateToUtcDate(date: string): Date {
   const [year, month, day] = date.split("-").map(Number)
   const utcDate = new Date(Date.UTC(year, month - 1, day))
@@ -442,6 +548,7 @@ function mapTripRow(row: unknown): Trip {
     startDate: parsedRow.start_date,
     endDate: parsedRow.end_date,
     notes: parsedRow.notes,
+    acceptedCurrencies: parsedRow.accepted_currencies,
   })
 }
 
@@ -473,6 +580,9 @@ function mapActivityRow(row: unknown): Activity {
     placeAddress: parsedRow.place_address,
     latitude: parsedRow.latitude,
     longitude: parsedRow.longitude,
+    priceAmount: parsedRow.price_amount,
+    priceCurrency: parsedRow.price_currency,
+    website: parsedRow.website,
     sortOrder: parsedRow.sort_order,
   })
 }
@@ -493,6 +603,9 @@ function mapHousingStayRow(row: unknown): HousingStay {
     placeAddress: parsedRow.place_address,
     latitude: parsedRow.latitude,
     longitude: parsedRow.longitude,
+    priceAmount: parsedRow.price_amount,
+    priceCurrency: parsedRow.price_currency,
+    website: parsedRow.website,
   })
 }
 
@@ -514,7 +627,10 @@ function mapMealRow(row: unknown): Meal {
     placeAddress: parsedRow.place_address,
     latitude: parsedRow.latitude,
     longitude: parsedRow.longitude,
+    priceAmount: parsedRow.price_amount,
+    priceCurrency: parsedRow.price_currency,
     sortOrder: parsedRow.sort_order,
+    website: parsedRow.website,
   })
 }
 
@@ -741,6 +857,14 @@ async function listTripItemPreferences(
   return z.array(tripItemPreferenceRowSchema).parse(data).map(mapTripItemPreferenceRow)
 }
 
+function mapTripItemDetailVisibilityRow(row: unknown): TripItemDetailVisibility {
+  const parsedRow = tripItemDetailVisibilityRowSchema.parse(row)
+  return TripItemDetailVisibilitySchema.parse({
+    showPrice: parsedRow.show_price,
+    showWebsite: parsedRow.show_website,
+  })
+}
+
 function addActivitiesToDays(
   days: TripDetail["days"],
   activities: Activity[],
@@ -773,7 +897,7 @@ export function createSupabaseTripRepository(): TripRepository {
       const client = createUserSupabaseClient(accessToken)
       const { data, error } = await client
         .from("trips")
-        .select("id, name, start_date, end_date, notes")
+        .select(tripColumns)
         .is("deleted_at", null)
         .order("start_date", { ascending: true })
 
@@ -788,7 +912,7 @@ export function createSupabaseTripRepository(): TripRepository {
       const client = createUserSupabaseClient(accessToken)
       const { data, error } = await client
         .from("trips")
-        .select("id, name, start_date, end_date, notes")
+        .select(tripColumns)
         .eq("id", tripId)
         .is("deleted_at", null)
         .maybeSingle()
@@ -802,13 +926,15 @@ export function createSupabaseTripRepository(): TripRepository {
       }
 
       const trip = mapTripRow(data)
-      const [activities, tripDays, housingStays, meals, preferences] = await Promise.all([
-        listActivities(client, tripId),
-        listTripDays(client, tripId),
-        listHousingStays(client, tripId),
-        listMeals(client, tripId),
-        listTripItemPreferences(client, tripId),
-      ])
+      const [activities, tripDays, housingStays, meals, preferences, itemDetailVisibility] =
+        await Promise.all([
+          listActivities(client, tripId),
+          listTripDays(client, tripId),
+          listHousingStays(client, tripId),
+          listMeals(client, tripId),
+          listTripItemPreferences(client, tripId),
+          this.getTripItemDetailVisibility(userId, accessToken, tripId),
+        ])
       const backupActivities = activities.filter(
         (activity) => activity.isBackup || !activity.tripDate,
       )
@@ -823,6 +949,7 @@ export function createSupabaseTripRepository(): TripRepository {
         housingStays,
         meals,
         preferences,
+        itemDetailVisibility: itemDetailVisibility ?? { showPrice: true, showWebsite: true },
       })
     },
 
@@ -916,6 +1043,123 @@ export function createSupabaseTripRepository(): TripRepository {
       return mapTripItemPreferenceRow(result.data)
     },
 
+    async getTripCurrencies(_userId, accessToken, tripId) {
+      const client = createUserSupabaseClient(accessToken)
+      const { data, error } = await client
+        .from("trips")
+        .select("id, accepted_currencies")
+        .eq("id", tripId)
+        .is("deleted_at", null)
+        .maybeSingle()
+
+      if (error) {
+        throw error
+      }
+      if (!data) {
+        return null
+      }
+
+      return TripCurrencySettingsSchema.parse({
+        tripId: data.id,
+        acceptedCurrencies: z.array(CurrencyCodeSchema).parse(data.accepted_currencies ?? []),
+      })
+    },
+
+    async updateTripCurrencies(_userId, accessToken, tripId, input) {
+      const parsedInput = UpdateTripCurrencySettingsInputSchema.parse(input)
+      const client = createUserSupabaseClient(accessToken)
+      await ensureCurrenciesAreNotUsedByTripItems(client, tripId, parsedInput.acceptedCurrencies)
+      const { data, error } = await client
+        .from("trips")
+        .update({
+          accepted_currencies: parsedInput.acceptedCurrencies,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", tripId)
+        .is("deleted_at", null)
+        .select("id, accepted_currencies")
+        .maybeSingle()
+
+      if (error) {
+        throw error
+      }
+      if (!data) {
+        return null
+      }
+
+      return TripCurrencySettingsSchema.parse({
+        tripId: data.id,
+        acceptedCurrencies: z.array(CurrencyCodeSchema).parse(data.accepted_currencies ?? []),
+      })
+    },
+
+    async getTripItemDetailVisibility(userId, accessToken, tripId) {
+      const client = createUserSupabaseClient(accessToken)
+      const [{ data: trip, error: tripError }, { data, error }] = await Promise.all([
+        client.from("trips").select("id").eq("id", tripId).is("deleted_at", null).maybeSingle(),
+        client
+          .from("trip_visibility_settings")
+          .select("show_price, show_website")
+          .eq("trip_id", tripId)
+          .eq("user_id", userId)
+          .maybeSingle(),
+      ])
+
+      if (tripError) {
+        throw tripError
+      }
+      if (error) {
+        throw error
+      }
+      if (!trip) {
+        return null
+      }
+
+      return data ? mapTripItemDetailVisibilityRow(data) : { showPrice: true, showWebsite: true }
+    },
+
+    async updateTripItemDetailVisibility(userId, accessToken, tripId, input) {
+      const parsedInput = UpdateTripItemDetailVisibilityInputSchema.parse(input)
+      const client = createUserSupabaseClient(accessToken)
+      const { data: trip, error: tripError } = await client
+        .from("trips")
+        .select("id")
+        .eq("id", tripId)
+        .is("deleted_at", null)
+        .maybeSingle()
+
+      if (tripError) {
+        throw tripError
+      }
+      if (!trip) {
+        return null
+      }
+
+      const { data, error } = await client
+        .from("trip_visibility_settings")
+        .upsert(
+          {
+            trip_id: tripId,
+            user_id: userId,
+            show_price: parsedInput.showPrice,
+            show_website: parsedInput.showWebsite,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "trip_id,user_id" },
+        )
+        .select("show_price, show_website")
+        .maybeSingle()
+
+      if (error) {
+        throw error
+      }
+      if (!data) {
+        return null
+      }
+
+      return mapTripItemDetailVisibilityRow(data)
+    },
+
     async createTrip(userId, accessToken, input, userEmail, userName) {
       const parsedInput = CreateTripInputSchema.parse(input)
       const client = createUserSupabaseClient(accessToken)
@@ -927,6 +1171,7 @@ export function createSupabaseTripRepository(): TripRepository {
         start_date: parsedInput.startDate,
         end_date: parsedInput.endDate,
         notes: parsedInput.notes,
+        accepted_currencies: parsedInput.acceptedCurrencies ?? [],
       })
 
       if (error) {
@@ -946,7 +1191,7 @@ export function createSupabaseTripRepository(): TripRepository {
 
       const { data, error: readError } = await client
         .from("trips")
-        .select("id, name, start_date, end_date, notes")
+        .select("id, name, start_date, end_date, notes, accepted_currencies")
         .eq("id", tripId)
         .eq("owner_id", userId)
         .single()
@@ -971,9 +1216,15 @@ export function createSupabaseTripRepository(): TripRepository {
         startDate: currentTrip.startDate,
         endDate: currentTrip.endDate,
         notes: currentTrip.notes,
+        acceptedCurrencies: currentTrip.acceptedCurrencies ?? [],
         ...parsedInput,
       })
       const client = createUserSupabaseClient(accessToken)
+      await ensureCurrenciesAreNotUsedByTripItems(
+        client,
+        tripId,
+        updatedTrip.acceptedCurrencies ?? [],
+      )
       const { error } = await client
         .from("trips")
         .update({
@@ -981,6 +1232,7 @@ export function createSupabaseTripRepository(): TripRepository {
           start_date: updatedTrip.startDate,
           end_date: updatedTrip.endDate,
           notes: updatedTrip.notes,
+          accepted_currencies: updatedTrip.acceptedCurrencies ?? [],
           updated_at: new Date().toISOString(),
         })
         .eq("id", tripId)
@@ -1098,6 +1350,9 @@ export function createSupabaseTripRepository(): TripRepository {
         place_address: parsedInput.placeAddress,
         latitude: parsedInput.latitude,
         longitude: parsedInput.longitude,
+        price_amount: parsedInput.priceAmount,
+        price_currency: parsedInput.priceCurrency,
+        website: parsedInput.website,
       })
 
       if (error) {
@@ -1137,6 +1392,9 @@ export function createSupabaseTripRepository(): TripRepository {
         placeAddress: currentStay.placeAddress,
         latitude: currentStay.latitude,
         longitude: currentStay.longitude,
+        priceAmount: currentStay.priceAmount,
+        priceCurrency: currentStay.priceCurrency,
+        website: currentStay.website,
         ...input,
       })
       const { error } = await client
@@ -1152,6 +1410,9 @@ export function createSupabaseTripRepository(): TripRepository {
           place_address: parsedInput.placeAddress,
           latitude: parsedInput.latitude,
           longitude: parsedInput.longitude,
+          price_amount: parsedInput.priceAmount,
+          price_currency: parsedInput.priceCurrency,
+          website: parsedInput.website,
         })
         .eq("trip_id", tripId)
         .eq("id", housingStayId)
@@ -1223,6 +1484,9 @@ export function createSupabaseTripRepository(): TripRepository {
         place_address: parsedInput.placeAddress,
         latitude: parsedInput.latitude,
         longitude: parsedInput.longitude,
+        price_amount: parsedInput.priceAmount,
+        price_currency: parsedInput.priceCurrency,
+        website: parsedInput.website,
         sort_order: highestSortOrder + 1,
       })
 
@@ -1265,6 +1529,9 @@ export function createSupabaseTripRepository(): TripRepository {
         placeAddress: currentMeal.placeAddress,
         latitude: currentMeal.latitude,
         longitude: currentMeal.longitude,
+        priceAmount: currentMeal.priceAmount,
+        priceCurrency: currentMeal.priceCurrency,
+        website: currentMeal.website,
         ...input,
       })
       const { error } = await client
@@ -1282,6 +1549,9 @@ export function createSupabaseTripRepository(): TripRepository {
           place_address: parsedInput.placeAddress,
           latitude: parsedInput.latitude,
           longitude: parsedInput.longitude,
+          price_amount: parsedInput.priceAmount,
+          price_currency: parsedInput.priceCurrency,
+          website: parsedInput.website,
         })
         .eq("trip_id", tripId)
         .eq("id", mealId)
@@ -1337,6 +1607,9 @@ export function createSupabaseTripRepository(): TripRepository {
         place_address: parsedInput.placeAddress,
         latitude: parsedInput.latitude,
         longitude: parsedInput.longitude,
+        price_amount: parsedInput.priceAmount,
+        price_currency: parsedInput.priceCurrency,
+        website: parsedInput.website,
         sort_order: highestSortOrder + 1,
       })
 
@@ -1368,6 +1641,9 @@ export function createSupabaseTripRepository(): TripRepository {
         placeAddress: currentActivity.placeAddress,
         latitude: currentActivity.latitude,
         longitude: currentActivity.longitude,
+        priceAmount: currentActivity.priceAmount,
+        priceCurrency: currentActivity.priceCurrency,
+        website: currentActivity.website,
         ...input,
       })
       const parsedUpdateInput = UpdateActivityInputSchema.parse(input)
@@ -1386,6 +1662,9 @@ export function createSupabaseTripRepository(): TripRepository {
           place_address: parsedInput.placeAddress,
           latitude: parsedInput.latitude,
           longitude: parsedInput.longitude,
+          price_amount: parsedInput.priceAmount,
+          price_currency: parsedInput.priceCurrency,
+          website: parsedInput.website,
           sort_order: parsedUpdateInput.sortOrder ?? currentActivity.sortOrder,
         })
         .eq("trip_id", tripId)

@@ -21,7 +21,7 @@ import type {
 import type { AuthService } from "./auth.js"
 import { createApp } from "./app.js"
 import { createGooglePlacesResolver, type GooglePlacesResolver } from "./google-places.js"
-import type { TripRepository } from "./trip-repository.js"
+import { CurrencyRemovalError, type TripRepository } from "./trip-repository.js"
 
 const testTrip: Trip = {
   id: "trip-1",
@@ -33,6 +33,7 @@ const testTrip: Trip = {
 
 const testTripDetail: TripDetail = {
   ...testTrip,
+  acceptedCurrencies: [],
   days: [
     { date: "2026-08-10", dayNumber: 1, title: null, notes: null, activities: [] },
     { date: "2026-08-11", dayNumber: 2, title: null, notes: null, activities: [] },
@@ -42,6 +43,7 @@ const testTripDetail: TripDetail = {
   housingStays: [],
   meals: [],
   preferences: [],
+  itemDetailVisibility: { showPrice: true, showWebsite: true },
 }
 
 const testActivity: Activity = {
@@ -59,6 +61,9 @@ const testActivity: Activity = {
   placeAddress: null,
   latitude: null,
   longitude: null,
+  priceAmount: null,
+  priceCurrency: null,
+  website: null,
   sortOrder: 0,
 }
 
@@ -75,6 +80,9 @@ const testHousingStay: HousingStay = {
   placeAddress: null,
   latitude: null,
   longitude: null,
+  priceAmount: null,
+  priceCurrency: null,
+  website: null,
 }
 
 const laterTestActivity: Activity = {
@@ -168,6 +176,9 @@ function createTestApp(
       placeAddress: input.placeAddress ?? null,
       latitude: input.latitude ?? null,
       longitude: input.longitude ?? null,
+      priceAmount: input.priceAmount ?? null,
+      priceCurrency: input.priceCurrency ?? null,
+      website: input.website ?? null,
       sortOrder: 0,
     }),
     updateMeal: async () => null,
@@ -223,6 +234,9 @@ function createTestApp(
           placeAddress: null,
           latitude: null,
           longitude: null,
+          priceAmount: null,
+          priceCurrency: null,
+          website: null,
           sortOrder: item.sortOrder,
         })),
     }),
@@ -239,6 +253,13 @@ function createTestApp(
     removeTripMember: async () => null,
     deleteActivity: async () => true,
     setTripItemPreference: async () => null,
+    getTripCurrencies: async () => ({ tripId: "trip-1", acceptedCurrencies: [] }),
+    updateTripCurrencies: async (_userId, _accessToken, tripId, input) => ({
+      tripId,
+      acceptedCurrencies: input.acceptedCurrencies,
+    }),
+    getTripItemDetailVisibility: async () => ({ showPrice: true, showWebsite: true }),
+    updateTripItemDetailVisibility: async (_userId, _accessToken, _tripId, input) => input,
   }
 
   return createApp({
@@ -336,6 +357,80 @@ test("preference updates return not found for items outside the trip", async () 
     .send({ itemType: "meal", itemId: "meal-from-another-trip", value: "yellow" })
 
   assert.equal(response.status, 404)
+})
+
+test("currency settings require authentication", async () => {
+  const response = await request(createTestApp()).get("/api/trips/trip-1/currencies")
+
+  assert.equal(response.status, 401)
+})
+
+test("authenticated users can update shared trip currencies", async () => {
+  const response = await request(createTestApp())
+    .put("/api/trips/trip-1/currencies")
+    .set("Authorization", "Bearer valid-token")
+    .send({ acceptedCurrencies: ["nok", "EUR"] })
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(response.body, {
+    tripId: "trip-1",
+    acceptedCurrencies: ["NOK", "EUR"],
+  })
+})
+
+test("currency settings reject removing currencies used by trip items", async () => {
+  const app = createTestApp(undefined, testTripDetail, {
+    updateTripCurrencies: async () => {
+      throw new CurrencyRemovalError(["NOK"])
+    },
+  })
+  const response = await request(app)
+    .put("/api/trips/trip-1/currencies")
+    .set("Authorization", "Bearer valid-token")
+    .send({ acceptedCurrencies: ["EUR"] })
+
+  assert.equal(response.status, 400)
+  assert.deepEqual(response.body, {
+    message:
+      "Cannot remove currencies currently used by trip items: NOK. " +
+      "Update the item prices before removing these currencies.",
+    currencies: ["NOK"],
+  })
+})
+
+test("item detail visibility requires authentication", async () => {
+  const response = await request(createTestApp()).put("/api/trips/trip-1/item-detail-visibility")
+
+  assert.equal(response.status, 401)
+})
+
+test("authenticated users can update item detail visibility", async () => {
+  const response = await request(createTestApp())
+    .put("/api/trips/trip-1/item-detail-visibility")
+    .set("Authorization", "Bearer valid-token")
+    .send({ showPrice: false, showWebsite: true })
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(response.body, { showPrice: false, showWebsite: true })
+})
+
+test("item prices reject amounts with more than two decimals", async () => {
+  const response = await request(createTestApp())
+    .post("/api/trips/trip-1/activities")
+    .set("Authorization", "Bearer valid-token")
+    .send({
+      title: "Museum",
+      tripDate: "2026-08-11",
+      startTime: null,
+      endTime: null,
+      allDay: true,
+      notes: null,
+      priceAmount: 10.123,
+      priceCurrency: "NOK",
+      website: "Valgfri tekst",
+    })
+
+  assert.equal(response.status, 400)
 })
 
 test("sharing endpoints require authentication", async () => {
@@ -727,6 +822,9 @@ test("meal updates clear place coordinates when a Google Maps link is removed", 
     placeAddress: "Vulkan 5, Oslo",
     latitude: 59.922,
     longitude: 10.752,
+    priceAmount: null,
+    priceCurrency: null,
+    website: null,
     sortOrder: 0,
   }
   const response = await request(
@@ -815,6 +913,7 @@ test("trip details include every date in the inclusive range", async () => {
   assert.equal(response.body.days.length, 3)
   assert.equal(response.body.days[0].date, "2026-08-10")
   assert.equal(response.body.days[2].date, "2026-08-12")
+  assert.deepEqual(response.body.itemDetailVisibility, { showPrice: true, showWebsite: true })
 })
 
 test("authenticated users can create an activity within a trip", async () => {

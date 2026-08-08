@@ -27,6 +27,14 @@ export {
   ReorderDayItemInputSchema,
   ReorderDayItemsInputSchema,
   ReorderedDayItemsSchema,
+  CurrencyCodeSchema,
+  AcceptedCurrenciesSchema,
+  PriceAmountSchema,
+  WebsiteSchema,
+  TripCurrencySettingsSchema,
+  UpdateTripCurrencySettingsInputSchema,
+  TripItemDetailVisibilitySchema,
+  UpdateTripItemDetailVisibilityInputSchema,
 } from "./trip.js"
 export { isAllowedGoogleMapsUrl } from "./google-maps.js"
 export {
@@ -70,6 +78,14 @@ export type {
   ReorderActivitiesInput,
   ReorderDayItemInput,
   ReorderDayItemsInput,
+  TripCurrencySettings,
+  UpdateTripCurrencySettingsInput,
+  CurrencyCode,
+  AcceptedCurrencies,
+  PriceAmount,
+  Website,
+  TripItemDetailVisibility,
+  UpdateTripItemDetailVisibilityInput,
 } from "./trip.js"
 export type {
   InviteTripMemberInput,

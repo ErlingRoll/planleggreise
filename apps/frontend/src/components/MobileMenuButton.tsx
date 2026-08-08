@@ -53,7 +53,12 @@ export function MobileMenuButton({
       className={`touch-manipulation rounded-xl border border-border bg-surface p-2 text-on-surface ${
         showOnDesktop ? "" : "sm:hidden"
       }`}
-      onClick={handleToggle}
+      onClick={(event) => {
+        // Pointer input is handled on press; keep the native click for keyboard users.
+        if (event.detail === 0) {
+          handleToggle()
+        }
+      }}
       onPointerCancel={handlePointerCancel}
       onPointerDown={handleToggle}
       type="button"
