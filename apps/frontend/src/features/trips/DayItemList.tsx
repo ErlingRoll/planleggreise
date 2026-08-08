@@ -272,6 +272,9 @@ export function DayItemList({
                 </div>
               </div>
             </div>
+            {item.notes?.trim() && (
+              <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{item.notes}</p>
+            )}
             {editingItemId === item.id && renderEditForm(day.date)}
             <TripItemPreference
               disabled={savingPreferenceKey === `${record.itemType}:${item.id}`}
