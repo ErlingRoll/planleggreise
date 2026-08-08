@@ -158,6 +158,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   padding: 0;
+  position: relative;
 }
 
 .trip-map-marker-label {
@@ -178,6 +179,20 @@ button:disabled {
   z-index: 1;
 }
 
+.trip-map-marker-connector {
+  background: var(--trip-map-pin-color);
+  border-radius: 9999px;
+  height: 2px;
+  left: 50%;
+  opacity: 0.5;
+  pointer-events: none;
+  position: absolute;
+  top: 100%;
+  transform-origin: left center;
+  width: 0;
+  z-index: 0;
+}
+
 .trip-map-marker-pointer {
   border-left: 0.58rem solid transparent;
   border-right: 0.58rem solid transparent;
@@ -186,7 +201,7 @@ button:disabled {
   margin-top: -0.1rem;
   position: relative;
   width: 0;
-  z-index: 0;
+  z-index: 1;
 }
 
 .trip-map-marker-pointer::after {

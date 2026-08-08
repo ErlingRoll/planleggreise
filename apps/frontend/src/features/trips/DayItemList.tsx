@@ -3,6 +3,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { formatActivityTime, getDayItemTitle, type DayItem } from "../../lib/activity-format"
 import type { Activity, Meal, TripDetail } from "../../api"
+import { MapLocateButton } from "../../components/MapLocateButton"
 import { MobileMenuButton } from "../../components/MobileMenuButton"
 import { TripItemPreference } from "../../components/TripItemPreference"
 import type { TripItemPreferenceValue, TripItemType } from "@turprep/models"
@@ -38,6 +39,7 @@ type DayItemListProps = {
   userId: string
   savingPreferenceKey: string | null
   highlightedItemKey?: string | null
+  onLocateItem?: (record: DayItemRecord) => void
   onPreferenceChange: (
     itemType: TripItemType,
     itemId: string,
@@ -75,6 +77,7 @@ export function DayItemList({
   userId,
   savingPreferenceKey,
   highlightedItemKey,
+  onLocateItem,
   onPreferenceChange,
 }: DayItemListProps) {
   const { t } = useTranslation()
@@ -158,7 +161,7 @@ export function DayItemList({
                   </a>
                 )}
               </div>
-              <div className="relative shrink-0">
+              <div className="relative flex shrink-0 flex-col items-end gap-1">
                 <MobileMenuButton
                   closeLabel={t("common.close")}
                   isOpen={openMenuItemId === item.id}
@@ -169,8 +172,14 @@ export function DayItemList({
                   openLabel={t("common.menu")}
                   showOnDesktop
                 />
+                {onLocateItem && item.latitude !== null && item.longitude !== null && (
+                  <MapLocateButton
+                    label={t("tripMap.locate")}
+                    onClick={() => onLocateItem(record)}
+                  />
+                )}
                 {openMenuItemId === item.id && (
-                  <div className="absolute right-0 z-10 mt-1 grid min-w-40 gap-1 rounded-xl border border-border bg-surface p-1 shadow-popover">
+                  <div className="absolute right-0 top-full z-10 mt-1 grid min-w-40 gap-1 rounded-xl border border-border bg-surface p-1 shadow-popover">
                     <button
                       className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
                       disabled={editingItemId !== null || movingItem !== null}

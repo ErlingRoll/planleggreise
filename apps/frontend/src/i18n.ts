@@ -74,6 +74,7 @@ const resources = {
       tripMap: {
         close: "Lukk kart",
         closeDetails: "Lukk stedsdetaljer",
+        locate: "Vis på kart",
         locations_one: "{{count}} sted",
         locations_other: "{{count}} steder",
         noLocations: "Ingen planlagte steder med kartposisjon for de valgte dagene.",
@@ -347,6 +348,7 @@ const resources = {
       tripMap: {
         close: "Close map",
         closeDetails: "Close location details",
+        locate: "Show on map",
         locations_one: "{{count}} location",
         locations_other: "{{count}} locations",
         noLocations: "No planned places with map coordinates for the selected days.",

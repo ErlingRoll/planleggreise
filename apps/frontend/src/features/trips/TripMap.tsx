@@ -26,9 +26,80 @@ type TripMapProps = {
   markers: TripMapMarker[]
   renderMarkerDetails?: (marker: TripMapMarker) => ReactNode
   onMarkerClick?: (marker: TripMapMarker) => void
+  focusMarker?: TripMapMarker | null
+  onFocusMarkerHandled?: () => void
 }
 
 const markerDetailsAnimationDuration = 180
+const markerOverlapDistance = 28
+
+function setMarkerVisualOffset(marker: MapLibreMarker, offset: [number, number]) {
+  marker.setOffset(offset)
+  const connector = marker.getElement().querySelector<HTMLElement>(".trip-map-marker-connector")
+
+  if (!connector) {
+    return
+  }
+
+  const distance = Math.hypot(offset[0], offset[1])
+  connector.style.width = `${distance}px`
+  connector.style.transform = `rotate(${Math.atan2(-offset[1], -offset[0])}rad)`
+  connector.hidden = distance === 0
+}
+
+function applyMarkerLayout(map: MapLibreMap, markers: Map<string, MapLibreMarker>) {
+  const entries = Array.from(markers.values()).map((marker) => ({
+    marker,
+    point: map.project(marker.getLngLat()),
+  }))
+  const groups: (typeof entries)[] = []
+  const remaining = [...entries]
+
+  while (remaining.length > 0) {
+    const group = [remaining.shift()!]
+    let groupChanged = true
+
+    while (groupChanged) {
+      groupChanged = false
+      for (let index = remaining.length - 1; index >= 0; index -= 1) {
+        const candidate = remaining[index]
+        const isOverlapping = group.some(
+          (entry) =>
+            Math.hypot(entry.point.x - candidate.point.x, entry.point.y - candidate.point.y) <=
+            markerOverlapDistance,
+        )
+
+        if (isOverlapping) {
+          group.push(candidate)
+          remaining.splice(index, 1)
+          groupChanged = true
+        }
+      }
+    }
+
+    groups.push(group)
+  }
+
+  groups.forEach((group) => {
+    if (group.length === 1) {
+      setMarkerVisualOffset(group[0].marker, [0, 0])
+      return
+    }
+
+    const radius = Math.min(42, Math.max(26, 18 + group.length * 3))
+    group.forEach((entry, index) => {
+      const angle = -Math.PI / 2 + (index * Math.PI * 2) / group.length
+      setMarkerVisualOffset(entry.marker, [Math.cos(angle) * radius, Math.sin(angle) * radius])
+    })
+  })
+}
+
+function bringMarkerToFront(markers: Map<string, MapLibreMarker>, marker: TripMapMarker) {
+  markers.forEach((currentMarker) => {
+    currentMarker.getElement().style.zIndex = ""
+  })
+  markers.get(`${marker.type}:${marker.id}`)?.getElement().style.setProperty("z-index", "10")
+}
 
 function fitMapToMarkers(map: MapLibreMap, markers: TripMapMarker[]) {
   if (markers.length === 0) {
@@ -73,19 +144,27 @@ const defaultMapStyle: StyleSpecification = {
   ],
 }
 
-export function TripMap({ markers, renderMarkerDetails, onMarkerClick }: TripMapProps) {
+export function TripMap({
+  markers,
+  renderMarkerDetails,
+  onMarkerClick,
+  focusMarker,
+  onFocusMarkerHandled,
+}: TripMapProps) {
   const { t } = useTranslation()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [selectedMarker, setSelectedMarker] = useState<TripMapMarker | null>(null)
   const [isMarkerDetailsClosing, setIsMarkerDetailsClosing] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
-  const markerRefs = useRef<MapLibreMarker[]>([])
+  const markerRefs = useRef<Map<string, MapLibreMarker>>(new Map())
   const markerDetailsCloseTimeoutRef = useRef<number | null>(null)
   const renderMarkerDetailsRef = useRef(renderMarkerDetails)
   const onMarkerClickRef = useRef(onMarkerClick)
+  const onFocusMarkerHandledRef = useRef(onFocusMarkerHandled)
   renderMarkerDetailsRef.current = renderMarkerDetails
   onMarkerClickRef.current = onMarkerClick
+  onFocusMarkerHandledRef.current = onFocusMarkerHandled
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -100,10 +179,11 @@ export function TripMap({ markers, renderMarkerDetails, onMarkerClick }: TripMap
     })
     map.addControl(new NavigationControl(), "top-right")
     mapRef.current = map
+    const markerMap = markerRefs.current
 
     return () => {
-      markerRefs.current.forEach((marker) => marker.remove())
-      markerRefs.current = []
+      markerMap.forEach((marker) => marker.remove())
+      markerMap.clear()
       map.remove()
       mapRef.current = null
     }
@@ -117,7 +197,7 @@ export function TripMap({ markers, renderMarkerDetails, onMarkerClick }: TripMap
     }
 
     markerRefs.current.forEach((marker) => marker.remove())
-    markerRefs.current = []
+    markerRefs.current.clear()
 
     if (markers.length === 0) {
       return
@@ -135,10 +215,15 @@ export function TripMap({ markers, renderMarkerDetails, onMarkerClick }: TripMap
       label.textContent = getMarkerLabel(marker.title)
       const pointer = document.createElement("span")
       pointer.className = "trip-map-marker-pointer"
-      element.append(label, pointer)
+      const connector = document.createElement("span")
+      connector.className = "trip-map-marker-connector"
+      connector.hidden = true
+      element.append(connector, label, pointer)
 
       if (renderMarkerDetailsRef.current || onMarkerClickRef.current) {
         element.addEventListener("click", (event) => {
+          bringMarkerToFront(markerRefs.current, marker)
+
           if (window.innerWidth >= 1024) {
             if (onMarkerClickRef.current) {
               event.preventDefault()
@@ -170,10 +255,31 @@ export function TripMap({ markers, renderMarkerDetails, onMarkerClick }: TripMap
         .setPopup(popup)
         .addTo(map)
 
-      markerRefs.current.push(mapMarker)
+      markerRefs.current.set(`${marker.type}:${marker.id}`, mapMarker)
     })
 
     fitMapToMarkers(map, markers)
+  }, [markers])
+
+  useEffect(() => {
+    const map = mapRef.current
+
+    if (!map) {
+      return
+    }
+
+    const updateMarkerLayout = () => applyMarkerLayout(map, markerRefs.current)
+    const frame = requestAnimationFrame(updateMarkerLayout)
+    map.on("moveend", updateMarkerLayout)
+    map.on("zoomend", updateMarkerLayout)
+    map.on("resize", updateMarkerLayout)
+
+    return () => {
+      cancelAnimationFrame(frame)
+      map.off("moveend", updateMarkerLayout)
+      map.off("zoomend", updateMarkerLayout)
+      map.off("resize", updateMarkerLayout)
+    }
   }, [markers])
 
   useEffect(() => {
@@ -183,6 +289,35 @@ export function TripMap({ markers, renderMarkerDetails, onMarkerClick }: TripMap
         : null,
     )
   }, [markers])
+
+  useEffect(() => {
+    if (!focusMarker || !mapRef.current) {
+      return
+    }
+
+    bringMarkerToFront(markerRefs.current, focusMarker)
+
+    const focusMap = () => {
+      if (!mapRef.current) {
+        return
+      }
+
+      mapRef.current.flyTo({
+        center: [focusMarker.longitude, focusMarker.latitude],
+        essential: true,
+        zoom: 14,
+      })
+      onFocusMarkerHandledRef.current?.()
+    }
+
+    if (window.innerWidth < 1024) {
+      setIsMobileOpen(true)
+      requestAnimationFrame(() => requestAnimationFrame(focusMap))
+      return
+    }
+
+    focusMap()
+  }, [focusMarker])
 
   useEffect(() => {
     if (!isMobileOpen || !mapRef.current) {

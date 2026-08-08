@@ -649,30 +649,79 @@ export function TripBackupPage({
     return (
       <article className={`rounded-2xl border border-border-soft ${surfaceClass} p-4`} key={key}>
         <div className="flex flex-col gap-3">
-          <div className="min-w-0">
-            <h3 className="font-semibold text-brand">
-              {dayItem ? getDayItemTitle(dayItem, t("tripDetails.untitledItem")) : housing?.name}
-            </h3>
-            {dayItem && (
-              <p className="mt-1 text-sm text-muted">
-                {dayItem.tripDate ? formatDate(dayItem.tripDate) : t("backup.noTentativeDate")} ·{" "}
-                {formatActivityTime(dayItem, {
-                  allDay: t("tripDetails.allDay"),
-                  timeNotSet: t("tripDetails.timeNotSet"),
-                })}
-              </p>
-            )}
-            {housing && (
-              <p className="mt-1 text-sm text-muted">
-                {housing.checkIn && housing.checkOut
-                  ? `${formatDate(housing.checkIn)} – ${formatDate(housing.checkOut)}`
-                  : t("backup.noTentativeDates")}
-              </p>
-            )}
-            {item.notes?.trim() && (
-              <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{item.notes}</p>
-            )}
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-brand">
+                {dayItem ? getDayItemTitle(dayItem, t("tripDetails.untitledItem")) : housing?.name}
+              </h3>
+              {dayItem && (
+                <p className="mt-1 text-sm text-muted">
+                  {dayItem.tripDate ? formatDate(dayItem.tripDate) : t("backup.noTentativeDate")} ·{" "}
+                  {formatActivityTime(dayItem, {
+                    allDay: t("tripDetails.allDay"),
+                    timeNotSet: t("tripDetails.timeNotSet"),
+                  })}
+                </p>
+              )}
+              {housing && (
+                <p className="mt-1 text-sm text-muted">
+                  {housing.checkIn && housing.checkOut
+                    ? `${formatDate(housing.checkIn)} – ${formatDate(housing.checkOut)}`
+                    : t("backup.noTentativeDates")}
+                </p>
+              )}
+            </div>
+            <div className="relative flex shrink-0">
+              <MobileMenuButton
+                closeLabel={t("common.close")}
+                isOpen={openMenuKey === key}
+                menuLabel={t("common.menu")}
+                onToggle={() => setOpenMenuKey((currentKey) => (currentKey === key ? null : key))}
+                openLabel={t("common.menu")}
+                showOnDesktop
+              />
+              {openMenuKey === key && (
+                <div className="absolute right-0 top-full z-10 mt-1 grid min-w-40 gap-1 rounded-xl border border-border bg-surface p-1 shadow-popover">
+                  {includeMoveToPlan && (
+                    <button
+                      className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-brand hover:bg-surface-muted"
+                      onClick={() => {
+                        setOpenMenuKey(null)
+                        void moveToPlan({ item, type })
+                      }}
+                      type="button"
+                    >
+                      {t("backup.moveToPlan")}
+                    </button>
+                  )}
+                  <button
+                    className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-on-surface hover:bg-surface-muted"
+                    onClick={() => {
+                      setOpenMenuKey(null)
+                      startEdit(item, type)
+                    }}
+                    type="button"
+                  >
+                    {t("common.edit")}
+                  </button>
+                  <button
+                    className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-error hover:bg-danger-surface"
+                    disabled={deletingKey === key}
+                    onClick={() => {
+                      setOpenMenuKey(null)
+                      setPendingDeletion({ item, type })
+                    }}
+                    type="button"
+                  >
+                    {deletingKey === key ? "..." : t("common.delete")}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
+          {item.notes?.trim() && (
+            <p className="whitespace-pre-wrap text-sm text-muted">{item.notes}</p>
+          )}
           <TripItemPreference
             disabled={savingPreferenceKey === key}
             itemId={item.id}
@@ -681,53 +730,6 @@ export function TripBackupPage({
             preferences={trip.preferences}
             userId={userId}
           />
-          <div className="relative flex justify-end">
-            <MobileMenuButton
-              closeLabel={t("common.close")}
-              isOpen={openMenuKey === key}
-              menuLabel={t("common.menu")}
-              onToggle={() => setOpenMenuKey((currentKey) => (currentKey === key ? null : key))}
-              openLabel={t("common.menu")}
-              showOnDesktop
-            />
-            {openMenuKey === key && (
-              <div className="absolute right-0 top-full z-10 mt-1 grid min-w-40 gap-1 rounded-xl border border-border bg-surface p-1 shadow-popover">
-                {includeMoveToPlan && (
-                  <button
-                    className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-brand hover:bg-surface-muted"
-                    onClick={() => {
-                      setOpenMenuKey(null)
-                      void moveToPlan({ item, type })
-                    }}
-                    type="button"
-                  >
-                    {t("backup.moveToPlan")}
-                  </button>
-                )}
-                <button
-                  className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-on-surface hover:bg-surface-muted"
-                  onClick={() => {
-                    setOpenMenuKey(null)
-                    startEdit(item, type)
-                  }}
-                  type="button"
-                >
-                  {t("common.edit")}
-                </button>
-                <button
-                  className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-error hover:bg-danger-surface"
-                  disabled={deletingKey === key}
-                  onClick={() => {
-                    setOpenMenuKey(null)
-                    setPendingDeletion({ item, type })
-                  }}
-                  type="button"
-                >
-                  {deletingKey === key ? "..." : t("common.delete")}
-                </button>
-              </div>
-            )}
-          </div>
           {editingId === item.id && formType === type && renderForm(true)}
         </div>
       </article>

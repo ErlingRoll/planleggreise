@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import type { TripDetail } from "../../api"
+import { MapLocateButton } from "../../components/MapLocateButton"
 import { formatActivityTime, getDayItemTitle, sortActivities } from "../../lib/activity-format"
 import { formatDate } from "../../lib/date-format"
 import { TripMap, type TripMapMarker } from "./TripMap"
@@ -33,10 +34,48 @@ export function TravelMode({ trip }: TravelModeProps) {
   const [selectedDate, setSelectedDate] = useState(
     () => trip.days[getRelevantDayIndex(trip.days)]?.date ?? "",
   )
+  const [mapFocusRequest, setMapFocusRequest] = useState<{ itemKey: string } | null>(null)
+  const [highlightedMapItemKey, setHighlightedMapItemKey] = useState<string | null>(null)
+  const [mapFocusMarker, setMapFocusMarker] = useState<TripMapMarker | null>(null)
 
   useEffect(() => {
     setSelectedDate(trip.days[getRelevantDayIndex(trip.days)]?.date ?? "")
   }, [trip.id, trip.days])
+
+  useEffect(() => {
+    if (!mapFocusRequest) {
+      return
+    }
+
+    setHighlightedMapItemKey(null)
+    let highlightTimeout: number | null = null
+    const frame = requestAnimationFrame(() => {
+      const elements = Array.from(
+        document.querySelectorAll<HTMLElement>(`[data-trip-item-key="${mapFocusRequest.itemKey}"]`),
+      )
+      const element = elements.find((candidate) => candidate.getClientRects().length > 0)
+
+      if (!element) {
+        return
+      }
+
+      const bounds = element.getBoundingClientRect()
+      if (bounds.top < 0 || bounds.bottom > window.innerHeight) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" })
+      }
+      setHighlightedMapItemKey(mapFocusRequest.itemKey)
+      highlightTimeout = window.setTimeout(() => {
+        setHighlightedMapItemKey(null)
+      }, 4800)
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
+      if (highlightTimeout !== null) {
+        window.clearTimeout(highlightTimeout)
+      }
+    }
+  }, [mapFocusRequest])
 
   const selectedDayIndex = useMemo(() => {
     const selectedIndex = trip.days.findIndex((day) => day.date === selectedDate)
@@ -47,65 +86,89 @@ export function TravelMode({ trip }: TravelModeProps) {
   const isToday = selectedDay.date === today
   const isBeforeTrip = today < trip.startDate
   const isAfterTrip = today > trip.endDate
-  const housingForDay = trip.housingStays.filter(
-    (stay) =>
-      !stay.isBackup &&
-      stay.checkIn !== null &&
-      stay.checkOut !== null &&
-      stay.checkIn <= selectedDay.date &&
-      selectedDay.date < stay.checkOut,
+  const housingForDay = useMemo(
+    () =>
+      trip.housingStays.filter(
+        (stay) =>
+          !stay.isBackup &&
+          stay.checkIn !== null &&
+          stay.checkOut !== null &&
+          stay.checkIn <= selectedDay.date &&
+          selectedDay.date < stay.checkOut,
+      ),
+    [selectedDay.date, trip.housingStays],
   )
-  const mealsForDay = trip.meals.filter((meal) => meal.tripDate === selectedDay.date)
-  const mapMarkers: TripMapMarker[] = [
-    ...selectedDay.activities.flatMap((activity) =>
-      activity.latitude !== null && activity.longitude !== null
-        ? [
-            {
-              id: activity.id,
-              type: "activity" as const,
-              title: getDayItemTitle(activity, t("tripDetails.untitledItem")),
-              date: selectedDay.date,
-              latitude: activity.latitude,
-              longitude: activity.longitude,
-            },
-          ]
-        : [],
-    ),
-    ...mealsForDay.flatMap((meal) =>
-      meal.latitude !== null && meal.longitude !== null
-        ? [
-            {
-              id: meal.id,
-              type: "meal" as const,
-              title: getDayItemTitle(meal, t("tripDetails.untitledItem")),
-              date: selectedDay.date,
-              latitude: meal.latitude,
-              longitude: meal.longitude,
-            },
-          ]
-        : [],
-    ),
-    ...housingForDay.flatMap((stay) =>
-      stay.latitude !== null && stay.longitude !== null
-        ? [
-            {
-              id: stay.id,
-              type: "housing" as const,
-              title: stay.placeName ?? stay.name,
-              date: selectedDay.date,
-              latitude: stay.latitude,
-              longitude: stay.longitude,
-            },
-          ]
-        : [],
-    ),
-  ]
+  const mealsForDay = useMemo(
+    () => trip.meals.filter((meal) => meal.tripDate === selectedDay.date),
+    [selectedDay.date, trip.meals],
+  )
+  const mapMarkers = useMemo<TripMapMarker[]>(
+    () => [
+      ...selectedDay.activities.flatMap((activity) =>
+        activity.latitude !== null && activity.longitude !== null
+          ? [
+              {
+                id: activity.id,
+                type: "activity" as const,
+                title: getDayItemTitle(activity, t("tripDetails.untitledItem")),
+                date: selectedDay.date,
+                latitude: activity.latitude,
+                longitude: activity.longitude,
+              },
+            ]
+          : [],
+      ),
+      ...mealsForDay.flatMap((meal) =>
+        meal.latitude !== null && meal.longitude !== null
+          ? [
+              {
+                id: meal.id,
+                type: "meal" as const,
+                title: getDayItemTitle(meal, t("tripDetails.untitledItem")),
+                date: selectedDay.date,
+                latitude: meal.latitude,
+                longitude: meal.longitude,
+              },
+            ]
+          : [],
+      ),
+      ...housingForDay.flatMap((stay) =>
+        stay.latitude !== null && stay.longitude !== null
+          ? [
+              {
+                id: stay.id,
+                type: "housing" as const,
+                title: stay.placeName ?? stay.name,
+                date: selectedDay.date,
+                latitude: stay.latitude,
+                longitude: stay.longitude,
+              },
+            ]
+          : [],
+      ),
+    ],
+    [housingForDay, mealsForDay, selectedDay.activities, selectedDay.date, t],
+  )
 
   function moveDay(offset: number) {
     const nextDay = trip.days[selectedDayIndex + offset]
 
     if (nextDay) {
       setSelectedDate(nextDay.date)
+    }
+  }
+
+  function handleMapMarkerClick(marker: TripMapMarker) {
+    setMapFocusRequest({ itemKey: `${marker.type}:${marker.id}` })
+  }
+
+  function handleLocateItem(type: TripMapMarker["type"], id: string) {
+    const marker = mapMarkers.find(
+      (currentMarker) => currentMarker.type === type && currentMarker.id === id,
+    )
+
+    if (marker) {
+      setMapFocusMarker(marker)
     }
   }
 
@@ -265,36 +328,68 @@ export function TravelMode({ trip }: TravelModeProps) {
           {(housingForDay.length > 0 || mealsForDay.length > 0) && (
             <div className="mt-4 grid gap-3">
               {housingForDay.map((stay) => (
-                <article className="rounded-2xl border border-border bg-surface p-4" key={stay.id}>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-                    {t("travelMode.housing")}
-                  </p>
-                  <h3 className="mt-1 font-semibold text-brand">{stay.name}</h3>
+                <article
+                  className={`rounded-2xl border border-border bg-surface p-4 ${
+                    highlightedMapItemKey === `housing:${stay.id}` ? "trip-map-card-focus" : ""
+                  }`}
+                  data-trip-item-key={`housing:${stay.id}`}
+                  key={stay.id}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+                        {t("travelMode.housing")}
+                      </p>
+                      <h3 className="mt-1 font-semibold text-brand">{stay.name}</h3>
+                    </div>
+                    {stay.latitude !== null && stay.longitude !== null && (
+                      <MapLocateButton
+                        label={t("tripMap.locate")}
+                        onClick={() => handleLocateItem("housing", stay.id)}
+                      />
+                    )}
+                  </div>
                   {stay.notes?.trim() && (
                     <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{stay.notes}</p>
                   )}
                 </article>
               ))}
               {mealsForDay.map((meal) => (
-                <article className="rounded-2xl border border-border bg-surface p-4" key={meal.id}>
-                  <div className="flex items-start gap-3">
-                    <div className="grid min-w-16 place-items-center rounded-xl bg-accent px-2 py-2 text-sm font-semibold text-on-accent">
-                      {formatActivityTime(meal, {
-                        allDay: t("tripDetails.allDay"),
-                        timeNotSet: t("tripDetails.timeNotSet"),
-                      })}
+                <article
+                  className={`rounded-2xl border border-border bg-surface p-4 ${
+                    highlightedMapItemKey === `meal:${meal.id}` ? "trip-map-card-focus" : ""
+                  }`}
+                  data-trip-item-key={`meal:${meal.id}`}
+                  key={meal.id}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <div className="grid min-w-16 place-items-center rounded-xl bg-accent px-2 py-2 text-sm font-semibold text-on-accent">
+                        {formatActivityTime(meal, {
+                          allDay: t("tripDetails.allDay"),
+                          timeNotSet: t("tripDetails.timeNotSet"),
+                        })}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+                          {t("travelMode.meal")}
+                        </p>
+                        <h3 className="mt-1 font-semibold text-brand">
+                          {getDayItemTitle(meal, t("tripDetails.untitledItem"))}
+                        </h3>
+                        {meal.notes?.trim() && (
+                          <p className="mt-2 whitespace-pre-wrap text-sm text-muted">
+                            {meal.notes}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-                        {t("travelMode.meal")}
-                      </p>
-                      <h3 className="mt-1 font-semibold text-brand">
-                        {getDayItemTitle(meal, t("tripDetails.untitledItem"))}
-                      </h3>
-                      {meal.notes?.trim() && (
-                        <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{meal.notes}</p>
-                      )}
-                    </div>
+                    {meal.latitude !== null && meal.longitude !== null && (
+                      <MapLocateButton
+                        label={t("tripMap.locate")}
+                        onClick={() => handleLocateItem("meal", meal.id)}
+                      />
+                    )}
                   </div>
                 </article>
               ))}
@@ -309,46 +404,63 @@ export function TravelMode({ trip }: TravelModeProps) {
             ) : (
               sortActivities(selectedDay.activities).map((activity) => (
                 <article
-                  className="rounded-2xl border border-border-card bg-surface p-4"
+                  className={`rounded-2xl border border-border-card bg-surface p-4 ${
+                    highlightedMapItemKey === `activity:${activity.id}` ? "trip-map-card-focus" : ""
+                  }`}
+                  data-trip-item-key={`activity:${activity.id}`}
                   key={activity.id}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="grid min-w-16 place-items-center rounded-xl bg-brand-surface px-2 py-2 text-sm font-semibold text-on-brand">
-                      {formatActivityTime(activity, {
-                        allDay: t("tripDetails.allDay"),
-                        timeNotSet: t("tripDetails.timeNotSet"),
-                      })}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <div className="grid min-w-16 place-items-center rounded-xl bg-brand-surface px-2 py-2 text-sm font-semibold text-on-brand">
+                        {formatActivityTime(activity, {
+                          allDay: t("tripDetails.allDay"),
+                          timeNotSet: t("tripDetails.timeNotSet"),
+                        })}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-brand">
+                          {getDayItemTitle(activity, t("tripDetails.untitledItem"))}
+                        </h3>
+                        {activity.placeAddress && (
+                          <p className="mt-1 text-sm text-muted">{activity.placeAddress}</p>
+                        )}
+                        {activity.notes?.trim() && (
+                          <p className="mt-2 whitespace-pre-wrap text-sm text-muted">
+                            {activity.notes}
+                          </p>
+                        )}
+                        {activity.googleMapsUrl && (
+                          <a
+                            className="mt-3 inline-flex rounded-lg bg-surface-muted px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-soft"
+                            href={activity.googleMapsUrl}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            {t("tripDetails.openGoogleMaps")}
+                          </a>
+                        )}
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-brand">
-                        {getDayItemTitle(activity, t("tripDetails.untitledItem"))}
-                      </h3>
-                      {activity.placeAddress && (
-                        <p className="mt-1 text-sm text-muted">{activity.placeAddress}</p>
-                      )}
-                      {activity.notes?.trim() && (
-                        <p className="mt-2 whitespace-pre-wrap text-sm text-muted">
-                          {activity.notes}
-                        </p>
-                      )}
-                      {activity.googleMapsUrl && (
-                        <a
-                          className="mt-3 inline-flex rounded-lg bg-surface-muted px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-soft"
-                          href={activity.googleMapsUrl}
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          {t("tripDetails.openGoogleMaps")}
-                        </a>
-                      )}
-                    </div>
+                    {activity.latitude !== null && activity.longitude !== null && (
+                      <MapLocateButton
+                        label={t("tripMap.locate")}
+                        onClick={() => handleLocateItem("activity", activity.id)}
+                      />
+                    )}
                   </div>
                 </article>
               ))
             )}
           </div>
         </div>
-        <TripMap markers={mapMarkers} renderMarkerDetails={renderMapMarkerDetails} />
+        <TripMap
+          focusMarker={mapFocusMarker}
+          markers={mapMarkers}
+          onMarkerClick={handleMapMarkerClick}
+          onFocusMarkerHandled={() => setMapFocusMarker(null)}
+          renderMarkerDetails={renderMapMarkerDetails}
+        />
       </div>
     </section>
   )

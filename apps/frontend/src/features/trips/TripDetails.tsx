@@ -111,6 +111,7 @@ export function TripDetails({
   const [mapHousingAction, setMapHousingAction] = useState<MapHousingAction | null>(null)
   const [mapFocusRequest, setMapFocusRequest] = useState<MapFocusRequest | null>(null)
   const [highlightedMapItemKey, setHighlightedMapItemKey] = useState<string | null>(null)
+  const [mapFocusMarker, setMapFocusMarker] = useState<TripMapMarker | null>(null)
   const [savingPreferenceKey, setSavingPreferenceKey] = useState<string | null>(null)
   const [draggedItem, setDraggedItem] = useState<DayItemRecord | null>(null)
   const [movingItem, setMovingItem] = useState<MovingItem | null>(null)
@@ -138,7 +139,10 @@ export function TripDetails({
         return
       }
 
-      element.scrollIntoView({ behavior: "smooth", block: "center" })
+      const bounds = element.getBoundingClientRect()
+      if (bounds.top < 0 || bounds.bottom > window.innerHeight) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" })
+      }
       setHighlightedMapItemKey(mapFocusRequest.itemKey)
       highlightTimeout = window.setTimeout(() => {
         setHighlightedMapItemKey(null)
@@ -386,6 +390,38 @@ export function TripDetails({
     )
     setMapFocusRequest({
       itemKey,
+    })
+  }
+
+  function handleLocateItem(record: DayItemRecord) {
+    const { item } = record
+
+    if (item.latitude === null || item.longitude === null) {
+      return
+    }
+
+    setMapFocusMarker({
+      date: item.tripDate ?? selectedDay.date,
+      id: item.id,
+      latitude: item.latitude,
+      longitude: item.longitude,
+      title: getDayItemTitle(item, t("tripDetails.untitledItem")),
+      type: record.itemType,
+    })
+  }
+
+  function handleLocateHousing(stay: HousingStay) {
+    if (stay.latitude === null || stay.longitude === null) {
+      return
+    }
+
+    setMapFocusMarker({
+      date: stay.checkIn ?? currentTrip.startDate,
+      id: stay.id,
+      latitude: stay.latitude,
+      longitude: stay.longitude,
+      title: stay.placeName ?? stay.name,
+      type: "housing",
     })
   }
 
@@ -1326,6 +1362,7 @@ export function TripDetails({
               accessToken={accessToken}
               onTripUpdated={onTripUpdated}
               onMoveHousingToBackup={(stay) => void moveHousingToBackup(stay)}
+              onLocateHousing={handleLocateHousing}
               onPreferenceChange={(itemType, itemId, value) => {
                 void handlePreferenceChange(itemType, itemId, value)
               }}
@@ -1387,6 +1424,7 @@ export function TripDetails({
                   onEditMeal={editMeal}
                   onMoveActivityToBackup={(activity) => void moveActivityToBackup(activity)}
                   onMoveMealToBackup={(meal) => void moveMealToBackup(meal)}
+                  onLocateItem={handleLocateItem}
                   onItemDragEnd={() => {
                     setDraggedItem(null)
                     setDropTarget(null)
@@ -1415,6 +1453,7 @@ export function TripDetails({
               accessToken={accessToken}
               onTripUpdated={onTripUpdated}
               onMoveHousingToBackup={(stay) => void moveHousingToBackup(stay)}
+              onLocateHousing={handleLocateHousing}
               onPreferenceChange={(itemType, itemId, value) => {
                 void handlePreferenceChange(itemType, itemId, value)
               }}
@@ -1437,6 +1476,7 @@ export function TripDetails({
               accessToken={accessToken}
               onTripUpdated={onTripUpdated}
               onMoveHousingToBackup={(stay) => void moveHousingToBackup(stay)}
+              onLocateHousing={handleLocateHousing}
               onPreferenceChange={(itemType, itemId, value) => {
                 void handlePreferenceChange(itemType, itemId, value)
               }}
@@ -1457,8 +1497,10 @@ export function TripDetails({
         </div>
         <aside className="contents lg:block">
           <TripMap
+            focusMarker={mapFocusMarker}
             markers={mapMarkers}
             onMarkerClick={handleMapMarkerClick}
+            onFocusMarkerHandled={() => setMapFocusMarker(null)}
             renderMarkerDetails={renderMapMarkerDetails}
           />
         </aside>
