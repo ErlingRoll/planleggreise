@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next"
 import { formatDateRange } from "../../lib/date-format"
 import type { TripDetail } from "../../api"
+import { SettingsIcon } from "../../components/SettingsIcon"
 
 type TripDetailsHeaderProps = {
   trip: TripDetail
@@ -29,7 +30,7 @@ export function TripDetailsHeader({
           onClick={onToggleSettings}
           type="button"
         >
-          ⚙
+          <SettingsIcon />
         </button>
       </div>
     </div>

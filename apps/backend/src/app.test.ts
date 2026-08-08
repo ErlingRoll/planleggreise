@@ -891,6 +891,31 @@ test("Google Places resolves a full place URL without redirect resolution", asyn
   }
 })
 
+test("Google Places uses full place URL coordinates when text search has no result", async () => {
+  const url =
+    "https://www.google.com/maps/place/Kazuya+Rice+Flour+Bread+Cafe/@35.6972086,139.8003857,917m/data=!3m1!1e3!4m15!1m8!2m7!1sRestaurants!3m5!2sArkaden!3s0x46416e89dd75c50d:0x9b553acd95992fe2!4m2!1d10.7484049!2d59.9116603!3m5!1s0x60188933108a6a9b:0x36547a12db1c595d!8m2!3d35.6981009!4d139.8002201!16s%2Fg%2F11d_wyb6rt?entry=ttu&g_ep=EgoyMDI2MDgwNS4xIKXMDSoASAFQAw%3D%3D"
+  const originalFetch = globalThis.fetch
+
+  globalThis.fetch = async () =>
+    new Response(JSON.stringify({ error: { status: "INVALID_ARGUMENT" } }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    })
+
+  try {
+    const place = await createGooglePlacesResolver("test-key")(url)
+
+    assert.deepEqual(place, {
+      name: "Kazuya Rice Flour Bread Cafe",
+      address: "Kazuya Rice Flour Bread Cafe",
+      latitude: 35.6981009,
+      longitude: 139.8002201,
+    })
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
 test("trip updates reject trips longer than 60 days", async () => {
   const response = await request(createTestApp())
     .patch("/api/trips/trip-1")

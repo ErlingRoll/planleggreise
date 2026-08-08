@@ -4,7 +4,7 @@ import { PRODUCT_USER_AGENT } from "./brand.js"
 
 const placeDetailsSchema = z.object({
   displayName: z.object({ text: z.string().min(1) }),
-  formattedAddress: z.string().min(1),
+  formattedAddress: z.string().min(1).nullable().optional(),
   location: z
     .object({
       latitude: z.number().nullable().optional(),
@@ -15,7 +15,7 @@ const placeDetailsSchema = z.object({
 })
 
 const placeSearchSchema = z.object({
-  places: z.array(placeDetailsSchema).min(1),
+  places: z.array(placeDetailsSchema),
 })
 
 export type ResolvedGooglePlace = {
@@ -26,6 +26,12 @@ export type ResolvedGooglePlace = {
 }
 
 export type GooglePlacesResolver = (googleMapsUrl: string) => Promise<ResolvedGooglePlace>
+
+type PlaceSearchLocationBias = {
+  latitude: number
+  longitude: number
+  radius: number
+}
 
 export class GooglePlacesError extends Error {
   constructor(
@@ -95,7 +101,51 @@ function getPlaceQuery(url: URL): string | null {
   return decodeURIComponent(placePart.replace(/\+/g, " "))
 }
 
-async function requestGooglePlaces(apiKey: string, url: string): Promise<ResolvedGooglePlace> {
+function getPlaceSearchLocationBias(url: URL): PlaceSearchLocationBias | null {
+  const placeCoordinates = url.pathname.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/)
+
+  if (placeCoordinates) {
+    return {
+      latitude: Number(placeCoordinates[1]),
+      longitude: Number(placeCoordinates[2]),
+      radius: 1000,
+    }
+  }
+
+  const mapCenter = url.pathname.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/)
+
+  if (!mapCenter) {
+    return null
+  }
+
+  return {
+    latitude: Number(mapCenter[1]),
+    longitude: Number(mapCenter[2]),
+    radius: 5000,
+  }
+}
+
+function getPlaceUrlFallback(
+  query: string,
+  locationBias: PlaceSearchLocationBias | null,
+): ResolvedGooglePlace | null {
+  if (!locationBias) {
+    return null
+  }
+
+  return {
+    name: query,
+    address: query,
+    latitude: locationBias.latitude,
+    longitude: locationBias.longitude,
+  }
+}
+
+async function requestGooglePlaces(
+  apiKey: string,
+  query: string,
+  locationBias: PlaceSearchLocationBias | null,
+): Promise<ResolvedGooglePlace> {
   const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
     method: "POST",
     headers: {
@@ -105,23 +155,58 @@ async function requestGooglePlaces(apiKey: string, url: string): Promise<Resolve
     },
     body: JSON.stringify({
       languageCode: "nb",
-      textQuery: url,
+      textQuery: query,
+      ...(locationBias
+        ? {
+            locationBias: {
+              circle: {
+                center: {
+                  latitude: locationBias.latitude,
+                  longitude: locationBias.longitude,
+                },
+                radius: locationBias.radius,
+              },
+            },
+          }
+        : {}),
     }),
   })
 
   if (!response.ok) {
+    const fallback = getPlaceUrlFallback(query, locationBias)
+
+    if (fallback) {
+      return fallback
+    }
+
     throw new GooglePlacesError("Could not resolve Google Maps link")
   }
 
   const result = placeSearchSchema.safeParse(await response.json())
 
   if (!result.success) {
+    const fallback = getPlaceUrlFallback(query, locationBias)
+
+    if (fallback) {
+      return fallback
+    }
+
     throw new GooglePlacesError("No place found for Google Maps link")
+  }
+
+  if (result.data.places.length === 0) {
+    const fallback = getPlaceUrlFallback(query, locationBias)
+
+    if (!fallback) {
+      throw new GooglePlacesError("No place found for Google Maps link")
+    }
+
+    return fallback
   }
 
   return {
     name: result.data.places[0].displayName.text,
-    address: result.data.places[0].formattedAddress,
+    address: result.data.places[0].formattedAddress ?? query,
     latitude: result.data.places[0].location?.latitude ?? null,
     longitude: result.data.places[0].location?.longitude ?? null,
   }
@@ -136,12 +221,13 @@ export function createGooglePlacesResolver(
     }
 
     const inputUrl = parseAllowedGoogleUrl(googleMapsUrl)
-    const placeQuery = getPlaceQuery(inputUrl) ?? getPlaceQuery(await resolveRedirectUrl(inputUrl))
+    const resolvedUrl = getPlaceQuery(inputUrl) ? inputUrl : await resolveRedirectUrl(inputUrl)
+    const placeQuery = getPlaceQuery(resolvedUrl)
 
     if (!placeQuery) {
       throw new GooglePlacesError("Could not resolve Google Maps link")
     }
 
-    return requestGooglePlaces(apiKey, placeQuery)
+    return requestGooglePlaces(apiKey, placeQuery, getPlaceSearchLocationBias(resolvedUrl))
   }
 }
