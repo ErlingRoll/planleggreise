@@ -93,6 +93,7 @@ const resources = {
         red: "Nei",
         summary: "Nei: {{red}}, kanskje: {{yellow}}, ja: {{green}}",
         voteCount: "{{count}} stemmer",
+        vote: "Stem",
       },
       theme: {
         darkMode: "Mørk",
@@ -356,6 +357,7 @@ const resources = {
         red: "No",
         summary: "No: {{red}}, maybe: {{yellow}}, yes: {{green}}",
         voteCount: "{{count}} votes",
+        vote: "Vote",
       },
       theme: {
         darkMode: "Dark",
