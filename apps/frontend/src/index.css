@@ -15,6 +15,9 @@
   --color-surface-soft: #f0f5ed;
   --color-surface-muted: #e6eee3;
   --color-surface-inset: #eee8dd;
+  --color-activity-surface: #eaf3e8;
+  --color-meal-surface: #f8eee8;
+  --color-housing-surface: #f2eee5;
   --color-brand: #274b48;
   --color-brand-hover: #1c3b38;
   --color-brand-soft: #35605c;
@@ -99,6 +102,9 @@ button:disabled {
   --color-surface-soft: #23312b;
   --color-surface-muted: #2f4037;
   --color-surface-inset: #2b332f;
+  --color-activity-surface: #26352d;
+  --color-meal-surface: #362a26;
+  --color-housing-surface: #302d27;
   --color-brand: #b5dfbf;
   --color-brand-hover: #b5dfbf;
   --color-brand-soft: #467268;

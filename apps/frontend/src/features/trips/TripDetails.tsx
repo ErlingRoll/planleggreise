@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type DragEvent, type FormEvent } from "react"
+import { useRef, useState, type DragEvent, type FormEvent } from "react"
 import { useTranslation } from "react-i18next"
 import {
   createActivity,
@@ -36,68 +36,10 @@ import { TripDayCard } from "./TripDayCard"
 import { TripDayNavigator } from "./TripDayNavigator"
 import { TripDetailsHeader } from "./TripDetailsHeader"
 import { useTripRealtime } from "./useTripRealtime"
+import type { TripDaySelection } from "./useTripDaySelection"
 import type { DayItemRecord, DropTarget, MovingItem, PlannerTab } from "./planner-types"
 import { isAllowedGoogleMapsUrl } from "@turprep/models"
 import type { TripItemPreferenceValue, TripItemType } from "@turprep/models"
-import { storageKeys } from "../../lib/brand"
-
-const daySelectionCookiePrefix = storageKeys.selectedDaysPrefix
-const legacyDaySelectionCookiePrefix = storageKeys.legacySelectedDaysPrefix
-const daySelectionCookieMaxAge = 60 * 60 * 24 * 365
-
-function getDaySelectionCookieName(tripId: string) {
-  return `${daySelectionCookiePrefix}${tripId}`
-}
-
-function getLegacyDaySelectionCookieName(tripId: string) {
-  return `${legacyDaySelectionCookiePrefix}${tripId}`
-}
-
-function readSelectedDayDates(tripId: string, validDates: string[]) {
-  const cookieName = getDaySelectionCookieName(tripId)
-  const legacyCookieName = getLegacyDaySelectionCookieName(tripId)
-  const cookie =
-    document.cookie.split("; ").find((entry) => entry.startsWith(`${cookieName}=`)) ??
-    document.cookie.split("; ").find((entry) => entry.startsWith(`${legacyCookieName}=`))
-  const storedCookieName = cookie?.startsWith(`${cookieName}=`) ? cookieName : legacyCookieName
-
-  if (!cookie) {
-    return null
-  }
-
-  try {
-    const storedDates: unknown = JSON.parse(
-      decodeURIComponent(cookie.slice(storedCookieName.length + 1)),
-    )
-
-    if (
-      !Array.isArray(storedDates) ||
-      !storedDates.every((date): date is string => typeof date === "string")
-    ) {
-      return null
-    }
-
-    const selectedDates = storedDates.filter((date) => validDates.includes(date))
-
-    if (storedCookieName === legacyCookieName) {
-      writeSelectedDayDates(tripId, selectedDates)
-    }
-
-    return selectedDates
-  } catch {
-    return null
-  }
-}
-
-function writeSelectedDayDates(tripId: string, selectedDates: string[]) {
-  const cookieName = getDaySelectionCookieName(tripId)
-  document.cookie = [
-    `${cookieName}=${encodeURIComponent(JSON.stringify(selectedDates))}`,
-    `max-age=${daySelectionCookieMaxAge}`,
-    "path=/",
-    "samesite=lax",
-  ].join("; ")
-}
 
 type TripDetailsProps = {
   accessToken: string
@@ -107,6 +49,7 @@ type TripDetailsProps = {
   onTripUpdated: (trip: TripDetail) => void
   onTripDeleted: (trip: TripDetail) => Promise<void>
   userId: string
+  daySelection: TripDaySelection
 }
 
 type PendingDeletion = { item: Activity; type: "activity" } | { item: Meal; type: "meal" }
@@ -133,6 +76,7 @@ export function TripDetails({
   onTripUpdated,
   onTripDeleted,
   userId,
+  daySelection,
 }: TripDetailsProps) {
   const { t } = useTranslation()
   const [openDay, setOpenDay] = useState<string | null>(null)
@@ -154,9 +98,6 @@ export function TripDetails({
   const [dayTitle, setDayTitle] = useState("")
   const [dayNotes, setDayNotes] = useState("")
   const [isSavingDayDetails, setIsSavingDayDetails] = useState(false)
-  const [selectedDayDate, setSelectedDayDate] = useState("")
-  const [selectedDayDates, setSelectedDayDates] = useState<string[]>([])
-  const [lastClickedDayDate, setLastClickedDayDate] = useState("")
   const [plannerTab, setPlannerTab] = useState<PlannerTab>("all")
   const [showMobileHousing, setShowMobileHousing] = useState(false)
   const [savingPreferenceKey, setSavingPreferenceKey] = useState<string | null>(null)
@@ -176,21 +117,6 @@ export function TripDetails({
     tripId: trip?.id,
   })
 
-  useEffect(() => {
-    if (trip) {
-      const validDates = trip.days.map((day) => day.date)
-      const persistedDates = readSelectedDayDates(trip.id, validDates)
-
-      setSelectedDayDates(persistedDates ?? validDates)
-      setSelectedDayDate((currentDate) =>
-        validDates.includes(currentDate) ? currentDate : (validDates[0] ?? ""),
-      )
-      setLastClickedDayDate((currentDate) =>
-        validDates.includes(currentDate) ? currentDate : (validDates[0] ?? ""),
-      )
-    }
-  }, [trip])
-
   if (isLoading) {
     return <LoadingCover message={t("common.loadingTrip")} />
   }
@@ -208,6 +134,7 @@ export function TripDetails({
   }
 
   const currentTrip = trip
+  const { selectedDayDate, selectedDayDates, onSelectAll, onSelectDay, onToggleDay } = daySelection
   const normalizedGoogleMapsUrl = googleMapsUrl.trim()
   const googleMapsUrlIsInvalid =
     normalizedGoogleMapsUrl.length > 0 && !isAllowedGoogleMapsUrl(normalizedGoogleMapsUrl)
@@ -283,60 +210,6 @@ export function TripDetails({
     if (nextEndTime && !startTime) {
       setStartTime(shiftTime(nextEndTime, -2))
     }
-  }
-
-  function getDayRange(startDate: string, endDate: string) {
-    const startIndex = currentTrip.days.findIndex((day) => day.date === startDate)
-    const endIndex = currentTrip.days.findIndex((day) => day.date === endDate)
-
-    if (startIndex < 0 || endIndex < 0) {
-      return [endDate]
-    }
-
-    const rangeStart = Math.min(startIndex, endIndex)
-    const rangeEnd = Math.max(startIndex, endIndex)
-    return currentTrip.days.slice(rangeStart, rangeEnd + 1).map((day) => day.date)
-  }
-
-  function selectOnlyDay(date: string, shiftKey: boolean) {
-    const dates = shiftKey && lastClickedDayDate ? getDayRange(lastClickedDayDate, date) : [date]
-
-    setSelectedDayDate(date)
-    setSelectedDayDates(dates)
-    setLastClickedDayDate(date)
-    writeSelectedDayDates(currentTrip.id, dates)
-  }
-
-  function toggleDaySelection(date: string, shiftKey: boolean) {
-    if (shiftKey && lastClickedDayDate) {
-      const dates = getDayRange(lastClickedDayDate, date)
-      setSelectedDayDate(date)
-      setSelectedDayDates(dates)
-      setLastClickedDayDate(date)
-      writeSelectedDayDates(currentTrip.id, dates)
-      return
-    }
-
-    setSelectedDayDates((currentDates) => {
-      const nextDates = currentDates.includes(date)
-        ? currentDates.filter((currentDate) => currentDate !== date)
-        : [...currentDates, date]
-
-      writeSelectedDayDates(currentTrip.id, nextDates)
-      setLastClickedDayDate(date)
-
-      if (nextDates.length > 0 && !nextDates.includes(selectedDayDate)) {
-        setSelectedDayDate(nextDates[0])
-      }
-
-      return nextDates
-    })
-  }
-
-  function selectAllDays() {
-    const allDates = currentTrip.days.map((day) => day.date)
-    setSelectedDayDates(allDates)
-    writeSelectedDayDates(currentTrip.id, allDates)
   }
 
   function getDropIndex(event: DragEvent<HTMLDivElement>, itemIndex: number) {
@@ -1150,9 +1023,9 @@ export function TripDetails({
           days={trip.days}
           getDayScheduleSummary={getDayScheduleSummary}
           housingStays={trip.housingStays}
-          onSelectAll={selectAllDays}
-          onSelectDay={selectOnlyDay}
-          onToggleDay={toggleDaySelection}
+          onSelectAll={onSelectAll}
+          onSelectDay={onSelectDay}
+          onToggleDay={onToggleDay}
           selectedDay={selectedDay}
           selectedDayDates={selectedDayDates}
         />

@@ -11,6 +11,7 @@ import { TripBackupPage } from "./TripBackupPage"
 import { TripForm } from "./TripForm"
 import { TravelMode } from "./TravelMode"
 import { useTripRealtime } from "./useTripRealtime"
+import { useTripDaySelection } from "./useTripDaySelection"
 import { LanguageSwitcher } from "../../components/LanguageSwitcher"
 import { MobileMenuButton } from "../../components/MobileMenuButton"
 import { ThemeToggle } from "../../components/ThemeToggle"
@@ -36,6 +37,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
   const [error, setError] = useState<string | null>(null)
   const [detailsError, setDetailsError] = useState<string | null>(null)
   const [showMobileOptions, setShowMobileOptions] = useState(false)
+  const daySelection = useTripDaySelection(selectedTrip)
 
   useEffect(() => {
     let isMounted = true
@@ -240,19 +242,19 @@ export function TripDashboard({ session }: TripDashboardProps) {
             </Link>
             <Link
               className={`rounded-lg px-3 py-2 text-center text-sm font-semibold ${
-                isTravelMode ? "bg-surface text-on-surface shadow-sm" : "text-muted"
-              }`}
-              to={`/trips/${tripId}/travel`}
-            >
-              {t("tripModes.travel")}
-            </Link>
-            <Link
-              className={`rounded-lg px-3 py-2 text-center text-sm font-semibold ${
                 isBackupMode ? "bg-surface text-on-surface shadow-sm" : "text-muted"
               }`}
               to={`/trips/${tripId}/backup`}
             >
               {t("tripModes.backup")}
+            </Link>
+            <Link
+              className={`rounded-lg px-3 py-2 text-center text-sm font-semibold ${
+                isTravelMode ? "bg-surface text-on-surface shadow-sm" : "text-muted"
+              }`}
+              to={`/trips/${tripId}/travel`}
+            >
+              {t("tripModes.travel")}
             </Link>
           </nav>
           {isTravelMode && selectedTrip ? (
@@ -260,6 +262,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
           ) : isBackupMode && selectedTrip ? (
             <TripBackupPage
               accessToken={session.access_token}
+              daySelection={daySelection}
               onTripUpdated={handleTripUpdated}
               trip={selectedTrip}
               userId={session.user.id}
@@ -273,6 +276,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
               onTripUpdated={handleTripUpdated}
               trip={selectedTrip}
               userId={session.user.id}
+              daySelection={daySelection}
             />
           )}
         </section>

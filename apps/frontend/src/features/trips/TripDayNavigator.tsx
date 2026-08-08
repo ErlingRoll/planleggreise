@@ -11,6 +11,7 @@ type TripDayNavigatorProps = {
   onSelectDay: (date: string, shiftKey: boolean) => void
   onToggleDay: (date: string, shiftKey: boolean) => void
   getDayScheduleSummary: (day: TripDetail["days"][number]) => string
+  includeBackupHousing?: boolean
 }
 
 export function TripDayNavigator({
@@ -22,6 +23,7 @@ export function TripDayNavigator({
   onSelectDay,
   onToggleDay,
   getDayScheduleSummary,
+  includeBackupHousing = false,
 }: TripDayNavigatorProps) {
   const { t } = useTranslation()
 
@@ -44,7 +46,7 @@ export function TripDayNavigator({
             const isChecked = selectedDayDates.includes(day.date)
             const hasHousing = housingStays.some(
               (stay) =>
-                !stay.isBackup &&
+                (includeBackupHousing || !stay.isBackup) &&
                 stay.checkIn !== null &&
                 stay.checkOut !== null &&
                 stay.checkIn <= day.date &&

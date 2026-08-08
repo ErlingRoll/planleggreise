@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { useTranslation } from "react-i18next"
 import {
   createActivity,
@@ -24,6 +24,8 @@ import { getErrorMessage, isGoogleMapsError } from "../../lib/errors"
 import { formatActivityTime, getDayItemTitle, sortActivities } from "../../lib/activity-format"
 import { formatDate } from "../../lib/date-format"
 import { shiftDate } from "../../lib/trip-dates"
+import { TripDayNavigator } from "./TripDayNavigator"
+import type { TripDaySelection } from "./useTripDaySelection"
 import {
   isAllowedGoogleMapsUrl,
   type TripItemPreferenceValue,
@@ -39,9 +41,16 @@ type TripBackupPageProps = {
   trip: TripDetail
   userId: string
   onTripUpdated: (trip: TripDetail) => void
+  daySelection: TripDaySelection
 }
 
-export function TripBackupPage({ accessToken, trip, userId, onTripUpdated }: TripBackupPageProps) {
+export function TripBackupPage({
+  accessToken,
+  trip,
+  userId,
+  onTripUpdated,
+  daySelection,
+}: TripBackupPageProps) {
   const { t } = useTranslation()
   const [selectedType, setSelectedType] = useState<BackupType>("activity")
   const [formType, setFormType] = useState<BackupType | null>(null)
@@ -63,10 +72,58 @@ export function TripBackupPage({ accessToken, trip, userId, onTripUpdated }: Tri
   const [deletingKey, setDeletingKey] = useState<string | null>(null)
   const [pendingDeletion, setPendingDeletion] = useState<BackupEntry | null>(null)
   const [savingPreferenceKey, setSavingPreferenceKey] = useState<string | null>(null)
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches,
+  )
 
-  const backupActivities = trip.backupActivities
-  const backupMeals = trip.meals.filter((meal) => meal.isBackup)
-  const backupHousing = trip.housingStays.filter((stay) => stay.isBackup)
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)")
+    const handleChange = () => setIsDesktop(mediaQuery.matches)
+
+    mediaQuery.addEventListener("change", handleChange)
+    return () => mediaQuery.removeEventListener("change", handleChange)
+  }, [])
+
+  const allBackupActivities = trip.backupActivities
+  const allBackupMeals = trip.meals.filter((meal) => meal.isBackup)
+  const allBackupHousing = trip.housingStays.filter((stay) => stay.isBackup)
+  const { selectedDayDate, selectedDayDates } = daySelection
+  const selectedDay = trip.days.find((day) => day.date === selectedDayDate) ?? trip.days[0]
+
+  function isDateSelected(date: string | null) {
+    return date === null || selectedDayDates.includes(date)
+  }
+
+  function isHousingSelected(stay: HousingStay) {
+    if (stay.checkIn === null || stay.checkOut === null) {
+      return true
+    }
+
+    return selectedDayDates.some((date) => stay.checkIn! <= date && date < stay.checkOut!)
+  }
+
+  const backupActivities = isDesktop
+    ? allBackupActivities.filter((activity) => isDateSelected(activity.tripDate))
+    : allBackupActivities
+  const backupMeals = isDesktop
+    ? allBackupMeals.filter((meal) => isDateSelected(meal.tripDate))
+    : allBackupMeals
+  const backupHousing = isDesktop ? allBackupHousing.filter(isHousingSelected) : allBackupHousing
+
+  function getReserveDayScheduleSummary(day: TripDetail["days"][number]) {
+    const count =
+      allBackupActivities.filter((activity) => activity.tripDate === day.date).length +
+      allBackupMeals.filter((meal) => meal.tripDate === day.date).length +
+      allBackupHousing.filter(
+        (stay) =>
+          stay.checkIn !== null &&
+          stay.checkOut !== null &&
+          stay.checkIn <= day.date &&
+          day.date < stay.checkOut,
+      ).length
+
+    return count === 0 ? t("tripDetails.noPlans") : t("tripDetails.plansCount", { count })
+  }
 
   async function handlePreferenceChange(
     itemType: TripItemType,
@@ -550,9 +607,15 @@ export function TripBackupPage({ accessToken, trip, userId, onTripUpdated }: Tri
     const key = `${type}:${item.id}`
     const dayItem = type === "housing" ? null : (item as Activity | Meal)
     const housing = type === "housing" ? (item as HousingStay) : null
+    const surfaceClass =
+      type === "activity"
+        ? "bg-activity-surface"
+        : type === "meal"
+          ? "bg-meal-surface"
+          : "bg-housing-surface"
 
     return (
-      <article className="rounded-2xl border border-border-soft bg-surface p-4" key={key}>
+      <article className={`rounded-2xl border border-border-soft ${surfaceClass} p-4`} key={key}>
         <div className="flex flex-col gap-3">
           <div className="min-w-0">
             <h3 className="font-semibold text-brand">
@@ -643,34 +706,49 @@ export function TripBackupPage({ accessToken, trip, userId, onTripUpdated }: Tri
           </label>
         </div>
       </div>
-      {!editingId && renderForm()}
-      <div className="grid gap-5 lg:grid-cols-3">
-        {sections.map((section) => (
-          <section
-            className={`${selectedType === section.type ? "block" : "hidden"} lg:block`}
-            key={section.type}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold text-brand">{section.label}</h2>
-              <button
-                className="rounded-lg px-2 py-1 text-sm font-semibold text-on-surface hover:bg-surface-muted"
-                onClick={() => startCreate(section.type)}
-                type="button"
+      <div className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-5">
+        <TripDayNavigator
+          days={trip.days}
+          getDayScheduleSummary={getReserveDayScheduleSummary}
+          housingStays={trip.housingStays}
+          includeBackupHousing
+          onSelectAll={daySelection.onSelectAll}
+          onSelectDay={daySelection.onSelectDay}
+          onToggleDay={daySelection.onToggleDay}
+          selectedDay={selectedDay}
+          selectedDayDates={selectedDayDates}
+        />
+        <div className="min-w-0">
+          {!editingId && renderForm()}
+          <div className="mt-5 grid gap-5 lg:grid-cols-3">
+            {sections.map((section) => (
+              <section
+                className={`${selectedType === section.type ? "block" : "hidden"} lg:block`}
+                key={section.type}
               >
-                {t("tripDetails.add")}
-              </button>
-            </div>
-            {section.items.length === 0 ? (
-              <p className="mt-3 rounded-2xl border border-dashed border-border-dashed p-4 text-sm text-muted">
-                {t("backup.empty")}
-              </p>
-            ) : (
-              <div className="mt-3 grid gap-3">
-                {section.items.map((item) => renderItem(section.type, item))}
-              </div>
-            )}
-          </section>
-        ))}
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold text-brand">{section.label}</h2>
+                  <button
+                    className="rounded-lg px-2 py-1 text-sm font-semibold text-on-surface hover:bg-surface-muted"
+                    onClick={() => startCreate(section.type)}
+                    type="button"
+                  >
+                    {t("tripDetails.add")}
+                  </button>
+                </div>
+                {section.items.length === 0 ? (
+                  <p className="mt-3 rounded-2xl border border-dashed border-border-dashed p-4 text-sm text-muted">
+                    {t("backup.empty")}
+                  </p>
+                ) : (
+                  <div className="mt-3 grid gap-3">
+                    {section.items.map((item) => renderItem(section.type, item))}
+                  </div>
+                )}
+              </section>
+            ))}
+          </div>
+        </div>
       </div>
       <ConfirmDialog
         cancelLabel={t("common.cancel")}
