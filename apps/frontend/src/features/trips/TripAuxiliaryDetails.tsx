@@ -13,7 +13,7 @@ import { TripItemPreference } from "../../components/TripItemPreference"
 import { getErrorMessage } from "../../lib/errors"
 import { shiftDate } from "../../lib/trip-dates"
 import { formatDate } from "../../lib/date-format"
-import type { TripItemPreferenceValue } from "@turprep/models"
+import { isAllowedGoogleMapsUrl, type TripItemPreferenceValue } from "@turprep/models"
 
 type TripAuxiliaryDetailsProps = {
   accessToken: string
@@ -60,6 +60,7 @@ export function TripAuxiliaryDetails({
   const [formMode, setFormMode] = useState<FormMode>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState("")
+  const [googleMapsUrl, setGoogleMapsUrl] = useState("")
   const [checkIn, setCheckIn] = useState(trip.startDate)
   const [checkOut, setCheckOut] = useState(shiftDate(trip.endDate, 1))
   const [notes, setNotes] = useState("")
@@ -72,6 +73,7 @@ export function TripAuxiliaryDetails({
     setFormMode(null)
     setEditingId(null)
     setName("")
+    setGoogleMapsUrl("")
     setCheckIn(trip.startDate)
     setCheckOut(shiftDate(trip.endDate, 1))
     setNotes("")
@@ -91,6 +93,7 @@ export function TripAuxiliaryDetails({
     setFormMode("housing")
     setEditingId(stay.id)
     setName(stay.name)
+    setGoogleMapsUrl(stay.googleMapsUrl ?? "")
     setCheckIn(stay.checkIn ?? trip.startDate)
     setCheckOut(stay.checkOut ?? shiftDate(trip.endDate, 1))
     setNotes(stay.notes ?? "")
@@ -99,6 +102,12 @@ export function TripAuxiliaryDetails({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const normalizedGoogleMapsUrl = googleMapsUrl.trim()
+    if (normalizedGoogleMapsUrl && !isAllowedGoogleMapsUrl(normalizedGoogleMapsUrl)) {
+      setError(t("errors.googleMapsInvalid"))
+      return
+    }
+
     setIsSaving(true)
     setError(null)
 
@@ -111,6 +120,11 @@ export function TripAuxiliaryDetails({
               checkOut,
               isBackup: false,
               notes,
+              googleMapsUrl: normalizedGoogleMapsUrl || null,
+              placeName: null,
+              placeAddress: null,
+              latitude: null,
+              longitude: null,
             })
           : await createHousingStay(accessToken, trip.id, {
               name,
@@ -118,6 +132,11 @@ export function TripAuxiliaryDetails({
               checkOut,
               isBackup: false,
               notes,
+              googleMapsUrl: normalizedGoogleMapsUrl || null,
+              placeName: null,
+              placeAddress: null,
+              latitude: null,
+              longitude: null,
             })
         onTripUpdated({
           ...trip,
@@ -169,6 +188,16 @@ export function TripAuxiliaryDetails({
               onChange={(event) => setName(event.target.value)}
               required
               value={name}
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm font-medium text-muted">
+            {t("tripDetails.googleMapsUrl")}
+            <input
+              className="rounded-xl border border-border bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
+              onChange={(event) => setGoogleMapsUrl(event.target.value)}
+              placeholder={t("tripDetails.googleMapsPlaceholder")}
+              type="url"
+              value={googleMapsUrl}
             />
           </label>
           <div className="grid gap-3 sm:grid-cols-2">

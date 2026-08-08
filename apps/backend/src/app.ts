@@ -858,11 +858,32 @@ export function createApp(dependencies: AppDependencies = {}) {
           return
         }
 
+        let housingInput = parsedInput.data
+
+        if (housingInput.googleMapsUrl) {
+          try {
+            const place = await googlePlacesResolver(housingInput.googleMapsUrl)
+            housingInput = {
+              ...housingInput,
+              placeName: place.name,
+              placeAddress: place.address,
+              latitude: place.latitude,
+              longitude: place.longitude,
+            }
+          } catch (error) {
+            if (error instanceof GooglePlacesError) {
+              response.status(error.statusCode).json({ message: error.message })
+              return
+            }
+            throw error
+          }
+        }
+
         const housingStay = await tripRepository.createHousingStay(
           authenticatedRequest.user.id,
           authenticatedRequest.accessToken,
           tripId,
-          parsedInput.data,
+          housingInput,
         )
 
         if (!housingStay) {
@@ -916,7 +937,13 @@ export function createApp(dependencies: AppDependencies = {}) {
           name: currentHousingStay.name,
           checkIn: currentHousingStay.checkIn,
           checkOut: currentHousingStay.checkOut,
+          isBackup: currentHousingStay.isBackup,
           notes: currentHousingStay.notes,
+          googleMapsUrl: currentHousingStay.googleMapsUrl,
+          placeName: currentHousingStay.placeName,
+          placeAddress: currentHousingStay.placeAddress,
+          latitude: currentHousingStay.latitude,
+          longitude: currentHousingStay.longitude,
           ...parsedInput.data,
         })
 
@@ -928,12 +955,41 @@ export function createApp(dependencies: AppDependencies = {}) {
           return
         }
 
+        let housingInput = parsedInput.data
+
+        if (parsedInput.data.googleMapsUrl) {
+          try {
+            const place = await googlePlacesResolver(parsedInput.data.googleMapsUrl)
+            housingInput = {
+              ...housingInput,
+              placeName: place.name,
+              placeAddress: place.address,
+              latitude: place.latitude,
+              longitude: place.longitude,
+            }
+          } catch (error) {
+            if (error instanceof GooglePlacesError) {
+              response.status(error.statusCode).json({ message: error.message })
+              return
+            }
+            throw error
+          }
+        } else if (parsedInput.data.googleMapsUrl === null) {
+          housingInput = {
+            ...housingInput,
+            placeName: null,
+            placeAddress: null,
+            latitude: null,
+            longitude: null,
+          }
+        }
+
         const housingStay = await tripRepository.updateHousingStay(
           authenticatedRequest.user.id,
           authenticatedRequest.accessToken,
           tripId,
           housingStayId,
-          parsedInput.data,
+          housingInput,
         )
 
         if (!housingStay) {

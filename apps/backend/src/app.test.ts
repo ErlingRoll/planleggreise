@@ -62,6 +62,21 @@ const testActivity: Activity = {
   sortOrder: 0,
 }
 
+const testHousingStay: HousingStay = {
+  id: "housing-1",
+  tripId: "trip-1",
+  name: "Hotell",
+  checkIn: "2026-08-10",
+  checkOut: "2026-08-11",
+  isBackup: false,
+  notes: null,
+  googleMapsUrl: null,
+  placeName: null,
+  placeAddress: null,
+  latitude: null,
+  longitude: null,
+}
+
 const laterTestActivity: Activity = {
   ...testActivity,
   id: "activity-2",
@@ -535,6 +550,93 @@ test("authenticated users can create a housing stay with a note", async () => {
 
   assert.equal(response.status, 201)
   assert.equal(response.body.notes, "Be om rom høyt oppe")
+})
+
+test("housing creation resolves a Google Maps link", async () => {
+  const response = await request(
+    createTestApp(async () => ({
+      name: "Hotel Bristol",
+      address: "Kristian IVs gate 7, Oslo",
+      latitude: 59.915,
+      longitude: 10.738,
+    })),
+  )
+    .post("/api/trips/trip-1/housing")
+    .set("Authorization", "Bearer valid-token")
+    .send({
+      name: "Hotel Bristol",
+      checkIn: "2026-08-10",
+      checkOut: "2026-08-11",
+      notes: null,
+      googleMapsUrl: "https://maps.app.goo.gl/UqkAP8Bc5mx1tcVq6",
+    })
+
+  assert.equal(response.status, 201)
+  assert.equal(response.body.googleMapsUrl, "https://maps.app.goo.gl/UqkAP8Bc5mx1tcVq6")
+  assert.equal(response.body.placeName, "Hotel Bristol")
+  assert.equal(response.body.placeAddress, "Kristian IVs gate 7, Oslo")
+  assert.equal(response.body.latitude, 59.915)
+  assert.equal(response.body.longitude, 10.738)
+})
+
+test("housing updates resolve a Google Maps link", async () => {
+  const response = await request(
+    createTestApp(
+      async () => ({
+        name: "Hotel Bristol",
+        address: "Kristian IVs gate 7, Oslo",
+        latitude: 59.915,
+        longitude: 10.738,
+      }),
+      testTripDetail,
+      {
+        getHousingStay: async () => testHousingStay,
+        updateHousingStay: async (_userId, _accessToken, _tripId, _housingStayId, input) => ({
+          ...testHousingStay,
+          ...input,
+        }),
+      },
+    ),
+  )
+    .patch("/api/trips/trip-1/housing/housing-1")
+    .set("Authorization", "Bearer valid-token")
+    .send({ googleMapsUrl: "https://maps.app.goo.gl/UqkAP8Bc5mx1tcVq6" })
+
+  assert.equal(response.status, 200)
+  assert.equal(response.body.googleMapsUrl, "https://maps.app.goo.gl/UqkAP8Bc5mx1tcVq6")
+  assert.equal(response.body.placeName, "Hotel Bristol")
+  assert.equal(response.body.latitude, 59.915)
+  assert.equal(response.body.longitude, 10.738)
+})
+
+test("housing updates clear place fields when a Google Maps link is removed", async () => {
+  const linkedHousingStay: HousingStay = {
+    ...testHousingStay,
+    googleMapsUrl: "https://maps.app.goo.gl/UqkAP8Bc5mx1tcVq6",
+    placeName: "Hotel Bristol",
+    placeAddress: "Kristian IVs gate 7, Oslo",
+    latitude: 59.915,
+    longitude: 10.738,
+  }
+  const response = await request(
+    createTestApp(undefined, testTripDetail, {
+      getHousingStay: async () => linkedHousingStay,
+      updateHousingStay: async (_userId, _accessToken, _tripId, _housingStayId, input) => ({
+        ...linkedHousingStay,
+        ...input,
+      }),
+    }),
+  )
+    .patch("/api/trips/trip-1/housing/housing-1")
+    .set("Authorization", "Bearer valid-token")
+    .send({ googleMapsUrl: null })
+
+  assert.equal(response.status, 200)
+  assert.equal(response.body.googleMapsUrl, null)
+  assert.equal(response.body.placeName, null)
+  assert.equal(response.body.placeAddress, null)
+  assert.equal(response.body.latitude, null)
+  assert.equal(response.body.longitude, null)
 })
 
 test("authenticated users can create a meal with a note", async () => {

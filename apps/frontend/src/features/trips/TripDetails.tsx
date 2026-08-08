@@ -157,6 +157,28 @@ export function TripDetails({
             ]
           : [],
       ),
+      ...trip.housingStays.flatMap((stay) => {
+        const matchingDate = [...mapDates].find(
+          (date) =>
+            stay.checkIn !== null &&
+            stay.checkOut !== null &&
+            stay.checkIn <= date &&
+            date < stay.checkOut,
+        )
+
+        return !stay.isBackup && matchingDate && stay.latitude !== null && stay.longitude !== null
+          ? [
+              {
+                id: stay.id,
+                type: "housing" as const,
+                title: stay.placeName ?? stay.name,
+                date: matchingDate,
+                latitude: stay.latitude,
+                longitude: stay.longitude,
+              },
+            ]
+          : []
+      }),
     ]
   }, [selectedDayDate, selectedDayDates, t, trip])
 
@@ -1070,7 +1092,7 @@ export function TripDetails({
           {activityError}
         </p>
       )}
-      <div className="mt-4 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)_18rem] lg:items-start lg:gap-5">
+      <div className="mt-4 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)_minmax(22rem,32rem)] lg:items-start lg:gap-5">
         <TripDayNavigator
           days={trip.days}
           getDayScheduleSummary={getDayScheduleSummary}
@@ -1123,7 +1145,6 @@ export function TripDetails({
               ))}
             </div>
           </div>
-          <TripMap markers={mapMarkers} />
           <div className={`${showMobileHousing ? "block" : "hidden"} lg:hidden`}>
             <TripAuxiliaryDetails
               accessToken={accessToken}
@@ -1221,20 +1242,23 @@ export function TripDetails({
             />
           </div>
         </div>
-        <aside className="hidden lg:block">
-          <TripAuxiliaryDetails
-            accessToken={accessToken}
-            onTripUpdated={onTripUpdated}
-            onMoveHousingToBackup={(stay) => void moveHousingToBackup(stay)}
-            onPreferenceChange={(itemType, itemId, value) => {
-              void handlePreferenceChange(itemType, itemId, value)
-            }}
-            selectedDayDate={selectedDay.date}
-            selectedDayDates={selectedDayDates}
-            savingPreferenceKey={savingPreferenceKey}
-            trip={currentTrip}
-            userId={userId}
-          />
+        <aside className="contents lg:block">
+          <TripMap markers={mapMarkers} />
+          <div className="hidden lg:block">
+            <TripAuxiliaryDetails
+              accessToken={accessToken}
+              onTripUpdated={onTripUpdated}
+              onMoveHousingToBackup={(stay) => void moveHousingToBackup(stay)}
+              onPreferenceChange={(itemType, itemId, value) => {
+                void handlePreferenceChange(itemType, itemId, value)
+              }}
+              selectedDayDate={selectedDay.date}
+              selectedDayDates={selectedDayDates}
+              savingPreferenceKey={savingPreferenceKey}
+              trip={currentTrip}
+              userId={userId}
+            />
+          </div>
         </aside>
       </div>
       <ConfirmDialog

@@ -120,6 +120,7 @@ export function TripBackupPage({
   const mapMarkers = useMemo<TripMapMarker[]>(() => {
     const visibleActivities = isDesktop ? backupActivities : allBackupActivities
     const visibleMeals = isDesktop ? backupMeals : allBackupMeals
+    const visibleHousing = isDesktop ? backupHousing : allBackupHousing
 
     return [
       ...visibleActivities.flatMap((activity) =>
@@ -150,8 +151,32 @@ export function TripBackupPage({
             ]
           : [],
       ),
+      ...visibleHousing.flatMap((stay) =>
+        stay.latitude !== null && stay.longitude !== null
+          ? [
+              {
+                id: stay.id,
+                type: "housing" as const,
+                title: stay.placeName ?? stay.name,
+                date: stay.checkIn ?? selectedDayDate,
+                latitude: stay.latitude,
+                longitude: stay.longitude,
+              },
+            ]
+          : [],
+      ),
     ]
-  }, [allBackupActivities, allBackupMeals, backupActivities, backupMeals, isDesktop, t])
+  }, [
+    allBackupActivities,
+    allBackupHousing,
+    allBackupMeals,
+    backupActivities,
+    backupHousing,
+    backupMeals,
+    isDesktop,
+    selectedDayDate,
+    t,
+  ])
 
   function getReserveDayScheduleSummary(day: TripDetail["days"][number]) {
     const count =
@@ -260,6 +285,7 @@ export function TripBackupPage({
     if (type === "housing") {
       const housing = item as HousingStay
       setName(housing.name)
+      setGoogleMapsUrl(housing.googleMapsUrl ?? "")
       setCheckIn(housing.checkIn ?? "")
       setCheckOut(housing.checkOut ?? "")
       setNotes(housing.notes ?? "")
@@ -349,11 +375,7 @@ export function TripBackupPage({
     }
 
     const normalizedGoogleMapsUrl = googleMapsUrl.trim()
-    if (
-      formType !== "housing" &&
-      normalizedGoogleMapsUrl &&
-      !isAllowedGoogleMapsUrl(normalizedGoogleMapsUrl)
-    ) {
+    if (normalizedGoogleMapsUrl && !isAllowedGoogleMapsUrl(normalizedGoogleMapsUrl)) {
       setGoogleMapsError(t("errors.googleMapsInvalid"))
       return
     }
@@ -383,6 +405,11 @@ export function TripBackupPage({
               checkOut: checkOut || null,
               isBackup,
               notes,
+              googleMapsUrl: normalizedGoogleMapsUrl || null,
+              placeName: null,
+              placeAddress: null,
+              latitude: null,
+              longitude: null,
             })
           : await createHousingStay(accessToken, trip.id, {
               name,
@@ -390,6 +417,11 @@ export function TripBackupPage({
               checkOut: checkOut || null,
               isBackup: true,
               notes,
+              googleMapsUrl: normalizedGoogleMapsUrl || null,
+              placeName: null,
+              placeAddress: null,
+              latitude: null,
+              longitude: null,
             })
         onTripUpdated(updateTripItem(trip, saved, formType))
       } else {
@@ -543,6 +575,20 @@ export function TripBackupPage({
                   required
                   value={name}
                 />
+              </label>
+              <label className="grid gap-1.5 text-sm font-medium text-muted">
+                {t("tripDetails.googleMapsUrl")}
+                <input
+                  aria-invalid={Boolean(googleMapsError)}
+                  className="rounded-xl border border-border bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
+                  onChange={(event) => setGoogleMapsUrl(event.target.value)}
+                  placeholder={t("tripDetails.googleMapsPlaceholder")}
+                  type="url"
+                  value={googleMapsUrl}
+                />
+                {googleMapsError && (
+                  <span className="font-normal text-error">{googleMapsError}</span>
+                )}
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <DatePicker
@@ -751,7 +797,7 @@ export function TripBackupPage({
           </label>
         </div>
       </div>
-      <div className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-5">
+      <div className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)_minmax(22rem,32rem)] lg:items-start lg:gap-5">
         <TripDayNavigator
           days={trip.days}
           getDayScheduleSummary={getReserveDayScheduleSummary}
@@ -765,7 +811,6 @@ export function TripBackupPage({
         />
         <div className="min-w-0">
           {!editingId && renderForm()}
-          <TripMap markers={mapMarkers} />
           <div className="mt-5 grid gap-5 lg:grid-cols-3">
             {sections.map((section) => (
               <section
@@ -795,6 +840,7 @@ export function TripBackupPage({
             ))}
           </div>
         </div>
+        <TripMap markers={mapMarkers} />
       </div>
       <ConfirmDialog
         cancelLabel={t("common.cancel")}

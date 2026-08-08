@@ -100,6 +100,11 @@ const housingStayRowSchema = z.object({
   check_out: DateOnlySchema.nullable(),
   is_backup: z.boolean(),
   notes: z.string().nullable(),
+  google_maps_url: z.string().nullable(),
+  place_name: z.string().nullable(),
+  place_address: z.string().nullable(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
 })
 
 const mealRowSchema = z.object({
@@ -175,7 +180,8 @@ const tripItemPreferenceRowSchema = z.object({
 
 const activityColumns =
   "id, trip_id, trip_date, is_backup, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, latitude, longitude, sort_order"
-const housingStayColumns = "id, trip_id, name, check_in, check_out, is_backup, notes"
+const housingStayColumns =
+  "id, trip_id, name, check_in, check_out, is_backup, notes, google_maps_url, place_name, place_address, latitude, longitude"
 const mealColumns =
   "id, trip_id, trip_date, is_backup, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, latitude, longitude, sort_order"
 
@@ -482,6 +488,11 @@ function mapHousingStayRow(row: unknown): HousingStay {
     checkOut: parsedRow.check_out,
     isBackup: parsedRow.is_backup,
     notes: parsedRow.notes,
+    googleMapsUrl: parsedRow.google_maps_url,
+    placeName: parsedRow.place_name,
+    placeAddress: parsedRow.place_address,
+    latitude: parsedRow.latitude,
+    longitude: parsedRow.longitude,
   })
 }
 
@@ -1082,6 +1093,11 @@ export function createSupabaseTripRepository(): TripRepository {
         check_out: parsedInput.checkOut,
         is_backup: parsedInput.isBackup,
         notes: parsedInput.notes,
+        google_maps_url: parsedInput.googleMapsUrl,
+        place_name: parsedInput.placeName,
+        place_address: parsedInput.placeAddress,
+        latitude: parsedInput.latitude,
+        longitude: parsedInput.longitude,
       })
 
       if (error) {
@@ -1116,6 +1132,11 @@ export function createSupabaseTripRepository(): TripRepository {
         checkOut: currentStay.checkOut,
         isBackup: currentStay.isBackup,
         notes: currentStay.notes,
+        googleMapsUrl: currentStay.googleMapsUrl,
+        placeName: currentStay.placeName,
+        placeAddress: currentStay.placeAddress,
+        latitude: currentStay.latitude,
+        longitude: currentStay.longitude,
         ...input,
       })
       const { error } = await client
@@ -1126,6 +1147,11 @@ export function createSupabaseTripRepository(): TripRepository {
           check_out: parsedInput.checkOut,
           is_backup: parsedInput.isBackup,
           notes: parsedInput.notes,
+          google_maps_url: parsedInput.googleMapsUrl,
+          place_name: parsedInput.placeName,
+          place_address: parsedInput.placeAddress,
+          latitude: parsedInput.latitude,
+          longitude: parsedInput.longitude,
         })
         .eq("trip_id", tripId)
         .eq("id", housingStayId)

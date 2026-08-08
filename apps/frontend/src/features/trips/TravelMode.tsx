@@ -85,6 +85,20 @@ export function TravelMode({ trip }: TravelModeProps) {
           ]
         : [],
     ),
+    ...housingForDay.flatMap((stay) =>
+      stay.latitude !== null && stay.longitude !== null
+        ? [
+            {
+              id: stay.id,
+              type: "housing" as const,
+              title: stay.placeName ?? stay.name,
+              date: selectedDay.date,
+              latitude: stay.latitude,
+              longitude: stay.longitude,
+            },
+          ]
+        : [],
+    ),
   ]
 
   function moveDay(offset: number) {
@@ -141,115 +155,118 @@ export function TravelMode({ trip }: TravelModeProps) {
         )}
       </div>
 
-      <div className="mt-4">
-        <TripMap markers={mapMarkers} />
-      </div>
-
-      {(trip.notes?.trim() || selectedDay.notes?.trim()) && (
-        <div className="mt-4 grid gap-3">
-          {trip.notes?.trim() && (
-            <div className="rounded-2xl border border-gold bg-warning-surface p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold-text">
-                {t("travelMode.tripNote")}
-              </p>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-warning-body">{trip.notes}</p>
-            </div>
-          )}
-          {selectedDay.notes?.trim() && (
-            <div className="rounded-2xl border border-border-soft bg-surface-soft p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-success">
-                {t("travelMode.dayNote")}
-              </p>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-success-body">
-                {selectedDay.notes}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {(housingForDay.length > 0 || mealsForDay.length > 0) && (
-        <div className="mt-4 grid gap-3">
-          {housingForDay.map((stay) => (
-            <article className="rounded-2xl border border-border bg-surface p-4" key={stay.id}>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-                {t("travelMode.housing")}
-              </p>
-              <h3 className="mt-1 font-semibold text-brand">{stay.name}</h3>
-              {stay.notes?.trim() && (
-                <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{stay.notes}</p>
-              )}
-            </article>
-          ))}
-          {mealsForDay.map((meal) => (
-            <article className="rounded-2xl border border-border bg-surface p-4" key={meal.id}>
-              <div className="flex items-start gap-3">
-                <div className="grid min-w-16 place-items-center rounded-xl bg-accent px-2 py-2 text-sm font-semibold text-on-accent">
-                  {formatActivityTime(meal, {
-                    allDay: t("tripDetails.allDay"),
-                    timeNotSet: t("tripDetails.timeNotSet"),
-                  })}
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-                    {t("travelMode.meal")}
+      <div className="mt-4 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(22rem,32rem)] lg:items-start lg:gap-5">
+        <div className="min-w-0">
+          {(trip.notes?.trim() || selectedDay.notes?.trim()) && (
+            <div className="grid gap-3">
+              {trip.notes?.trim() && (
+                <div className="rounded-2xl border border-gold bg-warning-surface p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold-text">
+                    {t("travelMode.tripNote")}
                   </p>
-                  <h3 className="mt-1 font-semibold text-brand">
-                    {getDayItemTitle(meal, t("tripDetails.untitledItem"))}
-                  </h3>
-                  {meal.notes?.trim() && (
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{meal.notes}</p>
-                  )}
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-warning-body">{trip.notes}</p>
                 </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
+              )}
+              {selectedDay.notes?.trim() && (
+                <div className="rounded-2xl border border-border-soft bg-surface-soft p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-success">
+                    {t("travelMode.dayNote")}
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-success-body">
+                    {selectedDay.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
-      <div className="mt-4 grid gap-3">
-        {sortActivities(selectedDay.activities).length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border-dashed p-6 text-sm text-muted">
-            {t("travelMode.noActivities")}
-          </p>
-        ) : (
-          sortActivities(selectedDay.activities).map((activity) => (
-            <article
-              className="rounded-2xl border border-border-card bg-surface p-4"
-              key={activity.id}
-            >
-              <div className="flex items-start gap-3">
-                <div className="grid min-w-16 place-items-center rounded-xl bg-brand-surface px-2 py-2 text-sm font-semibold text-on-brand">
-                  {formatActivityTime(activity, {
-                    allDay: t("tripDetails.allDay"),
-                    timeNotSet: t("tripDetails.timeNotSet"),
-                  })}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-brand">
-                    {getDayItemTitle(activity, t("tripDetails.untitledItem"))}
-                  </h3>
-                  {activity.placeAddress && (
-                    <p className="mt-1 text-sm text-muted">{activity.placeAddress}</p>
+          {(housingForDay.length > 0 || mealsForDay.length > 0) && (
+            <div className="mt-4 grid gap-3">
+              {housingForDay.map((stay) => (
+                <article className="rounded-2xl border border-border bg-surface p-4" key={stay.id}>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+                    {t("travelMode.housing")}
+                  </p>
+                  <h3 className="mt-1 font-semibold text-brand">{stay.name}</h3>
+                  {stay.notes?.trim() && (
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{stay.notes}</p>
                   )}
-                  {activity.notes?.trim() && (
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{activity.notes}</p>
-                  )}
-                  {activity.googleMapsUrl && (
-                    <a
-                      className="mt-3 inline-flex rounded-lg bg-surface-muted px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-soft"
-                      href={activity.googleMapsUrl}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      {t("tripDetails.openGoogleMaps")}
-                    </a>
-                  )}
-                </div>
-              </div>
-            </article>
-          ))
-        )}
+                </article>
+              ))}
+              {mealsForDay.map((meal) => (
+                <article className="rounded-2xl border border-border bg-surface p-4" key={meal.id}>
+                  <div className="flex items-start gap-3">
+                    <div className="grid min-w-16 place-items-center rounded-xl bg-accent px-2 py-2 text-sm font-semibold text-on-accent">
+                      {formatActivityTime(meal, {
+                        allDay: t("tripDetails.allDay"),
+                        timeNotSet: t("tripDetails.timeNotSet"),
+                      })}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+                        {t("travelMode.meal")}
+                      </p>
+                      <h3 className="mt-1 font-semibold text-brand">
+                        {getDayItemTitle(meal, t("tripDetails.untitledItem"))}
+                      </h3>
+                      {meal.notes?.trim() && (
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{meal.notes}</p>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-4 grid gap-3">
+            {sortActivities(selectedDay.activities).length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-border-dashed p-6 text-sm text-muted">
+                {t("travelMode.noActivities")}
+              </p>
+            ) : (
+              sortActivities(selectedDay.activities).map((activity) => (
+                <article
+                  className="rounded-2xl border border-border-card bg-surface p-4"
+                  key={activity.id}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="grid min-w-16 place-items-center rounded-xl bg-brand-surface px-2 py-2 text-sm font-semibold text-on-brand">
+                      {formatActivityTime(activity, {
+                        allDay: t("tripDetails.allDay"),
+                        timeNotSet: t("tripDetails.timeNotSet"),
+                      })}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-brand">
+                        {getDayItemTitle(activity, t("tripDetails.untitledItem"))}
+                      </h3>
+                      {activity.placeAddress && (
+                        <p className="mt-1 text-sm text-muted">{activity.placeAddress}</p>
+                      )}
+                      {activity.notes?.trim() && (
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-muted">
+                          {activity.notes}
+                        </p>
+                      )}
+                      {activity.googleMapsUrl && (
+                        <a
+                          className="mt-3 inline-flex rounded-lg bg-surface-muted px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-soft"
+                          href={activity.googleMapsUrl}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          {t("tripDetails.openGoogleMaps")}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </div>
+        <TripMap markers={mapMarkers} />
       </div>
     </section>
   )

@@ -72,9 +72,11 @@ const resources = {
         travel: "Reise",
       },
       tripMap: {
+        close: "Lukk kart",
         locations_one: "{{count}} sted",
         locations_other: "{{count}} steder",
         noLocations: "Ingen planlagte steder med kartposisjon for de valgte dagene.",
+        open: "Åpne kart",
         title: "Kart",
       },
       backup: {
@@ -342,9 +344,11 @@ const resources = {
         travel: "Travel",
       },
       tripMap: {
+        close: "Close map",
         locations_one: "{{count}} location",
         locations_other: "{{count}} locations",
         noLocations: "No planned places with map coordinates for the selected days.",
+        open: "Open map",
         title: "Map",
       },
       backup: {

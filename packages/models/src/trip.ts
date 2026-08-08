@@ -151,9 +151,15 @@ const HousingStayFieldsSchema = z.object({
 export const HousingStaySchema = HousingStayFieldsSchema.extend({
   id: z.string(),
   tripId: z.string(),
-})
+}).merge(ActivityPlaceSchema)
 
-export const CreateHousingStayInputSchema = HousingStayFieldsSchema.refine(
+export const CreateHousingStayInputSchema = HousingStayFieldsSchema.extend({
+  googleMapsUrl: z.string().url().nullable().optional().default(null),
+  placeName: z.string().trim().max(200).nullable().optional().default(null),
+  placeAddress: z.string().trim().max(500).nullable().optional().default(null),
+  latitude: z.number().min(-90).max(90).nullable().optional().default(null),
+  longitude: z.number().min(-180).max(180).nullable().optional().default(null),
+}).refine(
   (stay) =>
     stay.isBackup ||
     (stay.checkIn !== null && stay.checkOut !== null && stay.checkOut > stay.checkIn),
@@ -167,6 +173,11 @@ export const UpdateHousingStayInputSchema = z
     checkOut: DateOnlySchema.nullable().optional(),
     isBackup: z.boolean().optional(),
     notes: NoteSchema.optional(),
+    googleMapsUrl: z.string().url().nullable().optional(),
+    placeName: z.string().trim().max(200).nullable().optional(),
+    placeAddress: z.string().trim().max(500).nullable().optional(),
+    latitude: z.number().min(-90).max(90).nullable().optional(),
+    longitude: z.number().min(-180).max(180).nullable().optional(),
   })
   .refine(
     (stay) =>
