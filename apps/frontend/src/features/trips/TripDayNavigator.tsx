@@ -115,12 +115,7 @@ export function TripDayNavigator({
                       )}
                     </span>
                     {day.title?.trim() && (
-                      <span
-                        className={`mt-0.5 block truncate text-xs ${
-                          isActive ? "text-soft" : "text-muted"
-                        }`}
-                        title={day.title}
-                      >
+                      <span className={`mt-0.5 block truncate text-xs font-bold`} title={day.title}>
                         {day.title}
                       </span>
                     )}
