@@ -228,7 +228,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
           )}
           <nav
             aria-label={t("tripModes.plan")}
-            className="mt-5 grid grid-cols-3 rounded-xl bg-surface-muted p-1"
+            className="mt-5 grid grid-cols-3 rounded-xl bg-surface-muted p-1 lg:sticky lg:top-0 lg:z-20"
           >
             <Link
               className={`rounded-lg px-3 py-2 text-center text-sm font-semibold ${
