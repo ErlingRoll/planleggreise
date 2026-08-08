@@ -113,10 +113,40 @@ export function TripBackupPage({
     return datesForFiltering.some((date) => stay.checkIn! <= date && date < stay.checkOut!)
   }
 
-  const backupActivities =
+  function sortBackupActivities(activities: Activity[]) {
+    return activities
+      .map((activity, index) => {
+        const preferences = trip.preferences.filter(
+          (preference) => preference.itemType === "activity" && preference.itemId === activity.id,
+        )
+        const greenVotes = preferences.filter((preference) => preference.value === "green").length
+        const redVotes = preferences.filter((preference) => preference.value === "red").length
+
+        return {
+          activity,
+          greenVotes,
+          redVotes,
+          score: greenVotes - redVotes,
+          totalVotes: preferences.length,
+          index,
+        }
+      })
+      .sort(
+        (left, right) =>
+          right.score - left.score ||
+          right.greenVotes - left.greenVotes ||
+          right.totalVotes - left.totalVotes ||
+          left.redVotes - right.redVotes ||
+          left.index - right.index,
+      )
+      .map(({ activity }) => activity)
+  }
+
+  const backupActivities = sortBackupActivities(
     isDesktop && !areAllDaysSelected
       ? allBackupActivities.filter((activity) => isDateSelected(activity.tripDate))
-      : allBackupActivities
+      : allBackupActivities,
+  )
   const backupMeals =
     isDesktop && !areAllDaysSelected
       ? allBackupMeals.filter((meal) => isDateSelected(meal.tripDate))
