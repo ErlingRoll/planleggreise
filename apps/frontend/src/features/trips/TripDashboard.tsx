@@ -229,8 +229,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
                   ? t("tripModes.backup")
                   : t("dashboard.plan")}
             </h1>
-            {!isBackupMode &&
-              selectedTrip &&
+            {selectedTrip &&
               (selectedTrip.itemDetailVisibility.showPrice ||
                 selectedTrip.itemDetailVisibility.showWebsite) && (
                 <button
@@ -284,6 +283,7 @@ export function TripDashboard({ session }: TripDashboardProps) {
               accessToken={session.access_token}
               daySelection={daySelection}
               onTripUpdated={handleTripUpdated}
+              showDetails={showItemDetails}
               trip={selectedTrip}
               userId={session.user.id}
             />

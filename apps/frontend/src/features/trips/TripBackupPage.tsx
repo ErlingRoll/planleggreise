@@ -20,6 +20,7 @@ import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { DatePicker } from "../../components/DatePicker"
 import { TimePicker } from "../../components/TimePicker"
 import { MobileMenuButton } from "../../components/MobileMenuButton"
+import { GoogleMapsLinkButton } from "../../components/GoogleMapsLinkButton"
 import { ItemDetailsEditor } from "../../components/ItemDetails"
 import { TripItemPreference } from "../../components/TripItemPreference"
 import type { ItemDetailValues } from "../../components/ItemDetails"
@@ -46,6 +47,7 @@ type TripBackupPageProps = {
   userId: string
   onTripUpdated: (trip: TripDetail) => void
   daySelection: TripDaySelection
+  showDetails: boolean
 }
 
 export function TripBackupPage({
@@ -54,6 +56,7 @@ export function TripBackupPage({
   userId,
   onTripUpdated,
   daySelection,
+  showDetails,
 }: TripBackupPageProps) {
   const { t } = useTranslation()
   const currencies =
@@ -728,6 +731,12 @@ export function TripBackupPage({
                     : t("backup.noTentativeDates")}
                 </p>
               )}
+              {item.googleMapsUrl && (
+                <GoogleMapsLinkButton
+                  href={item.googleMapsUrl}
+                  label={t("tripDetails.openGoogleMaps")}
+                />
+              )}
             </div>
             <div className="relative flex shrink-0">
               <MobileMenuButton
@@ -780,15 +789,17 @@ export function TripBackupPage({
           {item.notes?.trim() && (
             <p className="whitespace-pre-wrap text-sm text-muted">{item.notes}</p>
           )}
-          <ItemDetailsEditor
-            currencies={currencies}
-            details={{
-              priceAmount: item.priceAmount ?? null,
-              priceCurrency: item.priceCurrency ?? null,
-              website: item.website ?? null,
-            }}
-            onSave={(details) => handleSaveDetails({ item, type }, details)}
-          />
+          {showDetails && (
+            <ItemDetailsEditor
+              currencies={currencies}
+              details={{
+                priceAmount: item.priceAmount ?? null,
+                priceCurrency: item.priceCurrency ?? null,
+                website: item.website ?? null,
+              }}
+              onSave={(details) => handleSaveDetails({ item, type }, details)}
+            />
+          )}
           <TripItemPreference
             disabled={savingPreferenceKey === key}
             itemId={item.id}

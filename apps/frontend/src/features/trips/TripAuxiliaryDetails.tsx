@@ -10,6 +10,7 @@ import {
 import { DatePicker } from "../../components/DatePicker"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { MapLocateButton } from "../../components/MapLocateButton"
+import { GoogleMapsLinkButton } from "../../components/GoogleMapsLinkButton"
 import { MobileMenuButton } from "../../components/MobileMenuButton"
 import { ItemDetailsEditor } from "../../components/ItemDetails"
 import { TripItemPreference } from "../../components/TripItemPreference"
@@ -372,6 +373,12 @@ export function TripAuxiliaryDetails({
                   </div>
                   {stay.notes?.trim() && (
                     <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{stay.notes}</p>
+                  )}
+                  {stay.googleMapsUrl && (
+                    <GoogleMapsLinkButton
+                      href={stay.googleMapsUrl}
+                      label={t("tripDetails.openGoogleMaps")}
+                    />
                   )}
                   {showDetails && (
                     <ItemDetailsEditor

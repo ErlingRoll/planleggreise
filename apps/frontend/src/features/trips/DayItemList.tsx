@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { formatActivityTime, getDayItemTitle, type DayItem } from "../../lib/activity-format"
 import type { Activity, Meal, TripDetail } from "../../api"
 import { MapLocateButton } from "../../components/MapLocateButton"
+import { GoogleMapsLinkButton } from "../../components/GoogleMapsLinkButton"
 import { MobileMenuButton } from "../../components/MobileMenuButton"
 import { ItemDetailsEditor } from "../../components/ItemDetails"
 import { TripItemPreference } from "../../components/TripItemPreference"
@@ -170,14 +171,10 @@ export function DayItemList({
                   <p className="mt-1 text-sm text-muted">{item.placeAddress}</p>
                 )}
                 {item.googleMapsUrl && (
-                  <a
-                    className="mt-2 inline-block text-sm font-semibold text-brand underline"
+                  <GoogleMapsLinkButton
                     href={item.googleMapsUrl}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    {t("tripDetails.openGoogleMaps")}
-                  </a>
+                    label={t("tripDetails.openGoogleMaps")}
+                  />
                 )}
               </div>
               <div className="relative flex shrink-0 flex-col items-end gap-1">
