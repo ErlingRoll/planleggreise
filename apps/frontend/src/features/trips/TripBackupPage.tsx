@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react"
+import { useEffect, useMemo, useState, type FormEvent } from "react"
 import { useTranslation } from "react-i18next"
 import {
   createActivity,
@@ -25,6 +25,7 @@ import { formatActivityTime, getDayItemTitle, sortActivities } from "../../lib/a
 import { formatDate } from "../../lib/date-format"
 import { shiftDate } from "../../lib/trip-dates"
 import { TripDayNavigator } from "./TripDayNavigator"
+import { TripMap, type TripMapMarker } from "./TripMap"
 import type { TripDaySelection } from "./useTripDaySelection"
 import {
   isAllowedGoogleMapsUrl,
@@ -89,9 +90,13 @@ export function TripBackupPage({
   const allBackupHousing = trip.housingStays.filter((stay) => stay.isBackup)
   const { selectedDayDate, selectedDayDates } = daySelection
   const selectedDay = trip.days.find((day) => day.date === selectedDayDate) ?? trip.days[0]
+  const datesForFiltering =
+    selectedDayDates.length > 0 ? selectedDayDates : selectedDay ? [selectedDay.date] : []
+  const areAllDaysSelected =
+    trip.days.length > 0 && trip.days.every((day) => datesForFiltering.includes(day.date))
 
   function isDateSelected(date: string | null) {
-    return date === null || selectedDayDates.includes(date)
+    return date === null || datesForFiltering.includes(date)
   }
 
   function isHousingSelected(stay: HousingStay) {
@@ -99,16 +104,54 @@ export function TripBackupPage({
       return true
     }
 
-    return selectedDayDates.some((date) => stay.checkIn! <= date && date < stay.checkOut!)
+    return datesForFiltering.some((date) => stay.checkIn! <= date && date < stay.checkOut!)
   }
 
-  const backupActivities = isDesktop
-    ? allBackupActivities.filter((activity) => isDateSelected(activity.tripDate))
-    : allBackupActivities
-  const backupMeals = isDesktop
-    ? allBackupMeals.filter((meal) => isDateSelected(meal.tripDate))
-    : allBackupMeals
-  const backupHousing = isDesktop ? allBackupHousing.filter(isHousingSelected) : allBackupHousing
+  const backupActivities =
+    isDesktop && !areAllDaysSelected
+      ? allBackupActivities.filter((activity) => isDateSelected(activity.tripDate))
+      : allBackupActivities
+  const backupMeals =
+    isDesktop && !areAllDaysSelected
+      ? allBackupMeals.filter((meal) => isDateSelected(meal.tripDate))
+      : allBackupMeals
+  const backupHousing =
+    isDesktop && !areAllDaysSelected ? allBackupHousing.filter(isHousingSelected) : allBackupHousing
+  const mapMarkers = useMemo<TripMapMarker[]>(() => {
+    const visibleActivities = isDesktop ? backupActivities : allBackupActivities
+    const visibleMeals = isDesktop ? backupMeals : allBackupMeals
+
+    return [
+      ...visibleActivities.flatMap((activity) =>
+        activity.tripDate !== null && activity.latitude !== null && activity.longitude !== null
+          ? [
+              {
+                id: activity.id,
+                type: "activity" as const,
+                title: activity.title ?? activity.placeName ?? t("tripDetails.untitledItem"),
+                date: activity.tripDate,
+                latitude: activity.latitude,
+                longitude: activity.longitude,
+              },
+            ]
+          : [],
+      ),
+      ...visibleMeals.flatMap((meal) =>
+        meal.tripDate !== null && meal.latitude !== null && meal.longitude !== null
+          ? [
+              {
+                id: meal.id,
+                type: "meal" as const,
+                title: meal.title ?? meal.placeName ?? t("tripDetails.untitledItem"),
+                date: meal.tripDate,
+                latitude: meal.latitude,
+                longitude: meal.longitude,
+              },
+            ]
+          : [],
+      ),
+    ]
+  }, [allBackupActivities, allBackupMeals, backupActivities, backupMeals, isDesktop, t])
 
   function getReserveDayScheduleSummary(day: TripDetail["days"][number]) {
     const count =
@@ -361,6 +404,8 @@ export function TripBackupPage({
           googleMapsUrl: normalizedGoogleMapsUrl || null,
           placeName: null,
           placeAddress: null,
+          latitude: null,
+          longitude: null,
         }
         const saved =
           formType === "activity"
@@ -720,6 +765,7 @@ export function TripBackupPage({
         />
         <div className="min-w-0">
           {!editingId && renderForm()}
+          <TripMap markers={mapMarkers} />
           <div className="mt-5 grid gap-5 lg:grid-cols-3">
             {sections.map((section) => (
               <section

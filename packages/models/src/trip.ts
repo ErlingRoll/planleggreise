@@ -72,6 +72,8 @@ const ActivityPlaceSchema = z.object({
   googleMapsUrl: z.string().url().nullable(),
   placeName: z.string().trim().max(200).nullable(),
   placeAddress: z.string().trim().max(500).nullable(),
+  latitude: z.number().min(-90).max(90).nullable(),
+  longitude: z.number().min(-180).max(180).nullable(),
 })
 
 function hasValidTimeRange(
@@ -91,6 +93,8 @@ export const CreateActivityInputSchema = ActivityFieldsSchema.extend({
   googleMapsUrl: z.string().url().nullable().optional().default(null),
   placeName: z.string().trim().max(200).nullable().optional().default(null),
   placeAddress: z.string().trim().max(500).nullable().optional().default(null),
+  latitude: z.number().min(-90).max(90).nullable().optional().default(null),
+  longitude: z.number().min(-180).max(180).nullable().optional().default(null),
 })
   .refine(
     (activity) => Boolean(activity.title?.trim()) || Boolean(activity.googleMapsUrl),
@@ -117,6 +121,8 @@ export const UpdateActivityInputSchema = z
     googleMapsUrl: z.string().url().nullable().optional(),
     placeName: z.string().trim().max(200).nullable().optional(),
     placeAddress: z.string().trim().max(500).nullable().optional(),
+    latitude: z.number().min(-90).max(90).nullable().optional(),
+    longitude: z.number().min(-180).max(180).nullable().optional(),
     sortOrder: z.number().int().nonnegative().optional(),
   })
   .refine(
@@ -192,6 +198,8 @@ export const CreateMealInputSchema = MealFieldsSchema.extend({
   googleMapsUrl: z.string().url().nullable().optional().default(null),
   placeName: z.string().trim().max(200).nullable().optional().default(null),
   placeAddress: z.string().trim().max(500).nullable().optional().default(null),
+  latitude: z.number().min(-90).max(90).nullable().optional().default(null),
+  longitude: z.number().min(-180).max(180).nullable().optional().default(null),
 })
   .refine(
     (meal) => Boolean(meal.title?.trim()) || Boolean(meal.googleMapsUrl),
@@ -215,6 +223,8 @@ export const UpdateMealInputSchema = z
     googleMapsUrl: z.string().url().nullable().optional(),
     placeName: z.string().trim().max(200).nullable().optional(),
     placeAddress: z.string().trim().max(500).nullable().optional(),
+    latitude: z.number().min(-90).max(90).nullable().optional(),
+    longitude: z.number().min(-180).max(180).nullable().optional(),
     sortOrder: z.number().int().nonnegative().optional(),
   })
   .refine(

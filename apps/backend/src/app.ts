@@ -1029,6 +1029,8 @@ export function createApp(dependencies: AppDependencies = {}) {
               title: mealInput.title?.trim() || null,
               placeName: place.name,
               placeAddress: place.address,
+              latitude: place.latitude,
+              longitude: place.longitude,
             }
           } catch (error) {
             if (error instanceof GooglePlacesError) {
@@ -1111,6 +1113,8 @@ export function createApp(dependencies: AppDependencies = {}) {
           googleMapsUrl: currentMeal.googleMapsUrl,
           placeName: currentMeal.placeName,
           placeAddress: currentMeal.placeAddress,
+          latitude: currentMeal.latitude,
+          longitude: currentMeal.longitude,
           ...parsedInput.data,
         })
 
@@ -1140,6 +1144,8 @@ export function createApp(dependencies: AppDependencies = {}) {
                   : parsedInput.data.title?.trim() || null,
               placeName: place.name,
               placeAddress: place.address,
+              latitude: place.latitude,
+              longitude: place.longitude,
             }
           } catch (error) {
             if (error instanceof GooglePlacesError) {
@@ -1153,6 +1159,8 @@ export function createApp(dependencies: AppDependencies = {}) {
             ...mealInput,
             placeName: null,
             placeAddress: null,
+            latitude: null,
+            longitude: null,
           }
         }
 
@@ -1259,6 +1267,8 @@ export function createApp(dependencies: AppDependencies = {}) {
               title: activityInput.title?.trim() || null,
               placeName: place.name,
               placeAddress: place.address,
+              latitude: place.latitude,
+              longitude: place.longitude,
             }
           } catch (error) {
             if (error instanceof GooglePlacesError) {
@@ -1523,6 +1533,8 @@ export function createApp(dependencies: AppDependencies = {}) {
                   : parsedInput.data.title?.trim() || null,
               placeName: place.name,
               placeAddress: place.address,
+              latitude: place.latitude,
+              longitude: place.longitude,
             }
           } catch (error) {
             if (error instanceof GooglePlacesError) {
@@ -1536,6 +1548,8 @@ export function createApp(dependencies: AppDependencies = {}) {
             ...activityInput,
             placeName: null,
             placeAddress: null,
+            latitude: null,
+            longitude: null,
           }
         }
 

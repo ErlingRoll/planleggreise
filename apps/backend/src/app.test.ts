@@ -57,6 +57,8 @@ const testActivity: Activity = {
   googleMapsUrl: null,
   placeName: null,
   placeAddress: null,
+  latitude: null,
+  longitude: null,
   sortOrder: 0,
 }
 
@@ -149,6 +151,8 @@ function createTestApp(
       googleMapsUrl: input.googleMapsUrl ?? null,
       placeName: input.placeName ?? null,
       placeAddress: input.placeAddress ?? null,
+      latitude: input.latitude ?? null,
+      longitude: input.longitude ?? null,
       sortOrder: 0,
     }),
     updateMeal: async () => null,
@@ -202,6 +206,8 @@ function createTestApp(
           googleMapsUrl: null,
           placeName: null,
           placeAddress: null,
+          latitude: null,
+          longitude: null,
           sortOrder: item.sortOrder,
         })),
     }),
@@ -553,6 +559,8 @@ test("meal creation resolves a Google Maps link", async () => {
     createTestApp(async () => ({
       name: "Mathallen",
       address: "Vulkan 5, Oslo",
+      latitude: 59.922,
+      longitude: 10.752,
     })),
   )
     .post("/api/trips/trip-1/meals")
@@ -571,6 +579,8 @@ test("meal creation resolves a Google Maps link", async () => {
   assert.equal(response.body.title, null)
   assert.equal(response.body.placeName, "Mathallen")
   assert.equal(response.body.placeAddress, "Vulkan 5, Oslo")
+  assert.equal(response.body.latitude, 59.922)
+  assert.equal(response.body.longitude, 10.752)
 })
 
 test("meal creation keeps a custom title when resolving a Google Maps link", async () => {
@@ -578,6 +588,8 @@ test("meal creation keeps a custom title when resolving a Google Maps link", asy
     createTestApp(async () => ({
       name: "Mathallen",
       address: "Vulkan 5, Oslo",
+      latitude: 59.922,
+      longitude: 10.752,
     })),
   )
     .post("/api/trips/trip-1/meals")
@@ -595,6 +607,43 @@ test("meal creation keeps a custom title when resolving a Google Maps link", asy
   assert.equal(response.status, 201)
   assert.equal(response.body.title, "Dinner at Mathallen")
   assert.equal(response.body.placeName, "Mathallen")
+})
+
+test("meal updates clear place coordinates when a Google Maps link is removed", async () => {
+  const linkedMeal: Meal = {
+    id: "meal-1",
+    tripId: "trip-1",
+    tripDate: "2026-08-11",
+    isBackup: false,
+    title: "Middag",
+    startTime: null,
+    endTime: null,
+    allDay: true,
+    notes: null,
+    googleMapsUrl: "https://maps.app.goo.gl/UqkAP8Bc5mx1tcVq6",
+    placeName: "Mathallen",
+    placeAddress: "Vulkan 5, Oslo",
+    latitude: 59.922,
+    longitude: 10.752,
+    sortOrder: 0,
+  }
+  const response = await request(
+    createTestApp(undefined, testTripDetail, {
+      getMeal: async () => linkedMeal,
+      updateMeal: async (_userId, _accessToken, _tripId, _mealId, input) => ({
+        ...linkedMeal,
+        ...input,
+      }),
+    }),
+  )
+    .patch("/api/trips/trip-1/meals/meal-1")
+    .set("Authorization", "Bearer valid-token")
+    .send({ title: "Middag", googleMapsUrl: null })
+
+  assert.equal(response.status, 200)
+  assert.equal(response.body.googleMapsUrl, null)
+  assert.equal(response.body.latitude, null)
+  assert.equal(response.body.longitude, null)
 })
 
 test("full Google Maps place links are accepted", () => {
@@ -619,6 +668,7 @@ test("Google Places resolves a full place URL without redirect resolution", asyn
           {
             displayName: { text: "Oslo Camping" },
             formattedAddress: "Ekebergveien 65, Oslo",
+            location: { latitude: 59.9144933, longitude: 10.7475191 },
           },
         ],
       }),
@@ -632,6 +682,8 @@ test("Google Places resolves a full place URL without redirect resolution", asyn
     assert.deepEqual(place, {
       name: "Oslo Camping",
       address: "Ekebergveien 65, Oslo",
+      latitude: 59.9144933,
+      longitude: 10.7475191,
     })
     assert.deepEqual(requests, ["https://places.googleapis.com/v1/places:searchText"])
   } finally {
@@ -739,6 +791,8 @@ test("activity creation resolves a Google Maps link", async () => {
     createTestApp(async () => ({
       name: "Colosseum",
       address: "Piazza del Colosseo, 1, Rome",
+      latitude: 41.8902,
+      longitude: 12.4922,
     })),
   )
     .post("/api/trips/trip-1/activities")
@@ -757,6 +811,8 @@ test("activity creation resolves a Google Maps link", async () => {
   assert.equal(response.body.title, "Colosseum entrance")
   assert.equal(response.body.placeName, "Colosseum")
   assert.equal(response.body.placeAddress, "Piazza del Colosseo, 1, Rome")
+  assert.equal(response.body.latitude, 41.8902)
+  assert.equal(response.body.longitude, 12.4922)
 })
 
 test("activity updates resolve a Google Maps link", async () => {
@@ -764,6 +820,8 @@ test("activity updates resolve a Google Maps link", async () => {
     createTestApp(async () => ({
       name: "Colosseum",
       address: "Piazza del Colosseo, 1, Rome",
+      latitude: 41.8902,
+      longitude: 12.4922,
     })),
   )
     .patch("/api/trips/trip-1/activities/activity-1")
@@ -775,6 +833,36 @@ test("activity updates resolve a Google Maps link", async () => {
   assert.equal(response.status, 200)
   assert.equal(response.body.title, "Besøke museet")
   assert.equal(response.body.placeName, "Colosseum")
+  assert.equal(response.body.latitude, 41.8902)
+  assert.equal(response.body.longitude, 12.4922)
+})
+
+test("activity updates clear place coordinates when a Google Maps link is removed", async () => {
+  const linkedActivity: Activity = {
+    ...testActivity,
+    googleMapsUrl: "https://maps.app.goo.gl/UqkAP8Bc5mx1tcVq6",
+    placeName: "Colosseum",
+    placeAddress: "Piazza del Colosseo, 1, Rome",
+    latitude: 41.8902,
+    longitude: 12.4922,
+  }
+  const response = await request(
+    createTestApp(undefined, testTripDetail, {
+      getActivity: async () => linkedActivity,
+      updateActivity: async (_userId, _accessToken, _tripId, _activityId, input) => ({
+        ...linkedActivity,
+        ...input,
+      }),
+    }),
+  )
+    .patch("/api/trips/trip-1/activities/activity-1")
+    .set("Authorization", "Bearer valid-token")
+    .send({ title: "Besøke museet", googleMapsUrl: null })
+
+  assert.equal(response.status, 200)
+  assert.equal(response.body.googleMapsUrl, null)
+  assert.equal(response.body.latitude, null)
+  assert.equal(response.body.longitude, null)
 })
 
 test("activity updates preserve a custom title when a Google Maps link is added", async () => {
@@ -782,6 +870,8 @@ test("activity updates preserve a custom title when a Google Maps link is added"
     createTestApp(async () => ({
       name: "Colosseum",
       address: "Piazza del Colosseo, 1, Rome",
+      latitude: 41.8902,
+      longitude: 12.4922,
     })),
   )
     .patch("/api/trips/trip-1/activities/activity-1")

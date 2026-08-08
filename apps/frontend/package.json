@@ -10,9 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@turprep/models": "^0.1.0",
     "@supabase/supabase-js": "^2.57.4",
+    "@turprep/models": "^0.1.0",
     "i18next": "^26.3.6",
+    "maplibre-gl": "^6.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-i18next": "^17.0.11",

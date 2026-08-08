@@ -87,6 +87,8 @@ const activityRowSchema = z.object({
   google_maps_url: z.string().nullable(),
   place_name: z.string().nullable(),
   place_address: z.string().nullable(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
   sort_order: z.number().int(),
 })
 
@@ -113,6 +115,8 @@ const mealRowSchema = z.object({
   google_maps_url: z.string().nullable(),
   place_name: z.string().nullable(),
   place_address: z.string().nullable(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
   sort_order: z.number().int(),
 })
 
@@ -170,10 +174,10 @@ const tripItemPreferenceRowSchema = z.object({
 })
 
 const activityColumns =
-  "id, trip_id, trip_date, is_backup, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order"
+  "id, trip_id, trip_date, is_backup, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, latitude, longitude, sort_order"
 const housingStayColumns = "id, trip_id, name, check_in, check_out, is_backup, notes"
 const mealColumns =
-  "id, trip_id, trip_date, is_backup, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, sort_order"
+  "id, trip_id, trip_date, is_backup, title, start_time, end_time, all_day, notes, google_maps_url, place_name, place_address, latitude, longitude, sort_order"
 
 async function getHighestDayItemSortOrder(
   client: SupabaseClient,
@@ -461,6 +465,8 @@ function mapActivityRow(row: unknown): Activity {
     googleMapsUrl: parsedRow.google_maps_url,
     placeName: parsedRow.place_name,
     placeAddress: parsedRow.place_address,
+    latitude: parsedRow.latitude,
+    longitude: parsedRow.longitude,
     sortOrder: parsedRow.sort_order,
   })
 }
@@ -495,6 +501,8 @@ function mapMealRow(row: unknown): Meal {
     googleMapsUrl: parsedRow.google_maps_url,
     placeName: parsedRow.place_name,
     placeAddress: parsedRow.place_address,
+    latitude: parsedRow.latitude,
+    longitude: parsedRow.longitude,
     sortOrder: parsedRow.sort_order,
   })
 }
@@ -1187,6 +1195,8 @@ export function createSupabaseTripRepository(): TripRepository {
         google_maps_url: parsedInput.googleMapsUrl,
         place_name: parsedInput.placeName,
         place_address: parsedInput.placeAddress,
+        latitude: parsedInput.latitude,
+        longitude: parsedInput.longitude,
         sort_order: highestSortOrder + 1,
       })
 
@@ -1224,6 +1234,11 @@ export function createSupabaseTripRepository(): TripRepository {
         endTime: currentMeal.endTime,
         allDay: currentMeal.allDay,
         notes: currentMeal.notes,
+        googleMapsUrl: currentMeal.googleMapsUrl,
+        placeName: currentMeal.placeName,
+        placeAddress: currentMeal.placeAddress,
+        latitude: currentMeal.latitude,
+        longitude: currentMeal.longitude,
         ...input,
       })
       const { error } = await client
@@ -1239,6 +1254,8 @@ export function createSupabaseTripRepository(): TripRepository {
           google_maps_url: parsedInput.googleMapsUrl,
           place_name: parsedInput.placeName,
           place_address: parsedInput.placeAddress,
+          latitude: parsedInput.latitude,
+          longitude: parsedInput.longitude,
         })
         .eq("trip_id", tripId)
         .eq("id", mealId)
@@ -1292,6 +1309,8 @@ export function createSupabaseTripRepository(): TripRepository {
         google_maps_url: parsedInput.googleMapsUrl,
         place_name: parsedInput.placeName,
         place_address: parsedInput.placeAddress,
+        latitude: parsedInput.latitude,
+        longitude: parsedInput.longitude,
         sort_order: highestSortOrder + 1,
       })
 
@@ -1318,6 +1337,11 @@ export function createSupabaseTripRepository(): TripRepository {
         endTime: currentActivity.endTime,
         allDay: currentActivity.allDay,
         notes: currentActivity.notes,
+        googleMapsUrl: currentActivity.googleMapsUrl,
+        placeName: currentActivity.placeName,
+        placeAddress: currentActivity.placeAddress,
+        latitude: currentActivity.latitude,
+        longitude: currentActivity.longitude,
         ...input,
       })
       const parsedUpdateInput = UpdateActivityInputSchema.parse(input)
@@ -1334,6 +1358,8 @@ export function createSupabaseTripRepository(): TripRepository {
           google_maps_url: parsedInput.googleMapsUrl,
           place_name: parsedInput.placeName,
           place_address: parsedInput.placeAddress,
+          latitude: parsedInput.latitude,
+          longitude: parsedInput.longitude,
           sort_order: parsedUpdateInput.sortOrder ?? currentActivity.sortOrder,
         })
         .eq("trip_id", tripId)

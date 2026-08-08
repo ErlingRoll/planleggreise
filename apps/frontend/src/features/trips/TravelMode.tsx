@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 import type { TripDetail } from "../../api"
 import { formatActivityTime, getDayItemTitle, sortActivities } from "../../lib/activity-format"
 import { formatDate } from "../../lib/date-format"
+import { TripMap, type TripMapMarker } from "./TripMap"
 
 type TravelModeProps = {
   trip: TripDetail
@@ -55,6 +56,36 @@ export function TravelMode({ trip }: TravelModeProps) {
       selectedDay.date < stay.checkOut,
   )
   const mealsForDay = trip.meals.filter((meal) => meal.tripDate === selectedDay.date)
+  const mapMarkers: TripMapMarker[] = [
+    ...selectedDay.activities.flatMap((activity) =>
+      activity.latitude !== null && activity.longitude !== null
+        ? [
+            {
+              id: activity.id,
+              type: "activity" as const,
+              title: getDayItemTitle(activity, t("tripDetails.untitledItem")),
+              date: selectedDay.date,
+              latitude: activity.latitude,
+              longitude: activity.longitude,
+            },
+          ]
+        : [],
+    ),
+    ...mealsForDay.flatMap((meal) =>
+      meal.latitude !== null && meal.longitude !== null
+        ? [
+            {
+              id: meal.id,
+              type: "meal" as const,
+              title: getDayItemTitle(meal, t("tripDetails.untitledItem")),
+              date: selectedDay.date,
+              latitude: meal.latitude,
+              longitude: meal.longitude,
+            },
+          ]
+        : [],
+    ),
+  ]
 
   function moveDay(offset: number) {
     const nextDay = trip.days[selectedDayIndex + offset]
@@ -108,6 +139,10 @@ export function TravelMode({ trip }: TravelModeProps) {
               : t("travelMode.ended")}
           </p>
         )}
+      </div>
+
+      <div className="mt-4">
+        <TripMap markers={mapMarkers} />
       </div>
 
       {(trip.notes?.trim() || selectedDay.notes?.trim()) && (

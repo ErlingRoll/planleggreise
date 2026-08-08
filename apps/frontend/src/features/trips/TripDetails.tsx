@@ -1,4 +1,4 @@
-import { useRef, useState, type DragEvent, type FormEvent } from "react"
+import { useMemo, useRef, useState, type DragEvent, type FormEvent } from "react"
 import { useTranslation } from "react-i18next"
 import {
   createActivity,
@@ -35,6 +35,7 @@ import { MoveDayItemForm } from "./MoveDayItemForm"
 import { TripDayCard } from "./TripDayCard"
 import { TripDayNavigator } from "./TripDayNavigator"
 import { TripDetailsHeader } from "./TripDetailsHeader"
+import { TripMap, type TripMapMarker } from "./TripMap"
 import { useTripRealtime } from "./useTripRealtime"
 import type { TripDaySelection } from "./useTripDaySelection"
 import type { DayItemRecord, DropTarget, MovingItem, PlannerTab } from "./planner-types"
@@ -108,6 +109,56 @@ export function TripDetails({
   const reorderQueueRef = useRef(Promise.resolve())
   const pendingReorderCountRef = useRef(0)
   const reorderGenerationRef = useRef(0)
+  const { selectedDayDate, selectedDayDates, onSelectAll, onSelectDay, onToggleDay } = daySelection
+  const mapMarkers = useMemo<TripMapMarker[]>(() => {
+    if (!trip) {
+      return []
+    }
+
+    const selectedDay = trip.days.find((day) => day.date === selectedDayDate) ?? trip.days[0]
+    const mapDates = new Set(
+      selectedDayDates.length > 0 ? selectedDayDates : selectedDay ? [selectedDay.date] : [],
+    )
+
+    return [
+      ...trip.days.flatMap((day) =>
+        mapDates.has(day.date)
+          ? day.activities.flatMap((activity) =>
+              activity.latitude !== null && activity.longitude !== null
+                ? [
+                    {
+                      id: activity.id,
+                      type: "activity" as const,
+                      title: activity.title ?? activity.placeName ?? t("tripDetails.untitledItem"),
+                      date: day.date,
+                      latitude: activity.latitude,
+                      longitude: activity.longitude,
+                    },
+                  ]
+                : [],
+            )
+          : [],
+      ),
+      ...trip.meals.flatMap((meal) =>
+        !meal.isBackup &&
+        meal.tripDate !== null &&
+        mapDates.has(meal.tripDate) &&
+        meal.latitude !== null &&
+        meal.longitude !== null
+          ? [
+              {
+                id: meal.id,
+                type: "meal" as const,
+                title: meal.title ?? meal.placeName ?? t("tripDetails.untitledItem"),
+                date: meal.tripDate,
+                latitude: meal.latitude,
+                longitude: meal.longitude,
+              },
+            ]
+          : [],
+      ),
+    ]
+  }, [selectedDayDate, selectedDayDates, t, trip])
 
   useTripRealtime({
     accessToken,
@@ -134,7 +185,6 @@ export function TripDetails({
   }
 
   const currentTrip = trip
-  const { selectedDayDate, selectedDayDates, onSelectAll, onSelectDay, onToggleDay } = daySelection
   const normalizedGoogleMapsUrl = googleMapsUrl.trim()
   const googleMapsUrlIsInvalid =
     normalizedGoogleMapsUrl.length > 0 && !isAllowedGoogleMapsUrl(normalizedGoogleMapsUrl)
@@ -755,6 +805,8 @@ export function TripDetails({
         googleMapsUrl: normalizedGoogleMapsUrl || null,
         placeName: null,
         placeAddress: null,
+        latitude: null,
+        longitude: null,
       }
       let nextTrip: TripDetail
       let savedItem: DayItem
@@ -1071,6 +1123,7 @@ export function TripDetails({
               ))}
             </div>
           </div>
+          <TripMap markers={mapMarkers} />
           <div className={`${showMobileHousing ? "block" : "hidden"} lg:hidden`}>
             <TripAuxiliaryDetails
               accessToken={accessToken}

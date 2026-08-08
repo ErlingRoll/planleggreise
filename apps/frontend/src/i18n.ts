@@ -71,6 +71,12 @@ const resources = {
         plan: "Plan",
         travel: "Reise",
       },
+      tripMap: {
+        locations_one: "{{count}} sted",
+        locations_other: "{{count}} steder",
+        noLocations: "Ingen planlagte steder med kartposisjon for de valgte dagene.",
+        title: "Kart",
+      },
       backup: {
         activate: "Legg i planen",
         add: "Legg til i reserve",
@@ -334,6 +340,12 @@ const resources = {
         backup: "Reserve",
         plan: "Plan",
         travel: "Travel",
+      },
+      tripMap: {
+        locations_one: "{{count}} location",
+        locations_other: "{{count}} locations",
+        noLocations: "No planned places with map coordinates for the selected days.",
+        title: "Map",
       },
       backup: {
         activate: "Add to plan",

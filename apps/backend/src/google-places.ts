@@ -5,6 +5,13 @@ import { PRODUCT_USER_AGENT } from "./brand.js"
 const placeDetailsSchema = z.object({
   displayName: z.object({ text: z.string().min(1) }),
   formattedAddress: z.string().min(1),
+  location: z
+    .object({
+      latitude: z.number().nullable().optional(),
+      longitude: z.number().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
 })
 
 const placeSearchSchema = z.object({
@@ -14,6 +21,8 @@ const placeSearchSchema = z.object({
 export type ResolvedGooglePlace = {
   name: string
   address: string
+  latitude: number | null
+  longitude: number | null
 }
 
 export type GooglePlacesResolver = (googleMapsUrl: string) => Promise<ResolvedGooglePlace>
@@ -92,7 +101,7 @@ async function requestGooglePlaces(apiKey: string, url: string): Promise<Resolve
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": "places.displayName,places.formattedAddress",
+      "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location",
     },
     body: JSON.stringify({
       languageCode: "nb",
@@ -113,6 +122,8 @@ async function requestGooglePlaces(apiKey: string, url: string): Promise<Resolve
   return {
     name: result.data.places[0].displayName.text,
     address: result.data.places[0].formattedAddress,
+    latitude: result.data.places[0].location?.latitude ?? null,
+    longitude: result.data.places[0].location?.longitude ?? null,
   }
 }
 
