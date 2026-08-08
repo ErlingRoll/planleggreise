@@ -95,8 +95,8 @@ const resources = {
         voteCount: "{{count}} stemmer",
       },
       theme: {
-        darkMode: "Mørk modus",
-        lightMode: "Lys modus",
+        darkMode: "Mørk",
+        lightMode: "Lys",
         switchToDark: "Bytt til mørk modus",
         switchToLight: "Bytt til lys modus",
       },
@@ -358,8 +358,8 @@ const resources = {
         voteCount: "{{count}} votes",
       },
       theme: {
-        darkMode: "Dark mode",
-        lightMode: "Light mode",
+        darkMode: "Dark",
+        lightMode: "Light",
         switchToDark: "Switch to dark mode",
         switchToLight: "Switch to light mode",
       },

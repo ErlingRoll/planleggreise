@@ -1,7 +1,9 @@
 import type { DragEvent, ReactNode } from "react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { formatActivityTime, getDayItemTitle, type DayItem } from "../../lib/activity-format"
 import type { Activity, Meal, TripDetail } from "../../api"
+import { MobileMenuButton } from "../../components/MobileMenuButton"
 import { TripItemPreference } from "../../components/TripItemPreference"
 import type { TripItemPreferenceValue, TripItemType } from "@turprep/models"
 import type { DayItemRecord, DropTarget, MovingItem, PlannerTab } from "./planner-types"
@@ -74,6 +76,7 @@ export function DayItemList({
   onPreferenceChange,
 }: DayItemListProps) {
   const { t } = useTranslation()
+  const [openMenuItemId, setOpenMenuItemId] = useState<string | null>(null)
   const orderedItems =
     itemType === "meals"
       ? items.filter((item) => getDayItemRecord(item).itemType === "meal")
@@ -122,6 +125,12 @@ export function DayItemList({
                 <p className="font-semibold text-brand">
                   {getDayItemTitle(item, t("tripDetails.untitledItem"))}
                 </p>
+                <p className="mt-1">
+                  {formatActivityTime(item, {
+                    allDay: t("tripDetails.allDay"),
+                    timeNotSet: t("tripDetails.timeNotSet"),
+                  })}
+                </p>
                 {record.itemType === "meal" && (
                   <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-accent-text">
                     {t("tripDetails.meal")}
@@ -130,12 +139,6 @@ export function DayItemList({
                 {item.placeAddress && (
                   <p className="mt-1 text-sm text-muted">{item.placeAddress}</p>
                 )}
-                <p className="mt-1 text-sm text-muted">
-                  {formatActivityTime(item, {
-                    allDay: t("tripDetails.allDay"),
-                    timeNotSet: t("tripDetails.timeNotSet"),
-                  })}
-                </p>
                 {item.googleMapsUrl && (
                   <a
                     className="mt-2 inline-block text-sm font-semibold text-brand underline"
@@ -147,53 +150,126 @@ export function DayItemList({
                   </a>
                 )}
               </div>
-              <div className="flex shrink-0 flex-wrap justify-end gap-1">
-                <button
-                  className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
-                  disabled={editingItemId !== null || movingItem !== null}
-                  onClick={() => onStartMoving(record)}
-                  type="button"
-                >
-                  {t("common.move")}
-                </button>
-                <button
-                  className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
-                  disabled={editingItemId !== null || movingItem !== null}
-                  onClick={() =>
-                    record.itemType === "meal"
-                      ? onMoveMealToBackup(record.item)
-                      : onMoveActivityToBackup(record.item)
+              <div className="relative shrink-0">
+                <MobileMenuButton
+                  closeLabel={t("common.close")}
+                  isOpen={openMenuItemId === item.id}
+                  menuLabel={t("common.menu")}
+                  onToggle={() =>
+                    setOpenMenuItemId((currentId) => (currentId === item.id ? null : item.id))
                   }
-                  type="button"
-                >
-                  {t("backup.moveToBackup")}
-                </button>
-                <button
-                  className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
-                  disabled={movingItem !== null}
-                  onClick={() =>
-                    record.itemType === "meal"
-                      ? onEditMeal(record.item)
-                      : onEditActivity(record.item)
-                  }
-                  type="button"
-                >
-                  {t("common.edit")}
-                </button>
-                <button
-                  className="rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface disabled:opacity-50"
-                  disabled={
-                    deletingItemId === item.id || editingItemId !== null || movingItem !== null
-                  }
-                  onClick={() =>
-                    record.itemType === "meal"
-                      ? onDeleteMeal(record.item)
-                      : onDeleteActivity(record.item)
-                  }
-                  type="button"
-                >
-                  {deletingItemId === item.id ? "..." : t("common.delete")}
-                </button>
+                  openLabel={t("common.menu")}
+                />
+                {openMenuItemId === item.id && (
+                  <div className="absolute right-0 z-10 mt-1 grid min-w-40 gap-1 rounded-xl border border-border bg-surface p-1 shadow-popover sm:hidden">
+                    <button
+                      className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
+                      disabled={editingItemId !== null || movingItem !== null}
+                      onClick={() => {
+                        setOpenMenuItemId(null)
+                        onStartMoving(record)
+                      }}
+                      type="button"
+                    >
+                      {t("common.move")}
+                    </button>
+                    <button
+                      className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
+                      disabled={editingItemId !== null || movingItem !== null}
+                      onClick={() => {
+                        setOpenMenuItemId(null)
+                        if (record.itemType === "meal") {
+                          onMoveMealToBackup(record.item)
+                        } else {
+                          onMoveActivityToBackup(record.item)
+                        }
+                      }}
+                      type="button"
+                    >
+                      {t("backup.moveToBackup")}
+                    </button>
+                    <button
+                      className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
+                      disabled={movingItem !== null}
+                      onClick={() => {
+                        setOpenMenuItemId(null)
+                        if (record.itemType === "meal") {
+                          onEditMeal(record.item)
+                        } else {
+                          onEditActivity(record.item)
+                        }
+                      }}
+                      type="button"
+                    >
+                      {t("common.edit")}
+                    </button>
+                    <button
+                      className="rounded-lg px-3 py-2 text-left text-xs font-semibold text-error hover:bg-danger-surface disabled:opacity-50"
+                      disabled={
+                        deletingItemId === item.id || editingItemId !== null || movingItem !== null
+                      }
+                      onClick={() => {
+                        setOpenMenuItemId(null)
+                        if (record.itemType === "meal") {
+                          onDeleteMeal(record.item)
+                        } else {
+                          onDeleteActivity(record.item)
+                        }
+                      }}
+                      type="button"
+                    >
+                      {deletingItemId === item.id ? "..." : t("common.delete")}
+                    </button>
+                  </div>
+                )}
+                <div className="hidden flex-wrap justify-end gap-1 sm:flex">
+                  <button
+                    className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
+                    disabled={editingItemId !== null || movingItem !== null}
+                    onClick={() => onStartMoving(record)}
+                    type="button"
+                  >
+                    {t("common.move")}
+                  </button>
+                  <button
+                    className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
+                    disabled={editingItemId !== null || movingItem !== null}
+                    onClick={() =>
+                      record.itemType === "meal"
+                        ? onMoveMealToBackup(record.item)
+                        : onMoveActivityToBackup(record.item)
+                    }
+                    type="button"
+                  >
+                    {t("backup.moveToBackup")}
+                  </button>
+                  <button
+                    className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted disabled:opacity-50"
+                    disabled={movingItem !== null}
+                    onClick={() =>
+                      record.itemType === "meal"
+                        ? onEditMeal(record.item)
+                        : onEditActivity(record.item)
+                    }
+                    type="button"
+                  >
+                    {t("common.edit")}
+                  </button>
+                  <button
+                    className="rounded-lg px-2 py-1 text-xs font-semibold text-error hover:bg-danger-surface disabled:opacity-50"
+                    disabled={
+                      deletingItemId === item.id || editingItemId !== null || movingItem !== null
+                    }
+                    onClick={() =>
+                      record.itemType === "meal"
+                        ? onDeleteMeal(record.item)
+                        : onDeleteActivity(record.item)
+                    }
+                    type="button"
+                  >
+                    {deletingItemId === item.id ? "..." : t("common.delete")}
+                  </button>
+                </div>
               </div>
             </div>
             {editingItemId === item.id && renderEditForm(day.date)}
