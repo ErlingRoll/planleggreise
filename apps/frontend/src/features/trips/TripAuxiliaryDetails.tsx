@@ -286,7 +286,7 @@ export function TripAuxiliaryDetails({
           <div className="mt-3 grid gap-2">
             {visibleHousingStays.map((stay) => (
               <div
-                className={`rounded-xl bg-surface p-3 ${
+                className={`trip-item-type-housing rounded-xl bg-surface p-3 ${
                   highlightedHousingId === stay.id ? "trip-map-card-focus" : ""
                 }`}
                 data-trip-item-key={`housing:${stay.id}`}

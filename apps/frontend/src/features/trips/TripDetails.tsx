@@ -141,7 +141,12 @@ export function TripDetails({
 
       const bounds = element.getBoundingClientRect()
       if (bounds.top < 0 || bounds.bottom > window.innerHeight) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" })
+        element.scrollIntoView({
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? "auto"
+            : "smooth",
+          block: "center",
+        })
       }
       setHighlightedMapItemKey(mapFocusRequest.itemKey)
       highlightTimeout = window.setTimeout(() => {
@@ -423,6 +428,84 @@ export function TripDetails({
       title: stay.placeName ?? stay.name,
       type: "housing",
     })
+  }
+
+  async function handleSaveMarkerLocation(
+    marker: TripMapMarker,
+    latitude: number,
+    longitude: number,
+  ) {
+    setActivityError(null)
+
+    try {
+      if (marker.type === "housing") {
+        const stay = currentTrip.housingStays.find((currentStay) => currentStay.id === marker.id)
+        if (!stay) {
+          throw new Error(t("errors.itemNotFound"))
+        }
+
+        const savedStay = await updateHousingStay(accessToken, currentTrip.id, stay.id, {
+          latitude,
+          longitude,
+        })
+        onTripUpdated({
+          ...currentTrip,
+          housingStays: currentTrip.housingStays.map((currentStay) =>
+            currentStay.id === savedStay.id ? savedStay : currentStay,
+          ),
+        })
+        return
+      }
+
+      if (marker.type === "meal") {
+        const meal = currentTrip.meals.find((currentMeal) => currentMeal.id === marker.id)
+        if (!meal) {
+          throw new Error(t("errors.itemNotFound"))
+        }
+
+        const savedMeal = await updateMeal(accessToken, currentTrip.id, meal.id, {
+          latitude,
+          longitude,
+        })
+        onTripUpdated({
+          ...currentTrip,
+          meals: currentTrip.meals.map((currentMeal) =>
+            currentMeal.id === savedMeal.id ? savedMeal : currentMeal,
+          ),
+        })
+        return
+      }
+
+      const day = currentTrip.days.find((currentDay) =>
+        currentDay.activities.some((activity) => activity.id === marker.id),
+      )
+      const activity = day?.activities.find((currentActivity) => currentActivity.id === marker.id)
+      if (!activity || !day) {
+        throw new Error(t("errors.itemNotFound"))
+      }
+
+      const savedActivity = await updateActivity(accessToken, currentTrip.id, activity.id, {
+        latitude,
+        longitude,
+      })
+      onTripUpdated({
+        ...currentTrip,
+        days: currentTrip.days.map((currentDay) =>
+          currentDay.date === day.date
+            ? {
+                ...currentDay,
+                activities: currentDay.activities.map((currentActivity) =>
+                  currentActivity.id === savedActivity.id ? savedActivity : currentActivity,
+                ),
+              }
+            : currentDay,
+        ),
+      })
+    } catch (reason: unknown) {
+      const message = getErrorMessage(reason)
+      setActivityError(message)
+      throw reason
+    }
   }
 
   function resetActivityForm() {
@@ -1500,6 +1583,7 @@ export function TripDetails({
             focusMarker={mapFocusMarker}
             markers={mapMarkers}
             onMarkerClick={handleMapMarkerClick}
+            onMarkerLocationSave={handleSaveMarkerLocation}
             onFocusMarkerHandled={() => setMapFocusMarker(null)}
             renderMarkerDetails={renderMapMarkerDetails}
           />

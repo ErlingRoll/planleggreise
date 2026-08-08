@@ -50,6 +50,9 @@
   --color-preference-green: #4f8a63;
   --color-preference-yellow: #d09a3d;
   --color-preference-red: #c45b4b;
+  --color-type-activity: #2d7f8a;
+  --color-type-meal: #7654a8;
+  --color-type-housing: #bd6c3d;
   --color-soft: #b9d1be;
   --color-border: #d9d4ca;
   --color-border-card: #e1dbd0;
@@ -137,6 +140,9 @@ button:disabled {
   --color-preference-green: #83c694;
   --color-preference-yellow: #dfb65c;
   --color-preference-red: #e27b6b;
+  --color-type-activity: #79c1c8;
+  --color-type-meal: #b79be0;
+  --color-type-housing: #e3a17e;
   --color-soft: #a5c6ad;
   --color-border: #44504a;
   --color-border-card: #38443f;
@@ -223,6 +229,15 @@ button:disabled {
   pointer-events: none;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .trip-map-marker-details,
+  .trip-map-marker-details-closing,
+  .trip-map-card-focus {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 .trip-map-card-focus {
   animation: trip-map-card-focus 2.4s ease-in-out 2;
 }
@@ -263,18 +278,30 @@ button:disabled {
 }
 
 .trip-map-marker-activity {
-  --trip-map-pin-color: var(--color-preference-green);
+  --trip-map-pin-color: var(--color-type-activity);
   --trip-map-pin-text: var(--color-surface);
 }
 
 .trip-map-marker-meal {
-  --trip-map-pin-color: var(--color-preference-yellow);
-  --trip-map-pin-text: var(--color-ink);
+  --trip-map-pin-color: var(--color-type-meal);
+  --trip-map-pin-text: var(--color-on-accent);
 }
 
 .trip-map-marker-housing {
-  --trip-map-pin-color: var(--color-accent);
+  --trip-map-pin-color: var(--color-type-housing);
   --trip-map-pin-text: var(--color-on-accent);
+}
+
+.trip-item-type-activity {
+  border-left: 0.25rem solid var(--color-type-activity);
+}
+
+.trip-item-type-meal {
+  border-left: 0.25rem solid var(--color-type-meal);
+}
+
+.trip-item-type-housing {
+  border-left: 0.25rem solid var(--color-type-housing);
 }
 
 @media (min-width: 640px) {

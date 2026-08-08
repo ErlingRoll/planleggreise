@@ -61,7 +61,12 @@ export function TravelMode({ trip }: TravelModeProps) {
 
       const bounds = element.getBoundingClientRect()
       if (bounds.top < 0 || bounds.bottom > window.innerHeight) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" })
+        element.scrollIntoView({
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? "auto"
+            : "smooth",
+          block: "center",
+        })
       }
       setHighlightedMapItemKey(mapFocusRequest.itemKey)
       highlightTimeout = window.setTimeout(() => {

@@ -26,12 +26,23 @@ type TripMapProps = {
   markers: TripMapMarker[]
   renderMarkerDetails?: (marker: TripMapMarker) => ReactNode
   onMarkerClick?: (marker: TripMapMarker) => void
+  onMarkerLocationSave?: (
+    marker: TripMapMarker,
+    latitude: number,
+    longitude: number,
+  ) => Promise<void>
   focusMarker?: TripMapMarker | null
   onFocusMarkerHandled?: () => void
 }
 
 const markerDetailsAnimationDuration = 180
 const markerOverlapDistance = 28
+
+function prefersReducedMotion() {
+  return (
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
+}
 
 function setMarkerVisualOffset(marker: MapLibreMarker, offset: [number, number]) {
   marker.setOffset(offset)
@@ -109,6 +120,7 @@ function fitMapToMarkers(map: MapLibreMap, markers: TripMapMarker[]) {
   if (markers.length === 1) {
     map.flyTo({
       center: [markers[0].longitude, markers[0].latitude],
+      duration: prefersReducedMotion() ? 0 : 500,
       zoom: 13,
       essential: true,
     })
@@ -117,7 +129,7 @@ function fitMapToMarkers(map: MapLibreMap, markers: TripMapMarker[]) {
 
   const bounds = new LngLatBounds()
   markers.forEach((marker) => bounds.extend([marker.longitude, marker.latitude]))
-  map.fitBounds(bounds, { padding: 56, maxZoom: 13, duration: 500 })
+  map.fitBounds(bounds, { padding: 56, maxZoom: 13, duration: prefersReducedMotion() ? 0 : 500 })
 }
 
 function getMarkerLabel(title: string) {
@@ -148,6 +160,7 @@ export function TripMap({
   markers,
   renderMarkerDetails,
   onMarkerClick,
+  onMarkerLocationSave,
   focusMarker,
   onFocusMarkerHandled,
 }: TripMapProps) {
@@ -155,16 +168,30 @@ export function TripMap({
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [selectedMarker, setSelectedMarker] = useState<TripMapMarker | null>(null)
   const [isMarkerDetailsClosing, setIsMarkerDetailsClosing] = useState(false)
+  const [isLocationEditMode, setIsLocationEditMode] = useState(false)
+  const [draftLocation, setDraftLocation] = useState<{
+    marker: TripMapMarker
+    latitude: number
+    longitude: number
+    originalLatitude: number
+    originalLongitude: number
+  } | null>(null)
+  const [isSavingLocation, setIsSavingLocation] = useState(false)
+  const [locationEditError, setLocationEditError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markerRefs = useRef<Map<string, MapLibreMarker>>(new Map())
   const markerDetailsCloseTimeoutRef = useRef<number | null>(null)
   const renderMarkerDetailsRef = useRef(renderMarkerDetails)
   const onMarkerClickRef = useRef(onMarkerClick)
+  const onMarkerLocationSaveRef = useRef(onMarkerLocationSave)
   const onFocusMarkerHandledRef = useRef(onFocusMarkerHandled)
+  const isLocationEditModeRef = useRef(isLocationEditMode)
   renderMarkerDetailsRef.current = renderMarkerDetails
   onMarkerClickRef.current = onMarkerClick
+  onMarkerLocationSaveRef.current = onMarkerLocationSave
   onFocusMarkerHandledRef.current = onFocusMarkerHandled
+  isLocationEditModeRef.current = isLocationEditMode
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -224,6 +251,12 @@ export function TripMap({
         element.addEventListener("click", (event) => {
           bringMarkerToFront(markerRefs.current, marker)
 
+          if (isLocationEditModeRef.current) {
+            event.preventDefault()
+            event.stopImmediatePropagation()
+            return
+          }
+
           if (window.innerWidth >= 1024) {
             if (onMarkerClickRef.current) {
               event.preventDefault()
@@ -255,11 +288,40 @@ export function TripMap({
         .setPopup(popup)
         .addTo(map)
 
+      mapMarker.on("dragend", () => {
+        if (!isLocationEditModeRef.current) {
+          return
+        }
+
+        const position = mapMarker.getLngLat()
+        setDraftLocation((currentDraft) => ({
+          marker,
+          latitude: position.lat,
+          longitude: position.lng,
+          originalLatitude:
+            currentDraft?.marker.id === marker.id ? currentDraft.originalLatitude : marker.latitude,
+          originalLongitude:
+            currentDraft?.marker.id === marker.id
+              ? currentDraft.originalLongitude
+              : marker.longitude,
+        }))
+        setLocationEditError(null)
+      })
+
       markerRefs.current.set(`${marker.type}:${marker.id}`, mapMarker)
     })
 
     fitMapToMarkers(map, markers)
   }, [markers])
+
+  useEffect(() => {
+    markerRefs.current.forEach((marker) => marker.setDraggable(isLocationEditMode))
+
+    if (!isLocationEditMode) {
+      setDraftLocation(null)
+      setLocationEditError(null)
+    }
+  }, [isLocationEditMode])
 
   useEffect(() => {
     const map = mapRef.current
@@ -304,6 +366,7 @@ export function TripMap({
 
       mapRef.current.flyTo({
         center: [focusMarker.longitude, focusMarker.latitude],
+        duration: prefersReducedMotion() ? 0 : 500,
         essential: true,
         zoom: 14,
       })
@@ -359,6 +422,52 @@ export function TripMap({
     }, markerDetailsAnimationDuration)
   }
 
+  function resetMapView() {
+    if (mapRef.current) {
+      fitMapToMarkers(mapRef.current, markers)
+    }
+  }
+
+  function cancelLocationEdit() {
+    if (draftLocation) {
+      markerRefs.current
+        .get(`${draftLocation.marker.type}:${draftLocation.marker.id}`)
+        ?.setLngLat([draftLocation.originalLongitude, draftLocation.originalLatitude])
+      if (mapRef.current) {
+        applyMarkerLayout(mapRef.current, markerRefs.current)
+      }
+    }
+    setDraftLocation(null)
+    setLocationEditError(null)
+    setIsLocationEditMode(false)
+  }
+
+  async function saveLocationEdit() {
+    if (!draftLocation || !onMarkerLocationSaveRef.current) {
+      return
+    }
+
+    setIsSavingLocation(true)
+    setLocationEditError(null)
+    try {
+      await onMarkerLocationSaveRef.current(
+        draftLocation.marker,
+        draftLocation.latitude,
+        draftLocation.longitude,
+      )
+      setDraftLocation(null)
+      setIsLocationEditMode(false)
+    } catch {
+      const mapMarker = markerRefs.current.get(
+        `${draftLocation.marker.type}:${draftLocation.marker.id}`,
+      )
+      mapMarker?.setLngLat([draftLocation.originalLongitude, draftLocation.originalLatitude])
+      setLocationEditError(t("tripMap.locationSaveFailed"))
+    } finally {
+      setIsSavingLocation(false)
+    }
+  }
+
   return (
     <>
       <button
@@ -391,9 +500,76 @@ export function TripMap({
               {t("tripMap.locations", { count: markers.length })}
             </span>
           </div>
+          {onMarkerLocationSave && (
+            <div className="flex items-center gap-2">
+              {isLocationEditMode ? (
+                <>
+                  <button
+                    className="rounded-lg px-2 py-1 text-xs font-semibold text-muted hover:bg-surface-muted disabled:opacity-60"
+                    disabled={isSavingLocation}
+                    onClick={cancelLocationEdit}
+                    type="button"
+                  >
+                    {t("common.cancel")}
+                  </button>
+                  <button
+                    className="rounded-lg bg-brand-surface px-2 py-1 text-xs font-semibold text-on-brand hover:bg-brand-surface-hover disabled:opacity-60"
+                    disabled={!draftLocation || isSavingLocation}
+                    onClick={() => void saveLocationEdit()}
+                    type="button"
+                  >
+                    {isSavingLocation ? t("common.saving") : t("tripMap.saveLocation")}
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted"
+                  onClick={() => {
+                    setLocationEditError(null)
+                    setIsLocationEditMode(true)
+                  }}
+                  type="button"
+                >
+                  {t("tripMap.editLocations")}
+                </button>
+              )}
+            </div>
+          )}
         </div>
         <div className="relative mt-0 min-h-0 flex-1 overflow-hidden rounded-xl lg:mt-3">
           <div className="h-full min-h-72 w-full" ref={containerRef} />
+          {isLocationEditMode && (
+            <div className="absolute left-3 top-14 z-10 max-w-64 rounded-lg bg-surface/95 px-3 py-2 text-xs text-on-surface shadow-card">
+              {draftLocation ? t("tripMap.locationReadyToSave") : t("tripMap.locationEditHelp")}
+              {locationEditError && (
+                <p className="mt-1 text-error-strong" role="alert">
+                  {locationEditError}
+                </p>
+              )}
+            </div>
+          )}
+          <button
+            className="absolute left-3 top-3 z-10 rounded-lg bg-surface px-3 py-2 text-xs font-semibold text-on-surface shadow-card hover:bg-surface-muted"
+            onClick={resetMapView}
+            type="button"
+          >
+            {t("tripMap.reset")}
+          </button>
+          <div className="absolute bottom-3 left-3 z-10 grid gap-1 rounded-lg bg-surface/95 px-3 py-2 text-xs text-on-surface shadow-card">
+            <span className="font-semibold">{t("tripMap.legend")}</span>
+            <span className="flex items-center gap-2">
+              <span className="size-2.5 rounded-full bg-type-activity" />
+              {t("tripMap.activity")}
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="size-2.5 rounded-full bg-type-meal" />
+              {t("tripMap.meal")}
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="size-2.5 rounded-full bg-type-housing" />
+              {t("tripMap.housing")}
+            </span>
+          </div>
           {markers.length === 0 && (
             <div className="absolute inset-0 grid place-items-center bg-surface-muted/80 p-6 text-center text-sm text-muted">
               {t("tripMap.noLocations")}
@@ -407,6 +583,41 @@ export function TripMap({
               {t("tripMap.locations", { count: markers.length })}
             </span>
           </div>
+          {onMarkerLocationSave && (
+            <div className="flex items-center gap-2">
+              {isLocationEditMode ? (
+                <>
+                  <button
+                    className="rounded-lg px-2 py-1 text-xs font-semibold text-muted hover:bg-surface-muted disabled:opacity-60"
+                    disabled={isSavingLocation}
+                    onClick={cancelLocationEdit}
+                    type="button"
+                  >
+                    {t("common.cancel")}
+                  </button>
+                  <button
+                    className="rounded-lg bg-brand-surface px-2 py-1 text-xs font-semibold text-on-brand hover:bg-brand-surface-hover disabled:opacity-60"
+                    disabled={!draftLocation || isSavingLocation}
+                    onClick={() => void saveLocationEdit()}
+                    type="button"
+                  >
+                    {isSavingLocation ? t("common.saving") : t("tripMap.saveLocation")}
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="rounded-lg px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-muted"
+                  onClick={() => {
+                    setLocationEditError(null)
+                    setIsLocationEditMode(true)
+                  }}
+                  type="button"
+                >
+                  {t("tripMap.editLocations")}
+                </button>
+              )}
+            </div>
+          )}
           <button
             aria-label={t("tripMap.close")}
             className="grid size-9 place-items-center rounded-lg text-xl text-on-surface hover:bg-surface-muted"

@@ -639,15 +639,18 @@ export function TripBackupPage({
     const key = `${type}:${item.id}`
     const dayItem = type === "housing" ? null : (item as Activity | Meal)
     const housing = type === "housing" ? (item as HousingStay) : null
-    const surfaceClass =
+    const typeClass =
       type === "activity"
-        ? "bg-activity-surface"
+        ? "trip-item-type-activity"
         : type === "meal"
-          ? "bg-meal-surface"
-          : "bg-housing-surface"
+          ? "trip-item-type-meal"
+          : "trip-item-type-housing"
 
     return (
-      <article className={`rounded-2xl border border-border-soft ${surfaceClass} p-4`} key={key}>
+      <article
+        className={`rounded-2xl border border-border-soft bg-surface ${typeClass} p-4`}
+        key={key}
+      >
         <div className="flex flex-col gap-3">
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">

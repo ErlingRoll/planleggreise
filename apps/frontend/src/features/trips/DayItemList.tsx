@@ -113,7 +113,7 @@ export function DayItemList({
 
         return (
           <div
-            className={`rounded-xl bg-surface p-3 ${
+            className={`trip-item-type-${record.itemType} rounded-xl bg-surface p-3 ${
               highlightedItemKey === `${record.itemType}:${item.id}` ? "trip-map-card-focus" : ""
             }`}
             data-trip-item-key={`${record.itemType}:${item.id}`}
